@@ -392,6 +392,12 @@ is_ci() {
 	[ "${CI}" = "true" ]
 }
 
+ccache_stat() {
+	if is_ci; then
+		ccache -s
+	fi
+}
+
 # $@: args for kconfig
 analyse() {
 	if is_ci; then
@@ -434,6 +440,7 @@ go_expect() { local mode
 	mode="${1}"
 	shift
 
+	ccache_stat
 	check_last_iproute
 	gen_kconfig "${@}"
 	build
@@ -452,6 +459,7 @@ clean() { local path
 
 exit_trap() {
 	clean
+	ccache_stat
 }
 
 
