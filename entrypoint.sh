@@ -59,8 +59,9 @@ KCONFIG_EXTRA_CHECKS=(
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
 RESULTS_DIR=
 
-# tmp files
+# log files
 OUTPUT_VIRTME=
+TESTS_SUMMARY=
 
 EXIT_STATUS=0
 
@@ -169,6 +170,7 @@ prepare() { local old_pwd mode
 
 	RESULTS_DIR="${RESULTS_DIR_BASE}/${mode}"
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
+	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
@@ -400,6 +402,9 @@ ccache_stat() {
 
 # $@: args for kconfig
 analyse() {
+	# reduce log that could be wrongly interpreted
+	set +x
+
 	if is_ci; then
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
@@ -419,7 +424,10 @@ analyse() {
 		exit 1
 	fi
 
-	if grep "^not ok " "${RESULTS_DIR}"/*.tap; then
+	echo "== Tests Summary ==" | tee "${TESTS_SUMMARY}"
+	grep -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | tee -a "${TESTS_SUMMARY}"
+
+	if grep -q "^not ok " "${TESTS_SUMMARY}"; then
 		EXIT_STATUS=42
 	fi
 }
@@ -446,6 +454,7 @@ go_expect() { local mode
 	build
 	prepare "${mode}"
 	run_expect
+	ccache_stat
 	analyse "${@}"
 }
 
@@ -458,8 +467,8 @@ clean() { local path
 }
 
 exit_trap() {
+	set +x
 	clean
-	ccache_stat
 }
 
 
