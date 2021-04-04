@@ -45,12 +45,6 @@ VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
 VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
-if [ "${CI}" = "true" ]; then
-	VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
-else
-	VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
-fi
-
 # TODO: kmemleak (or all the time?)
 # TODO: kfence (or all the time?)
 KCONFIG_EXTRA_CHECKS=(
@@ -61,11 +55,8 @@ KCONFIG_EXTRA_CHECKS=(
 	-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
 )
 
-# results for the CI
+# results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
-if [ "${CI}" != "true" ]; then # avoid override
-	RESULTS_DIR_BASE="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)"
-fi
 RESULTS_DIR=
 
 # tmp files
@@ -397,16 +388,16 @@ _get_selftests_gen_files() {
 	grep TEST_GEN_FILES "${MPTCP_SELFTESTS_DIR}/Makefile" | cut -d= -f2
 }
 
-clean() { local path
-	# remove symlinks we added as a workaround for the selftests
-	rm -fv "${LINUX_USR_HEADERS_DIR}"
-	for path in $(_get_selftests_gen_files); do
-		rm -fv "${MPTCP_SELFTESTS_DIR}/${path}"
-	done
+is_ci() {
+	[ "${CI}" = "true" ]
 }
 
 # $@: args for kconfig
 analyse() {
+	if is_ci; then
+		tap2junit "${RESULTS_DIR}"/*.tap
+	fi
+
 	# look for crashes/warnings
 	if grep -q "Call Trace:" "${OUTPUT_VIRTME}"; then
 		grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
@@ -422,7 +413,7 @@ analyse() {
 		exit 1
 	fi
 
-	if grep -r "^not ok " "${RESULTS_DIR}"; then
+	if ! is_ci && grep "^not ok " "${RESULTS_DIR}"/*.tap; then
 		EXIT_STATUS=42
 	fi
 }
@@ -451,12 +442,29 @@ go_expect() { local mode
 	analyse "${@}"
 }
 
+clean() { local path
+	# remove symlinks we added as a workaround for the selftests
+	rm -fv "${LINUX_USR_HEADERS_DIR}"
+	for path in $(_get_selftests_gen_files); do
+		rm -fv "${MPTCP_SELFTESTS_DIR}/${path}"
+	done
+}
+
 exit_trap() {
 	clean
 }
 
 
 trap 'exit_trap' EXIT
+
+
+if is_ci; then
+	VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+else
+	VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+	# avoid override
+	RESULTS_DIR_BASE="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)"
+fi
 
 # allow to launch anything else
 if [ "${1}" = "manual" ]; then
