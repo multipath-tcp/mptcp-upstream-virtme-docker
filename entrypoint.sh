@@ -395,7 +395,7 @@ is_ci() {
 # $@: args for kconfig
 analyse() {
 	if is_ci; then
-		tap2junit "${RESULTS_DIR}"/*.tap
+		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
 	# look for crashes/warnings
@@ -413,7 +413,7 @@ analyse() {
 		exit 1
 	fi
 
-	if ! is_ci && grep "^not ok " "${RESULTS_DIR}"/*.tap; then
+	if grep "^not ok " "${RESULTS_DIR}"/*.tap; then
 		EXIT_STATUS=42
 	fi
 }
