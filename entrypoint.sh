@@ -503,4 +503,8 @@ else
 	go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
 fi
 
-exit "${EXIT_STATUS}"
+if is_ci; then
+	echo "==EXIT_STATUS=${EXIT_STATUS}=="
+else
+	exit "${EXIT_STATUS}"
+fi
