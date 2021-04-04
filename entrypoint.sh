@@ -425,7 +425,8 @@ analyse() {
 	fi
 
 	echo "== Tests Summary ==" | tee "${TESTS_SUMMARY}"
-	grep -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | tee -a "${TESTS_SUMMARY}"
+	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | \
+		tee -a "${TESTS_SUMMARY}"
 
 	if grep -q "^not ok " "${TESTS_SUMMARY}"; then
 		EXIT_STATUS=42
