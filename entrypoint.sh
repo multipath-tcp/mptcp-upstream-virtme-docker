@@ -171,7 +171,6 @@ prepare() { local old_pwd mode
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
-	local selftests_tap="${RESULTS_DIR}/selftests.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
 	local dummy_tap="${RESULTS_DIR}/dummy.tap"
 	local pktd_base="${RESULTS_DIR}/packetdrill"
@@ -280,19 +279,20 @@ run_kunit() {
 	_run_kunit | tee "${kunit_tap}"
 }
 
-_run_selftests() {
-	make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
-}
-
-run_selftests() {
-	cd ${KERNEL_SRC}
-	_run_selftests | tee "${selftests_tap}"
-}
-
 # \$1: output tap file; rest: command to launch
 run_one_selftest_tap() {
 	cd "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
 	tap "\${@}"
+}
+
+run_selftests() { local sf
+	# The following command re-do a slow headers install + compilation in a different dir
+	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
+
+	for sf in "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}/"*.sh; do
+		sf=\$(basename \${sf})
+		run_one_selftest_tap "${RESULTS_DIR}/selftest_\${sf:0:-3}.tap" "./\${sf}"
+	done
 }
 
 # \$@: cmd to run
