@@ -409,24 +409,28 @@ analyse() {
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
+	echo "== Tests Summary ==" | tee "${TESTS_SUMMARY}"
+	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | \
+		tee -a "${TESTS_SUMMARY}"
+
 	# look for crashes/warnings
 	if grep -q "Call Trace:" "${OUTPUT_VIRTME}"; then
 		grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
 			./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
-		echo "Call Trace found (additional kconfig: '${*}')"
+		echo "Call Trace found (additional kconfig: '${*}')" | \
+			tee -a "${TESTS_SUMMARY}"
 		# exit directly, that's bad
 		exit 1
 	fi
 
 	if ! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"; then
-		echo "Timeout (additional kconfig: '${*}')"
+		tail -n 20 "${OUTPUT_VIRTME}" | \
+			tee -a "${TESTS_SUMMARY}"
+		echo "Timeout (additional kconfig: '${*}')" | \
+			tee -a "${TESTS_SUMMARY}"
 		# exit directly, that's bad
 		exit 1
 	fi
-
-	echo "== Tests Summary ==" | tee "${TESTS_SUMMARY}"
-	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | \
-		tee -a "${TESTS_SUMMARY}"
 
 	if grep -q "^not ok " "${TESTS_SUMMARY}"; then
 		EXIT_STATUS=42
