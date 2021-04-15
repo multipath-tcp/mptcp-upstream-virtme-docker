@@ -180,6 +180,8 @@ prepare() { local old_pwd mode
 		RESULTS_DIR="${KERNEL_SRC}"
 
 		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+
+		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 	else
 		# avoid override
 		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
@@ -188,8 +190,6 @@ prepare() { local old_pwd mode
 
 		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
 	fi
-
-	EXIT_TITLE="${EXIT_TITLE}: ${mode}"
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
@@ -417,9 +417,20 @@ ccache_stat() {
 	fi
 }
 
-# $1: reason
-register_issue() {
-	EXIT_REASONS+=("${1}")
+# $1: category ; $2: mode ; $3: reason
+register_issue() { local msg
+	# only one mode in CI mode
+	if is_ci; then
+		msg="${1}: ${3}"
+	else
+		msg="${1} ('${2}' mode): ${3}"
+	fi
+
+	if [ "${#EXIT_REASONS[@]}" -eq 0 ]; then
+		EXIT_REASONS=("${msg}")
+	else
+		EXIT_REASONS+=("-" "${msg}")
+	fi
 }
 
 # $1: mode, rest: args for kconfig
@@ -440,14 +451,14 @@ _print_analyse() {
 		grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
 			./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
 		echo "Call Trace found (additional kconfig: '${*}')"
-		register_issue "/!\ Critical: $(grep -c "Call Trace:") Call Trace"
+		register_issue "Critical" "${mode}" "$(grep -c "Call Trace:") Call Trace"
 		rc=1
 	fi
 
 	if ! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"; then
 		tail -n 20 "${OUTPUT_VIRTME}"
 		echo "Timeout (additional kconfig: '${*}')"
-		register_issue "/!\ Critical: Global Timeout"
+		register_issue "Critical" "${mode}" "Global Timeout"
 		rc=1
 	fi
 
@@ -468,7 +479,7 @@ get_failed_tests_status() { local t fails=()
 		fails+=("${t}")
 	done
 
-	echo "Unstable: ${#fails[@]} failed tests: ${fails[*]}"
+	echo "${#fails[@]} failed tests: ${fails[*]}"
 }
 
 # $1: mode, rest: args for kconfig
@@ -476,17 +487,20 @@ analyse() {
 	# reduce log that could be wrongly interpreted
 	set +x
 
+	local mode="${1}"
+	shift
+
 	local rc
 
 	if is_ci; then
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
-	_print_analyse "${@}" | tee "${TESTS_SUMMARY}"
+	_print_analyse "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
 	rc=${PIPESTATUS[0]}
 
 	if has_failed_tests; then
-		register_issue "$(get_failed_tests_status)"
+		register_issue "Unstable" "${mode}" "$(get_failed_tests_status)"
 		EXIT_STATUS=42
 	fi
 
