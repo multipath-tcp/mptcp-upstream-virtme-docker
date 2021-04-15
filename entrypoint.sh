@@ -62,8 +62,11 @@ RESULTS_DIR=
 # log files
 OUTPUT_VIRTME=
 TESTS_SUMMARY=
+CONCLUSION=
 
 EXIT_STATUS=0
+EXIT_REASONS=()
+EXIT_TITLE="KVM Validation"
 
 _get_last_iproute_version() {
 	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
@@ -186,8 +189,11 @@ prepare() { local old_pwd mode
 		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
 	fi
 
+	EXIT_TITLE="${EXIT_TITLE}: ${mode}"
+
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
+	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
@@ -411,40 +417,82 @@ ccache_stat() {
 	fi
 }
 
-# $@: args for kconfig
-analyse() {
-	# reduce log that could be wrongly interpreted
-	set +x
+# $1: reason
+register_issue() {
+	EXIT_REASONS+=("${1}")
+}
 
-	if is_ci; then
-		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
-	fi
+# $1: mode, rest: args for kconfig
+_print_analyse() {
+	local rc=0
+	local mode="${1}"
+	shift
 
-	echo "== Tests Summary ==" | tee "${TESTS_SUMMARY}"
-	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap | \
-		tee -a "${TESTS_SUMMARY}"
+	echo "== Tests Summary =="
+
+	echo "Mode: ${mode}"
+	echo "Extra kconfig: ${*:-/}"
+
+	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap
 
 	# look for crashes/warnings
 	if grep -q "Call Trace:" "${OUTPUT_VIRTME}"; then
 		grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
 			./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
-		echo "Call Trace found (additional kconfig: '${*}')" | \
-			tee -a "${TESTS_SUMMARY}"
-		# exit directly, that's bad
-		exit 1
+		echo "Call Trace found (additional kconfig: '${*}')"
+		register_issue "/!\ Critical: $(grep -c "Call Trace:") Call Trace"
+		rc=1
 	fi
 
 	if ! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"; then
-		tail -n 20 "${OUTPUT_VIRTME}" | \
-			tee -a "${TESTS_SUMMARY}"
-		echo "Timeout (additional kconfig: '${*}')" | \
-			tee -a "${TESTS_SUMMARY}"
-		# exit directly, that's bad
-		exit 1
+		tail -n 20 "${OUTPUT_VIRTME}"
+		echo "Timeout (additional kconfig: '${*}')"
+		register_issue "/!\ Critical: Global Timeout"
+		rc=1
 	fi
 
-	if grep -q "^not ok " "${TESTS_SUMMARY}"; then
+	return ${rc}
+}
+
+has_failed_tests() {
+	grep -q "^not ok " "${TESTS_SUMMARY}"
+}
+
+get_failed_tests() {
+	# not ok 1 test: selftest_mptcp_join.tap # exit=1
+	grep "^not ok " "${TESTS_SUMMARY}" | awk '{ print $5 }' | sed "s/\.tap//g"
+}
+
+get_failed_tests_status() { local t fails=()
+	for t in $(get_failed_tests); do
+		fails+=("${t}")
+	done
+
+	echo "Unstable: ${#fails[@]} failed tests: ${fails[*]}"
+}
+
+# $1: mode, rest: args for kconfig
+analyse() {
+	# reduce log that could be wrongly interpreted
+	set +x
+
+	local rc
+
+	if is_ci; then
+		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
+	fi
+
+	_print_analyse "${@}" | tee "${TESTS_SUMMARY}"
+	rc=${PIPESTATUS[0]}
+
+	if has_failed_tests; then
+		register_issue "$(get_failed_tests_status)"
 		EXIT_STATUS=42
+	fi
+
+	if [ "${rc}" != "0" ]; then
+		echo "Critical issue detected, exiting"
+		exit 1
 	fi
 }
 
@@ -471,7 +519,7 @@ go_expect() { local mode
 	prepare "${mode}"
 	run_expect
 	ccache_stat
-	analyse "${@}"
+	analyse "${mode}" "${@}"
 }
 
 clean() { local path
@@ -482,9 +530,29 @@ clean() { local path
 	done
 }
 
-exit_trap() {
+print_conclusion() { local rc=${1}
+	echo -n "${EXIT_TITLE}: "
+
+	if [ ${#EXIT_REASONS[@]} -gt 0 ]; then
+		echo "${EXIT_REASONS[*]} 🔴"
+	elif [ "${rc}" != "0" ]; then
+		echo "Script error! ❓"
+	else
+		echo "Success! ✅"
+	fi
+}
+
+exit_trap() { local rc=${?}
 	set +x
-	clean
+
+	# not needed on CI, remove some lines in the logs
+	if ! is_ci; then
+		clean
+	fi
+
+	print_conclusion ${rc} | tee "${CONCLUSION}"
+
+	return ${rc}
 }
 
 
