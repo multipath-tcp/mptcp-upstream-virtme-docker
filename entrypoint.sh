@@ -164,11 +164,28 @@ build() {
 	_make_o -C "${MPTCP_SELFTESTS_DIR}"
 }
 
+is_ci() {
+	[ "${CI}" = "true" ]
+}
+
 prepare() { local old_pwd mode
 	old_pwd="${PWD}"
 	mode="${1:-}"
 
-	RESULTS_DIR="${RESULTS_DIR_BASE}/${mode}"
+	if is_ci; then
+		# Root dir: not to have to go down dirs to get artifacts
+		RESULTS_DIR="${KERNEL_SRC}"
+
+		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+	else
+		# avoid override
+		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
+		rm -rf "${RESULTS_DIR}"
+		mkdir -p "${RESULTS_DIR}"
+
+		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+	fi
+
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 
@@ -200,8 +217,6 @@ prepare() { local old_pwd mode
 	fi
 	cd "${old_pwd}"
 
-	rm -rf "${RESULTS_DIR}"
-	mkdir -p "${RESULTS_DIR}"
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash -x
 
@@ -390,10 +405,6 @@ _get_selftests_gen_files() {
 	grep TEST_GEN_FILES "${MPTCP_SELFTESTS_DIR}/Makefile" | cut -d= -f2
 }
 
-is_ci() {
-	[ "${CI}" = "true" ]
-}
-
 ccache_stat() {
 	if is_ci; then
 		ccache -s
@@ -479,14 +490,6 @@ exit_trap() {
 
 trap 'exit_trap' EXIT
 
-
-if is_ci; then
-	VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
-else
-	VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
-	# avoid override
-	RESULTS_DIR_BASE="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)"
-fi
 
 # allow to launch anything else
 if [ "${1}" = "manual" ]; then
