@@ -62,7 +62,7 @@ RESULTS_DIR=
 # log files
 OUTPUT_VIRTME=
 TESTS_SUMMARY=
-CONCLUSION=
+CONCLUSION="conclusion.txt"
 
 EXIT_STATUS=0
 EXIT_REASONS=()
@@ -193,7 +193,7 @@ prepare() { local old_pwd mode
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
-	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
+	CONCLUSION="${RESULTS_DIR}/${CONCLUSION}"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
