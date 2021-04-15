@@ -261,7 +261,7 @@ tap() { local out tmp fname rc
 # $1: path to .ko file
 _insmod() {
 	if ! insmod "\${1}"; then
-		echo "not ok 1 test: insmod \${1} # exit=\${?}"
+		echo "not ok 1 test: insmod \${1} # exit=1"
 		return 1
 	fi
 }
@@ -269,7 +269,7 @@ _insmod() {
 # kunit name
 _kunit_result() {
 	if ! cat "/sys/kernel/debug/kunit/\${1}/results"; then
-		echo "not ok 1 test: kunit result \${1} # exit=\${?}"
+		echo "not ok 1 test: kunit result \${1} # exit=1"
 		return 1
 	fi
 
