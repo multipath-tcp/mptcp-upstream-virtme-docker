@@ -419,7 +419,7 @@ ccache_stat() {
 }
 
 # $1: category ; $2: mode ; $3: reason
-register_issue() { local msg
+_register_issue() { local msg
 	# only one mode in CI mode
 	if is_ci; then
 		msg="${1}: ${3}"
@@ -434,40 +434,96 @@ register_issue() { local msg
 	fi
 }
 
+_had_issues() {
+	[ ${#EXIT_REASONS[@]} -gt 0 ]
+}
+
+_had_critical_issues() {
+	echo "${EXIT_REASONS[*]}" | grep -q "Critical"
+}
+
+# $1: end critical ; $2: end unstable
+_print_issues() {
+	echo -n "${EXIT_REASONS[*]} "
+	if _had_critical_issues; then
+		echo "${1}"
+	else
+		echo "${2}"
+	fi
+}
+
+_has_call_trace() {
+	grep -q "Call Trace:" "${OUTPUT_VIRTME}"
+}
+
+_print_line() {
+	echo "=========================================="
+}
+
+_print_call_trace_info() {
+	echo
+	_print_line
+	echo "Call Trace:"
+	_print_line
+	grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
+		./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
+	_print_line
+	echo "Call Trace found"
+}
+
+_get_call_trace_status() {
+	echo "$(grep -c "Call Trace:" "${OUTPUT_VIRTME}") Call Trace(s)"
+}
+
+_has_timed_out() {
+	! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"
+}
+
+_print_timed_out() {
+	echo
+	_print_line
+	echo "Timeout:"
+	_print_line
+	tail -n 20 "${OUTPUT_VIRTME}"
+	_print_line
+	echo "Global Timeout"
+}
+
 # $1: mode, rest: args for kconfig
-_print_analyse() {
-	local rc=0
+_print_summary_header() {
 	local mode="${1}"
 	shift
 
-	echo "== Tests Summary =="
-
+	echo "== Summary =="
+	echo
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
-
-	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap
-
-	# look for crashes/warnings
-	if grep -q "Call Trace:" "${OUTPUT_VIRTME}"; then
-		grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
-			./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
-		echo "Call Trace found (additional kconfig: '${*}')"
-		register_issue "Critical" "${mode}" "$(grep -c "Call Trace:") Call Trace"
-		rc=1
-	fi
-
-	if ! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"; then
-		tail -n 20 "${OUTPUT_VIRTME}"
-		echo "Timeout (additional kconfig: '${*}')"
-		register_issue "Critical" "${mode}" "Global Timeout"
-		rc=1
-	fi
-
-	return ${rc}
+	echo
 }
 
+# [ $1: .tap file, summary file by default]
 has_failed_tests() {
-	grep -q "^not ok " "${TESTS_SUMMARY}"
+	grep -q "^not ok " "${1:-TESTS_SUMMARY}"
+}
+
+_print_tests_result() {
+	echo "All tests:"
+	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap
+}
+
+_print_failed_tests() { local t
+	echo
+	_print_line
+	echo "Failed tests:"
+	for t in "${RESULTS_DIR}"/*.tap; do
+		if has_failed_tests "${t}"; then
+			_print_line
+			echo "- $(basename "${t}"):"
+			echo
+			cat "${t}"
+		fi
+	done
+	_print_line
 }
 
 get_failed_tests() {
@@ -475,12 +531,12 @@ get_failed_tests() {
 	grep "^not ok " "${TESTS_SUMMARY}" | awk '{ print $5 }' | sed "s/\.tap//g"
 }
 
-get_failed_tests_status() { local t fails=()
+_get_failed_tests_status() { local t fails=()
 	for t in $(get_failed_tests); do
 		fails+=("${t}")
 	done
 
-	echo "${#fails[@]} failed tests: ${fails[*]}"
+	echo "${#fails[@]} failed test(s): ${fails[*]}"
 }
 
 # $1: mode, rest: args for kconfig
@@ -491,22 +547,35 @@ analyse() {
 	local mode="${1}"
 	shift
 
-	local rc
-
 	if is_ci; then
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
-	_print_analyse "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
-	rc=${PIPESTATUS[0]}
+	_print_summary_header "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
+	_print_tests_result | tee -a "${TESTS_SUMMARY}"
 
 	if has_failed_tests; then
-		register_issue "Unstable" "${mode}" "$(get_failed_tests_status)"
+		# no tee, it can be long and less important than critical err
+		_print_failed_tests >> "${TESTS_SUMMARY}"
+		_register_issue "Unstable" "${mode}" "$(_get_failed_tests_status)"
 		EXIT_STATUS=42
 	fi
 
-	if [ "${rc}" != "0" ]; then
-		echo "Critical issue detected, exiting"
+	# look for crashes/warnings
+	if _has_call_trace; then
+		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "${mode}" "$(_get_call_trace_status)"
+		EXIT_STATUS=1
+	fi
+
+	if _has_timed_out; then
+		_print_timed_out | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "${mode}" "Global Timeout"
+		EXIT_STATUS=1
+	fi
+
+	if [ "${EXIT_STATUS}" = "1" ]; then
+		echo "Critical issue(s) detected, exiting"
 		exit 1
 	fi
 }
@@ -550,8 +619,8 @@ clean() { local path
 print_conclusion() { local rc=${1}
 	echo -n "${EXIT_TITLE}: "
 
-	if [ ${#EXIT_REASONS[@]} -gt 0 ]; then
-		echo "${EXIT_REASONS[*]} 🔴"
+	if _had_issues; then
+		_print_issues "❌" "🔴"
 	elif [ "${rc}" != "0" ]; then
 		echo "Script error! ❓"
 	else
