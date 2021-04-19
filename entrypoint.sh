@@ -67,6 +67,7 @@ CONCLUSION="conclusion.txt"
 EXIT_STATUS=0
 EXIT_REASONS=()
 EXIT_TITLE="KVM Validation"
+EXPECT=0
 
 _get_last_iproute_version() {
 	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
@@ -526,6 +527,8 @@ go_expect() { local mode
 	mode="${1}"
 	shift
 
+	EXPECT=1
+
 	ccache_stat
 	check_last_iproute
 	gen_kconfig "${@}"
@@ -564,7 +567,9 @@ exit_trap() { local rc=${?}
 		clean
 	fi
 
-	print_conclusion ${rc} | tee "${CONCLUSION}"
+	if [ "${EXPECT}" = 1 ]; then
+		print_conclusion ${rc} | tee "${CONCLUSION}"
+	fi
 
 	return ${rc}
 }
