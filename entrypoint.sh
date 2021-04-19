@@ -503,7 +503,7 @@ _print_summary_header() {
 
 # [ $1: .tap file, summary file by default]
 has_failed_tests() {
-	grep -q "^not ok " "${1:-TESTS_SUMMARY}"
+	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
 }
 
 _print_tests_result() {
