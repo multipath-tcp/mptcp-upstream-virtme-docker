@@ -8,7 +8,14 @@
 
 # We should manage all errors in this script
 set -e
-set -x
+
+is_ci() {
+	[ "${CI}" = "true" ]
+}
+
+if is_ci; then
+	set -x
+fi
 
 KERNEL_SRC="${PWD}"
 
@@ -72,6 +79,28 @@ VIRTME_EXEC_RUN="${KERNEL_SRC}/.virtme-exec-run"
 VIRTME_EXEC_PRE="${KERNEL_SRC}/.virtme-exec-pre"
 VIRTME_EXEC_POST="${KERNEL_SRC}/.virtme-exec-post"
 
+COLOR_RED="\E[1;31m"
+COLOR_GREEN="\E[1;32m"
+COLOR_BLUE="\E[1;34m"
+COLOR_RESET="\E(B\E[m"
+
+# $1: color, $2: text
+print_color() {
+	echo -e "${START_PRINT:-}${*}${COLOR_RESET}"
+}
+
+print() {
+	print_color "${COLOR_GREEN}${*}"
+}
+
+printinfo() {
+	print_color "${COLOR_BLUE}${*}"
+}
+
+printerr() {
+	print_color "${COLOR_RED}${*}" >&2
+}
+
 _get_last_iproute_version() {
 	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
 		grep "/tag/?h=v[0-9]" | \
@@ -86,18 +115,20 @@ check_last_iproute() { local last curr
 		return 0
 	fi
 
+	printinfo "Check IPRoute2 version"
+
 	last="$(_get_last_iproute_version)"
 
 	if [[ "${IPROUTE2_GIT_SHA}" == "v"* ]]; then
 		curr="${IPROUTE2_GIT_SHA}"
 		if [ "${curr}" = "${last}" ]; then
-			echo "Using the last version of IPRoute2: ${last}"
+			printinfo "Using the last version of IPRoute2: ${last}"
 		else
-			echo "Not the last version of IPRoute2: ${curr} < ${last}"
+			printerr "Not the last version of IPRoute2: ${curr} < ${last}"
 			return 1
 		fi
 	else
-		echo "TODO: check ip -V"
+		printerr "TODO: check ip -V"
 		exit 1
 	fi
 
@@ -108,19 +139,21 @@ _check_source_exec_one() {
 	local reason="${2}"
 
 	if [ -f "${src}" ]; then
-		echo "This script file exists and will be used ${reason}: $(basename "${src}")"
+		printinfo "This script file exists and will be used ${reason}: $(basename "${src}")"
 		cat -n "${src}"
 
 		if [ "${VIRTME_NO_BLOCK}" = "1" ]; then
-			echo "Check source exec: not blocking"
+			printinfo "Check source exec: not blocking"
 		else
-			echo "Press Enter to continue (use 'VIRTME_NO_BLOCK=1' to avoid this)"
+			print "Press Enter to continue (use 'VIRTME_NO_BLOCK=1' to avoid this)"
 			read -r
 		fi
 	fi
 }
 
 check_source_exec_all() {
+	printinfo "Check extented exec files"
+
 	_check_source_exec_one "${VIRTME_EXEC_PRE}" "before the tests suite"
 	_check_source_exec_one "${VIRTME_EXEC_RUN}" "to replace the execution of the whole tests suite"
 	_check_source_exec_one "${VIRTME_EXEC_POST}" "after the tests suite"
@@ -140,7 +173,7 @@ _add_symlink() {
 	local dst="${2:-${1}}"
 
 	if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
-		echo "${dst} already exists and is not a symlink, please remove it"
+		printerr "${dst} already exists and is not a symlink, please remove it"
 		return 1
 	fi
 
@@ -153,6 +186,8 @@ _add_workaround_selftests() {
 
 # $@: extra kconfig
 gen_kconfig() { local kconfig=()
+	printinfo "Generate kernel config"
+
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
@@ -188,6 +223,8 @@ gen_kconfig() { local kconfig=()
 }
 
 build() {
+	printinfo "Build the kernel"
+
 	_make_o
 	_make_o headers_install
 	_make_o modules
@@ -199,13 +236,11 @@ build() {
 	_make_o -C "${MPTCP_SELFTESTS_DIR}"
 }
 
-is_ci() {
-	[ "${CI}" = "true" ]
-}
-
 prepare() { local old_pwd mode
 	old_pwd="${PWD}"
 	mode="${1:-}"
+
+	printinfo "Prepare the environment"
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
@@ -416,10 +451,14 @@ EOF
 }
 
 run() {
+	printinfo "Run the virtme script: manual"
+
 	sudo "${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}"
 }
 
 run_expect() {
+	printinfo "Run the virtme script: expect"
+
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash -x
 sudo "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
@@ -590,19 +629,24 @@ _get_failed_tests_status() { local t fails=()
 }
 
 # $1: mode, rest: args for kconfig
-analyse() {
+analyze() {
 	# reduce log that could be wrongly interpreted
 	set +x
 
 	local mode="${1}"
 	shift
 
+	printinfo "Analyze results"
+
 	if is_ci; then
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
+	echo -e "${COLOR_GREEN}"
 	_print_summary_header "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
 	_print_tests_result | tee -a "${TESTS_SUMMARY}"
+
+	echo -e "${COLOR_RED}"
 
 	if has_failed_tests; then
 		# no tee, it can be long and less important than critical err
@@ -624,8 +668,10 @@ analyse() {
 		EXIT_STATUS=1
 	fi
 
+	echo -e "${COLOR_RESET}"
+
 	if [ "${EXIT_STATUS}" = "1" ]; then
-		echo "Critical issue(s) detected, exiting"
+		printerr "Critical issue(s) detected, exiting"
 		exit 1
 	fi
 }
@@ -634,6 +680,8 @@ analyse() {
 go_manual() { local mode
 	mode="${1}"
 	shift
+
+	printinfo "Start: manual (${mode})"
 
 	gen_kconfig "${@}"
 	build
@@ -646,6 +694,8 @@ go_expect() { local mode
 	mode="${1}"
 	shift
 
+	printinfo "Start: auto (${mode})"
+
 	EXPECT=1
 
 	ccache_stat
@@ -656,7 +706,7 @@ go_expect() { local mode
 	prepare "${mode}"
 	run_expect
 	ccache_stat
-	analyse "${mode}" "${@}"
+	analyze "${mode}" "${@}"
 }
 
 clean() { local path
@@ -687,9 +737,11 @@ exit_trap() { local rc=${?}
 		clean
 	fi
 
+	echo -e "${COLOR_BLUE}"
 	if [ "${EXPECT}" = 1 ]; then
 		print_conclusion ${rc} | tee "${CONCLUSION}"
 	fi
+	echo -ne "${COLOR_RESET}"
 
 	return ${rc}
 }
