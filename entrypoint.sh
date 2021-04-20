@@ -68,6 +68,9 @@ EXIT_STATUS=0
 EXIT_REASONS=()
 EXIT_TITLE="KVM Validation"
 EXPECT=0
+VIRTME_EXEC_RUN="${KERNEL_SRC}/.virtme-exec-run"
+VIRTME_EXEC_PRE="${KERNEL_SRC}/.virtme-exec-pre"
+VIRTME_EXEC_POST="${KERNEL_SRC}/.virtme-exec-post"
 
 _get_last_iproute_version() {
 	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
@@ -98,6 +101,29 @@ check_last_iproute() { local last curr
 		exit 1
 	fi
 
+}
+
+_check_source_exec_one() {
+	local src="${1}"
+	local reason="${2}"
+
+	if [ -f "${src}" ]; then
+		echo "This script file exists and will be used ${reason}: $(basename "${src}")"
+		cat -n "${src}"
+
+		if [ "${VIRTME_NO_BLOCK}" = "1" ]; then
+			echo "Check source exec: not blocking"
+		else
+			echo "Press Enter to continue (use 'VIRTME_NO_BLOCK=1' to avoid this)"
+			read -r
+		fi
+	fi
+}
+
+check_source_exec_all() {
+	_check_source_exec_one "${VIRTME_EXEC_PRE}" "before the tests suite"
+	_check_source_exec_one "${VIRTME_EXEC_RUN}" "to replace the execution of the whole tests suite"
+	_check_source_exec_one "${VIRTME_EXEC_POST}" "after the tests suite"
 }
 
 _make() {
@@ -354,15 +380,34 @@ run_packetdrill_all() { local pktd_dir
 	done
 }
 
-# echo "file net/mptcp/* +fmp" > /sys/kernel/debug/dynamic_debug/control
+# To run commands before executing the tests
+if [ -f "${VIRTME_EXEC_PRE}" ]; then
+	source "${VIRTME_EXEC_PRE}"
+	# e.g.:
+	# echo "file net/mptcp/* +fmp" > /sys/kernel/debug/dynamic_debug/control
+	# echo __mptcp_subflow_connect > /sys/kernel/tracing/set_graph_function
+	# echo printk > /sys/kernel/tracing/set_graph_notrace
+	# echo function_graph > /sys/kernel/tracing/current_tracer
+fi
 
-run_kunit
-run_selftests
-run_mptcp_connect_mmap
-run_packetdrill_all
+# To exec different tests than the full suite
+if [ -f "${VIRTME_EXEC_RUN}" ]; then
+	source "${VIRTME_EXEC_RUN}"
+	# e.g.:
+	# run_selftest_one ./mptcp_join.sh -f
+	# run_packetdrill_one mptcp/dss
+else
+	run_kunit
+	run_selftest_all
+	run_mptcp_connect_mmap
+	run_packetdrill_all
+fi
 
-# For "manual" tests only
-#run_one_selftest ./mptcp_join.sh
+# To run commands before executing the tests
+if [ -f "${VIRTME_EXEC_POST}" ]; then
+	source "${VIRTME_EXEC_POST}"
+	# e.g.: cat /sys/kernel/tracing/trace
+fi
 
 # end
 echo "${VIRTME_SCRIPT_END}"
@@ -605,6 +650,7 @@ go_expect() { local mode
 
 	ccache_stat
 	check_last_iproute
+	check_source_exec_all
 	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
