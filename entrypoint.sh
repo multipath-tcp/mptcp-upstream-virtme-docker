@@ -591,7 +591,7 @@ _print_summary_header() {
 }
 
 # [ $1: .tap file, summary file by default]
-has_failed_tests() {
+_has_failed_tests() {
 	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
 }
 
@@ -605,7 +605,7 @@ _print_failed_tests() { local t
 	_print_line
 	echo "Failed tests:"
 	for t in "${RESULTS_DIR}"/*.tap; do
-		if has_failed_tests "${t}"; then
+		if _has_failed_tests "${t}"; then
 			_print_line
 			echo "- $(basename "${t}"):"
 			echo
@@ -615,13 +615,13 @@ _print_failed_tests() { local t
 	_print_line
 }
 
-get_failed_tests() {
+_get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
 	grep "^not ok " "${TESTS_SUMMARY}" | awk '{ print $5 }' | sed "s/\.tap//g"
 }
 
 _get_failed_tests_status() { local t fails=()
-	for t in $(get_failed_tests); do
+	for t in $(_get_failed_tests); do
 		fails+=("${t}")
 	done
 
@@ -648,7 +648,7 @@ analyze() {
 
 	echo -e "${COLOR_RED}"
 
-	if has_failed_tests; then
+	if _has_failed_tests; then
 		# no tee, it can be long and less important than critical err
 		_print_failed_tests >> "${TESTS_SUMMARY}"
 		_register_issue "Unstable" "${mode}" "$(_get_failed_tests_status)"
