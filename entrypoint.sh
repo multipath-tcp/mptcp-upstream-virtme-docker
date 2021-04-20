@@ -617,7 +617,10 @@ _print_failed_tests() { local t
 
 _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
-	grep "^not ok " "${TESTS_SUMMARY}" | awk '{ print $5 }' | sed "s/\.tap//g"
+	grep "^not ok " "${TESTS_SUMMARY}" | \
+		awk '{ print $5 }' | \
+		sort -u | \
+		sed "s/\.tap$//g"
 }
 
 _get_failed_tests_status() { local t fails=()
