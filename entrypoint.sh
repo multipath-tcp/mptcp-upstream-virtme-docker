@@ -234,7 +234,7 @@ prepare() { local old_pwd mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 
 # \$1: file ; \$2+: commands
-tap() { local out tmp fname rc
+_tap() { local out tmp fname rc
 	out="\${1}"
 	shift
 
@@ -308,29 +308,29 @@ run_kunit() {
 }
 
 # \$1: output tap file; rest: command to launch
-run_one_selftest_tap() {
+_run_selftest_one_tap() {
 	cd "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
-	tap "\${@}"
+	_tap "\${@}"
 }
 
 # \$1: script file; rest: command to launch
-run_one_selftest() { local sf
+run_selftest_one() { local sf
 	sf=\$(basename \${1})
 	shift
-	run_one_selftest_tap "${RESULTS_DIR}/selftest_\${sf:0:-3}.tap" "./\${sf}" "\${@}"
+	_run_selftest_one_tap "${RESULTS_DIR}/selftest_\${sf:0:-3}.tap" "./\${sf}" "\${@}"
 }
 
-run_selftests() { local sf
+run_selftest_all() { local sf
 	# The following command re-do a slow headers install + compilation in a different dir
 	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
 
 	for sf in "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}/"*.sh; do
-		run_one_selftest "\${sf}"
+		run_selftest_one "\${sf}"
 	done
 }
 
 run_mptcp_connect_mmap() {
-	run_one_selftest_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
+	_run_selftest_one_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
@@ -342,7 +342,7 @@ run_packetdrill_one() { local pktd_dir="\${1}" pktd
 	fi
 
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 tap "${pktd_base}_\${pktd}.tap" \
+	PYTHONUNBUFFERED=1 _tap "${pktd_base}_\${pktd}.tap" \
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
