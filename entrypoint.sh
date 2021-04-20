@@ -78,6 +78,11 @@ _get_last_iproute_version() {
 }
 
 check_last_iproute() { local last curr
+	# only check on CI
+	if ! is_ci; then
+		return 0
+	fi
+
 	last="$(_get_last_iproute_version)"
 
 	if [[ "${IPROUTE2_GIT_SHA}" == "v"* ]]; then
