@@ -645,11 +645,11 @@ analyze() {
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 	fi
 
-	echo -e "${COLOR_GREEN}"
+	echo -ne "\n${COLOR_GREEN}"
 	_print_summary_header "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
 	_print_tests_result | tee -a "${TESTS_SUMMARY}"
 
-	echo -e "${COLOR_RED}"
+	echo -ne "${COLOR_RESET}\n${COLOR_RED}"
 
 	if _has_failed_tests; then
 		# no tee, it can be long and less important than critical err
@@ -671,9 +671,10 @@ analyze() {
 		EXIT_STATUS=1
 	fi
 
-	echo -e "${COLOR_RESET}"
+	echo -ne "${COLOR_RESET}"
 
 	if [ "${EXIT_STATUS}" = "1" ]; then
+		echo
 		printerr "Critical issue(s) detected, exiting"
 		exit 1
 	fi
@@ -740,11 +741,11 @@ exit_trap() { local rc=${?}
 		clean
 	fi
 
-	echo -e "${COLOR_BLUE}"
+	echo -ne "\n${COLOR_BLUE}"
 	if [ "${EXPECT}" = 1 ]; then
 		print_conclusion ${rc} | tee "${CONCLUSION}"
 	fi
-	echo -ne "${COLOR_RESET}"
+	echo -e "${COLOR_RESET}"
 
 	return ${rc}
 }
