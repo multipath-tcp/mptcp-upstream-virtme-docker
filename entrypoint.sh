@@ -750,11 +750,28 @@ exit_trap() { local rc=${?}
 	return ${rc}
 }
 
+usage() {
+	echo "Usage: ${0} <manual-normal | manual-debug | auto-normal | auto-debug | auto-all> [KConfig]"
+	echo
+	echo " - manual: access to an interactive shell"
+	echo " - auto: the tests suite is ran automatically"
+	echo
+	echo " - normal: without the debug kconfig"
+	echo " - debug: with debug kconfig"
+	echo " - all: both 'normal' and 'debug'"
+	echo
+	echo " - KConfig: optional kernel config: arguments for './scripts/config'"
+	echo
+	echo "This script needs to be ran from the root of kernel source code."
+	echo
+	echo "Some files can be added in the kernel sources to modify the tests suite."
+	echo "See the README file for more details."
+}
 
 
 MODE="${1}"
 if [ -z "${MODE}" ]; then
-	print "no mode, see man page"
+	usage
 	exit 0
 fi
 shift
@@ -789,6 +806,9 @@ case "${MODE}" in
 		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
+		echo -e "${COLOR_RED}"
+		usage
+		echo -e "${COLOR_RESET}"
 		exit 1
 esac
 
