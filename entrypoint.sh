@@ -751,28 +751,41 @@ exit_trap() { local rc=${?}
 }
 
 
+
+MODE="${1}"
+if [ -z "${MODE}" ]; then
+	print "no mode, see man page"
+	exit 0
+fi
+shift
+
+
 trap 'exit_trap' EXIT
 
-
-# allow to launch anything else
-if [ "${1}" = "manual" ]; then
-	go_manual "${@}"
-elif [ "${1}" = "debug" ]; then
-	# note: we need to use "2" to skip the first arg with "$@" but we would
-	# use 1 with any other arrays!
-	# a=("${@}") ; ${a[@]:1} == ${@:2}
-	go_manual "${1}" "${KCONFIG_EXTRA_CHECKS[@]}" "${@:2}"
-elif [ "${1}" = "expect-normal" ]; then
-	go_expect "normal" "${@:2}"
-elif [ "${1}" = "expect-debug" ]; then
-	go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@:2}"
-else
-	# first with the minimum because configs like KASAN slow down the
-	# tests execution, it might hide bugs
-	go_expect "normal" "${@}"
-	make clean
-	go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
-fi
+case "${MODE}" in
+	"manual" | "normal" | "manual-normal")
+		go_manual "normal" "${@}"
+		;;
+	"debug" | "manual-debug")
+		go_manual "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		;;
+	"expect-normal" | "auto-normal")
+		go_expect "normal" "${@}"
+		;;
+	"expect-debug" | "auto-debug")
+		go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		;;
+	"expect" | "all" | "expect-all" | "auto-all")
+		# first with the minimum because configs like KASAN slow down the
+		# tests execution, it might hide bugs
+		go_expect "normal" "${@}"
+		make clean
+		go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		;;
+	*)
+		printerr "Unknown mode: ${MODE}"
+		exit 1
+esac
 
 if is_ci; then
 	echo "==EXIT_STATUS=${EXIT_STATUS}=="
