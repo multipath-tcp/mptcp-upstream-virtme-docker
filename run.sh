@@ -6,4 +6,5 @@ docker run \
 	--privileged \
 	--rm \
 	-it \
-	virtme "${@}"
+	"${DOCKER_VIRTME_NAME:-"mptcp/mptcp-upstream-virtme-docker:latest"}" \
+	"${@}"
