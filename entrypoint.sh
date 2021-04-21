@@ -759,6 +759,11 @@ if [ -z "${MODE}" ]; then
 fi
 shift
 
+if [ ! -s "net/mptcp/protocol.c" ]; then
+	printerr "Please be at the root of kernel source code with MPTCP (Upstream) support"
+	exit 1
+fi
+
 
 trap 'exit_trap' EXIT
 
