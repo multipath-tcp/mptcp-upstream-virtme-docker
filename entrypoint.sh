@@ -675,6 +675,11 @@ analyze() {
 		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${mode}" "$(_get_call_trace_status)"
 		EXIT_STATUS=1
+
+		if is_ci; then
+			zstd -19 -T0 "${VIRTME_BUILD_DIR}/vmlinux" \
+			     -o "${RESULTS_DIR}/vmlinux.zstd"
+		fi
 	fi
 
 	if _has_timed_out; then
