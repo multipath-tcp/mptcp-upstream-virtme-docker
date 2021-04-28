@@ -13,6 +13,8 @@ execute QEmu with KVM acceleration.
 
 ## Extension
 
+### Files
+
 3 files can be created:
 
 - `.virtme-exec-pre`
@@ -23,5 +25,9 @@ execute QEmu with KVM acceleration.
 `run` is ran instead of the tests suite.
 These scripts are sourced and can used functions from the virtme script.
 
-You can set `VIRTME_NO_BLOCK=1` env var not to block if these files are present.
+### Env vars
+
+#### Not blocking with questions
+
+You can set `INPUT_NO_BLOCK=1` env var not to block if these files are present.
 This is useful if you need to do a `git bisect`.

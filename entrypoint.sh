@@ -17,6 +17,10 @@ if is_ci; then
 	set -x
 fi
 
+# The behaviour can be changed with 'input' env var
+: "${INPUT_CCACHE_MAXSIZE:=5G}"
+: "${INPUT_NO_BLOCK:=0}"
+
 KERNEL_SRC="${PWD}"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
@@ -34,7 +38,7 @@ VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS}/virtme.expect"
 LINUX_USR_HEADERS_DIR="usr/include/linux"
 MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
 
-export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE:-5G}"
+export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
 
 export O="${VIRTME_BUILD_DIR}"
@@ -142,10 +146,10 @@ _check_source_exec_one() {
 		printinfo "This script file exists and will be used ${reason}: $(basename "${src}")"
 		cat -n "${src}"
 
-		if [ "${VIRTME_NO_BLOCK}" = "1" ]; then
+		if [ "${INPUT_NO_BLOCK}" = "1" ]; then
 			printinfo "Check source exec: not blocking"
 		else
-			print "Press Enter to continue (use 'VIRTME_NO_BLOCK=1' to avoid this)"
+			print "Press Enter to continue (use 'INPUT_NO_BLOCK=1' to avoid this)"
 			read -r
 		fi
 	fi
