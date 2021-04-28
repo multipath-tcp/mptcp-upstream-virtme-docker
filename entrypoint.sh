@@ -21,6 +21,7 @@ fi
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
 : "${INPUT_NO_BLOCK:=0}"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
+: "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
 
 KERNEL_SRC="${PWD}"
 
@@ -287,7 +288,9 @@ prepare() { local old_pwd mode
 	_make
 
 	cd ../mptcp
-	if [ "${mode}" = "debug" ]; then
+	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
+		printinfo "Packetdrill: not modifying the tolerance"
+	elif [ "${mode}" = "debug" ]; then
 		# Add higher tolerance in debug mode
 		git grep -l "^--tolerance_usecs" | \
 			xargs sed -i "s/^--tolerance_usecs=.*/&0/g"

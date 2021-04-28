@@ -42,3 +42,6 @@ with:
 
 You can also set `VIRTME_PACKETDRILL_PATH` with `run*.sh` scripts to do this
 mount and set the proper env var.
+
+You can also set `INPUT_PACKETDRILL_NO_MORE_TOLERANCE=1` not to increase
+Packetdrill's tolerances.
