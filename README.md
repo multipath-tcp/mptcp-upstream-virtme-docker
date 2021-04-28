@@ -31,3 +31,14 @@ These scripts are sourced and can used functions from the virtme script.
 
 You can set `INPUT_NO_BLOCK=1` env var not to block if these files are present.
 This is useful if you need to do a `git bisect`.
+
+#### Packetdrill
+
+You can set `INPUT_PACKETDRILL_NO_SYNC=1` env var not to sync Packetdrill with
+upstream. This is useful if you mount a local packetdrill repo in the image
+with:
+
+  -v /PATH/TO/packetdrill:/opt/packetdrill:rw
+
+You can also set `VIRTME_PACKETDRILL_PATH` with `run*.sh` scripts to do this
+mount and set the proper env var.

@@ -20,6 +20,7 @@ fi
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
 : "${INPUT_NO_BLOCK:=0}"
+: "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 
 KERNEL_SRC="${PWD}"
 
@@ -275,8 +276,12 @@ prepare() { local old_pwd mode
 
 	# make sure we have the last stable tests
 	cd /opt/packetdrill/
-	git fetch origin
-	git checkout -f "origin/${PACKETDRILL_GIT_BRANCH}"
+	if [ "${INPUT_PACKETDRILL_NO_SYNC}" = "1" ]; then
+		printinfo "Packetdrill: no sync"
+	else
+		git fetch origin
+		git checkout -f "origin/${PACKETDRILL_GIT_BRANCH}"
+	fi
 	cd gtests/net/packetdrill/
 	./configure
 	_make
