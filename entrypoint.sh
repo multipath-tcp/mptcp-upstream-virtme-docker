@@ -290,11 +290,11 @@ prepare() { local old_pwd mode
 	if [ "${mode}" = "debug" ]; then
 		# Add higher tolerance in debug mode
 		git grep -l "^--tolerance_usecs" | \
-			xargs sudo sed -i "s/^--tolerance_usecs=.*/&0/g"
+			xargs sed -i "s/^--tolerance_usecs=.*/&0/g"
 	else
 		# double the time in normal mode, CI can be quite loaded...
 		git grep -l "^--tolerance_usecs=1" | \
-			xargs sudo sed -i "s/^--tolerance_usecs=1/--tolerance_usecs=2/g"
+			xargs sed -i "s/^--tolerance_usecs=1/--tolerance_usecs=2/g"
 	fi
 	cd "${old_pwd}"
 
@@ -462,7 +462,7 @@ EOF
 run() {
 	printinfo "Run the virtme script: manual"
 
-	sudo "${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}"
+	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}"
 }
 
 run_expect() {
@@ -470,7 +470,7 @@ run_expect() {
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash -x
-sudo "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
+"${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
 
