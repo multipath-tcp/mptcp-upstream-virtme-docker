@@ -823,6 +823,14 @@ case "${MODE}" in
 	"make")
 		_make_o "${@}"
 		;;
+	"make.cross")
+		MAKE_CROSS="/usr/sbin/make.cross"
+		wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O "${MAKE_CROSS}"
+		chmod +x "${MAKE_CROSS}"
+		COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
+			COMPILER="${COMPILER}" \
+				"${MAKE_CROSS}" "${@}"
+		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
 		echo -e "${COLOR_RED}"
