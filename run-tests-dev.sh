@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 DIR="$(dirname "$(realpath -P "${0}")")"
 docker -v >/dev/null
 
