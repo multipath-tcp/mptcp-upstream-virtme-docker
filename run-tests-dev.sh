@@ -9,4 +9,6 @@ if [[ "${-}" =~ "x" ]]; then
 fi
 
 bash "-${-}" "${DIR}/build.sh"
+docker system prune --filter "label=mptcp-upstream-virtme-docker" -f
+
 bash "-${-}" "${DIR}/run.sh" "${@}"
