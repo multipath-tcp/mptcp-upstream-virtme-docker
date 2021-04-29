@@ -834,6 +834,15 @@ case "${MODE}" in
 	"cmd" | "command")
 		"${@}"
 		;;
+	"src" | "source" | "script")
+		if [ ! -f "${1}" ]; then
+			printerr "No such file: ${1}"
+			exit 1
+		fi
+
+		# shellcheck disable=SC1090
+		source "${1}"
+		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
 		echo -e "${COLOR_RED}"
