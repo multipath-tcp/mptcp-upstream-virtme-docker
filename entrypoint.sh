@@ -831,6 +831,9 @@ case "${MODE}" in
 			COMPILER="${COMPILER}" \
 				"${MAKE_CROSS}" "${@}"
 		;;
+	"cmd" | "command")
+		"${@}"
+		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
 		echo -e "${COLOR_RED}"
