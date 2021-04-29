@@ -4,5 +4,5 @@ docker -v >/dev/null
 
 export DOCKER_VIRTME_NAME="virtme"
 
-"${DIR}/build.sh"
-"${DIR}/run.sh" "${@}"
+bash "-${-}" "${DIR}/build.sh"
+bash "-${-}" "${DIR}/run.sh" "${@}"
