@@ -820,6 +820,9 @@ case "${MODE}" in
 		make clean
 		go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
 		;;
+	"make")
+		_make_o "${@}"
+		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
 		echo -e "${COLOR_RED}"
