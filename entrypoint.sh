@@ -43,7 +43,6 @@ MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
 
-export O="${VIRTME_BUILD_DIR}"
 export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
 export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 
