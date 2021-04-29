@@ -40,7 +40,7 @@ RUN apt-get update && \
 		gettext-base libevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
 		libtap-formatter-junit-perl \
 		zstd \
-		wget xz-utils lftp cpio \
+		wget xz-utils lftp cpio u-boot-tools \
 		&& \
 	apt-get clean
 
