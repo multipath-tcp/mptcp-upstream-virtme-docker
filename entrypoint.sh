@@ -13,7 +13,7 @@ is_ci() {
 	[ "${CI}" = "true" ]
 }
 
-if is_ci; then
+if is_ci || [ "${INPUT_TRACE}" = "1" ]; then
 	set -x
 fi
 
