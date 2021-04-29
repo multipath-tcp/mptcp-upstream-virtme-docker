@@ -29,14 +29,14 @@ RUN apt-get update && \
 		build-essential libncurses5-dev gcc libssl-dev bc bison \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
 		python3 python3-pkg-resources busybox \
-		iputils-ping ethtool klibc-utils kbd rsync ccache \
+		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
 		ca-certificates gnupg2 net-tools kmod \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
 		libsmi2-dev libcap-ng-dev \
 		pkg-config libmnl-dev \
 		clang lld llvm libcap-dev \
 		gdb crash dwarves \
-		iptables ebtables nftables vim psmisc bash-completion \
+		iptables ebtables nftables vim psmisc bash-completion less \
 		gettext-base libevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
 		libtap-formatter-junit-perl \
 		zstd \
