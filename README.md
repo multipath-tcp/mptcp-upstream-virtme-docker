@@ -6,11 +6,6 @@ This repo contains files to build a vitual environment with virtme to validate
 The idea here is to have automatic builds to published a docker that can be used
 by devs and CI.
 
-## Published image
-
-This docker image needs to be executed with `--privileged` option to be able to
-execute QEmu with KVM acceleration.
-
 ## Entrypoint options
 
 When launching the docker image, you have to specify the mode you want to use:
@@ -44,6 +39,9 @@ $ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   <entrypoint options, see above>
 ```
+
+This docker image needs to be executed with `--privileged` option to be able to
+execute QEmu with KVM acceleration.
 
 ### Developer mode
 
