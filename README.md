@@ -11,6 +11,26 @@ by devs and CI.
 This docker image needs to be executed with `--privileged` option to be able to
 execute QEmu with KVM acceleration.
 
+## Entrypoint options
+
+When launching the docker image, you have to specify the mode you want to use:
+
+- `manual-normal`: This will compile a kernel without a debug config and leave
+  you with a shell prompt.
+- `manual-debug`: Same but with a kernel debug config.
+- `auto-normal`: All the automatic tests are ran in a kernel without a debug
+  config.
+- `auto-debug`: Same but with a kernel debug config.
+- `auto-all`: Same but both non-debug and debug config are used.
+- `make`: run the make command with optional parameters.
+- `make.cross`: run Intel's make.cross command with optional parameters.
+- `cmd`: run the given command.
+- `src`: source a given script file.
+- `help`: display all possible commands.
+
+All the `manual-*` and `auto-*` options accept optional arguments for
+`scripts/config` script from the kernel source code, e.g. `-e DEBUG_LOCKDEP`
+
 ## How to use
 
 ### User mode
@@ -22,7 +42,7 @@ $ cd <kernel source code>
 $ docker pull mptcp/mptcp-upstream-virtme-docker:latest
 $ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
-  <manual-normal | manual-debug | auto-normal | auto-debug | auto-all>
+  <entrypoint options, see above>
 ```
 
 ### Developer mode
@@ -31,7 +51,7 @@ Clone this repo, then:
 
 ```
 $ cd <kernel source code>
-$ /PATH/TO/THIS/REPO/run-tests-dev.sh <manual-normal | manual-debug | auto-normal | auto-debug | auto-all>
+$ /PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
 ```
 
 This will build the docker image and start the script.
@@ -75,7 +95,7 @@ $ docker run \
   -v "${PWD}:${PWD}:rw" -w "${PWD}" \
   --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
-  <manual-normal | manual-debug | auto-normal | auto-debug | auto-all>
+  <entrypoint options, see above>
 ```
 
 If you use the `run*.sh` scripts, you can set `VIRTME_PACKETDRILL_PATH` to do
@@ -83,5 +103,5 @@ this mount and set the proper env var.
 
 ```
 VIRTME_PACKETDRILL_PATH=/PATH/TO/packetdrill \
-  /PATH/TO/THIS/REPO/run-tests-dev.sh <manual-normal | manual-debug | auto-normal | auto-debug | auto-all>
+  /PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
 ```

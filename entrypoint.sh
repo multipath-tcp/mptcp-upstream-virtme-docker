@@ -778,6 +778,13 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config'"
 	echo
+	echo "Usage: ${0} <make [params] | make.cross [params] | cmd <command> | src <source file>>"
+	echo
+	echo " - make: run the make command with optional parameters"
+	echo " - make.cross: run Intel's make.cross command with optional parameters"
+	echo " - cmd: run the given command"
+	echo " - src: source a given script file"
+	echo
 	echo "This script needs to be ran from the root of kernel source code."
 	echo
 	echo "Some files can be added in the kernel sources to modify the tests suite."
