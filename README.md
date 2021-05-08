@@ -32,10 +32,10 @@ All the `manual-*` and `auto-*` options accept optional arguments for
 
 Without cloning this repo, you can quickly get a ready to use environment:
 
-```
-$ cd <kernel source code>
-$ docker pull mptcp/mptcp-upstream-virtme-docker:latest
-$ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
+```bash
+cd <kernel source code>
+docker pull mptcp/mptcp-upstream-virtme-docker:latest
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   <entrypoint options, see above>
 ```
@@ -47,12 +47,12 @@ execute QEmu with KVM acceleration.
 
 Clone this repo, then:
 
-```
-$ cd <kernel source code>
-$ /PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
+```bash
+cd <kernel source code>
+/PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
 ```
 
-This will build the docker image and start the script.
+This will build and start the docker image.
 
 ## Extension
 
@@ -64,8 +64,9 @@ This will build the docker image and start the script.
 - `.virtme-exec-run`
 - `.virtme-exec-post`
 
-`pre` and `post` are ran before and after the tests suite.
-`run` is ran instead of the tests suite.
+`pre` and `post` are ran before and after the tests suite. `run` is ran instead
+of the tests suite.
+
 These scripts are sourced and can used functions from the virtme script.
 
 ### Env vars
@@ -85,8 +86,8 @@ Packetdrill's tolerances.
 
 If you run the Docker commands directly, you can use:
 
-```
-$ docker run \
+```bash
+docker run \
   -e INPUT_PACKETDRILL_NO_SYNC=1 \
   -e INPUT_PACKETDRILL_NO_MORE_TOLERANCE=1 \
   -v /PATH/TO/packetdrill:/opt/packetdrill:rw \
@@ -99,7 +100,7 @@ $ docker run \
 If you use the `run*.sh` scripts, you can set `VIRTME_PACKETDRILL_PATH` to do
 this mount and set the proper env var.
 
-```
+```bash
 VIRTME_PACKETDRILL_PATH=/PATH/TO/packetdrill \
   /PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
 ```
