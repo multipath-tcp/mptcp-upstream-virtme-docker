@@ -37,7 +37,7 @@ VIRTME_EXPECT_TIMEOUT="2700" # 45 minutes
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS}/virtme.expect"
 
-LINUX_USR_HEADERS_DIR="usr/include/linux"
+USR_INCLUDE_DIR="usr/include"
 MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
@@ -172,21 +172,23 @@ _make_o() {
 	_make O="${VIRTME_BUILD_DIR}" "${@}"
 }
 
-# $1: source ; [ $2: target ]
+# $1: source ; $2: target
 _add_symlink() {
 	local src="${1}"
-	local dst="${2:-${1}}"
+	local dst="${2}"
 
 	if [ -e "${dst}" ] && [ ! -L "${dst}" ]; then
 		printerr "${dst} already exists and is not a symlink, please remove it"
 		return 1
 	fi
 
-	ln -sf "${VIRTME_BUILD_DIR}/${src}" "${dst}"
+	ln -sf "${src}" "${dst}"
 }
 
-_add_workaround_selftests() {
-	_add_symlink "${LINUX_USR_HEADERS_DIR}"
+_add_workaround_selftests() { local f
+	for f in "${VIRTME_BUILD_DIR}/${USR_INCLUDE_DIR}/"*; do
+		_add_symlink "${f}" "${USR_INCLUDE_DIR}/$(basename "${f}")"
+	done
 }
 
 # $@: extra kconfig
@@ -731,7 +733,7 @@ go_expect() { local mode
 
 clean() { local path
 	# remove symlinks we added as a workaround for the selftests
-	rm -fv "${LINUX_USR_HEADERS_DIR}"
+	git clean -f -- "${USR_INCLUDE_DIR}"
 	for path in $(_get_selftests_gen_files); do
 		rm -fv "${MPTCP_SELFTESTS_DIR}/${path}"
 	done
