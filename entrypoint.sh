@@ -26,16 +26,17 @@ fi
 KERNEL_SRC="${PWD}"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
-
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
+VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
+VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/perf"
+
 VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
-VIRTME_SCRIPTS="${VIRTME_WORKDIR}/scripts"
-VIRTME_SCRIPT="${VIRTME_SCRIPTS}/tests.sh"
+VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_EXPECT_TIMEOUT="2700" # 45 minutes
-VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS}/virtme.sh"
-VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS}/virtme.expect"
+VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
+VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
 USR_INCLUDE_DIR="usr/include"
 MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
@@ -48,7 +49,8 @@ export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 
 mkdir -p \
 	"${VIRTME_BUILD_DIR}" \
-	"${VIRTME_SCRIPTS}" \
+	"${VIRTME_SCRIPTS_DIR}" \
+	"${VIRTME_PERF_DIR}" \
 	"${CCACHE_DIR}"
 
 VIRTME_PROG_PATH="/opt/virtme"
@@ -229,18 +231,38 @@ gen_kconfig() { local kconfig=()
 	_make_o olddefconfig
 }
 
-build() {
-	printinfo "Build the kernel"
-
+build_kernel() {
 	_make_o
 	_make_o headers_install
+}
+
+build_modules() {
 	_make_o modules
 	_make_o modules_install
+}
 
+build_selftests() {
 	# it doesn't seem OK to use a different output dir with our selftests
 	_make_o INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}/kselftest/usr" headers_install
 	_add_workaround_selftests
 	_make_o -C "${MPTCP_SELFTESTS_DIR}"
+}
+
+build_perf() {
+	cd tools/perf
+
+	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install
+
+	cd "${KERNEL_SRC}"
+}
+
+build() {
+	printinfo "Build the kernel"
+
+	build_kernel
+	build_modules
+	build_perf
+	build_selftests
 }
 
 prepare() { local old_pwd mode

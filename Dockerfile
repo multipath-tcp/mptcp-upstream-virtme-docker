@@ -38,6 +38,7 @@ RUN apt-get update && \
 		gdb crash dwarves \
 		iptables ebtables nftables vim psmisc bash-completion less \
 		gettext-base libevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
+		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev \
 		libtap-formatter-junit-perl \
 		zstd \
 		wget xz-utils lftp cpio u-boot-tools \
