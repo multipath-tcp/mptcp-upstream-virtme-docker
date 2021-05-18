@@ -34,7 +34,7 @@ VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
-VIRTME_EXPECT_TIMEOUT="2700" # 45 minutes
+VIRTME_EXPECT_TIMEOUT="2700" # 45 minutes: auto mode on CI only
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -285,6 +285,9 @@ prepare() { local old_pwd mode
 		mkdir -p "${RESULTS_DIR}"
 
 		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+
+		# disable timeout
+		VIRTME_EXPECT_TIMEOUT="-1"
 	fi
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
