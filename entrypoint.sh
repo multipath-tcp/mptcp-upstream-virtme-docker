@@ -330,7 +330,10 @@ prepare() { local old_pwd mode
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash -x
 
+# useful for virtme-exec-run
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
+RESULTS_DIR="${RESULTS_DIR}"
+OUTPUT_VIRTME="${OUTPUT_VIRTME}"
 
 # \$1: file ; \$2+: commands
 _tap() { local out tmp fname rc
@@ -451,6 +454,10 @@ run_packetdrill_all() { local pktd_dir
 	for pktd_dir in mptcp/*; do
 		run_packetdrill_one "\${pktd_dir}"
 	done
+}
+
+has_call_trace() {
+	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
 # To run commands before executing the tests
