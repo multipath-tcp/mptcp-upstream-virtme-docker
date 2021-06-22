@@ -463,6 +463,18 @@ has_call_trace() {
 	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
+# args: what needs to be executed
+run_loop() { local i
+	i=1
+	while true; do
+		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
+		"\${@}" || break
+		has_call_trace && break
+		i=\$((i+1))
+	done
+	echo -e "\n\n\tStopped after \${i} attempts\n\n"
+}
+
 # To run commands before executing the tests
 if [ -f "${VIRTME_EXEC_PRE}" ]; then
 	source "${VIRTME_EXEC_PRE}"
@@ -478,6 +490,7 @@ if [ -f "${VIRTME_EXEC_RUN}" ]; then
 	source "${VIRTME_EXEC_RUN}"
 	# e.g.:
 	# run_selftest_one ./mptcp_join.sh -f
+	# run_loop run_selftest_one ./simult_flows.sh
 	# run_packetdrill_one mptcp/dss
 else
 	run_kunit
