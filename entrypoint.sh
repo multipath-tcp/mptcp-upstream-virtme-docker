@@ -213,6 +213,9 @@ gen_kconfig() { local kconfig=()
 		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
 	)
 
+	# Useful to reproduce issue
+	kconfig+=(-e NET_SCH_TBF)
+
 	# extra config
 	if [ -n "${1}" ]; then
 		kconfig+=("${@}")
