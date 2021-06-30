@@ -10,9 +10,9 @@ ARG PACKETDRILL_GIT_BRANCH="mptcp-net-next"
 ENV PACKETDRILL_GIT_BRANCH="${PACKETDRILL_GIT_BRANCH}"
 
 ARG LIBPCAP_GIT_URL="https://github.com/the-tcpdump-group/libpcap.git"
-ARG LIBPCAP_GIT_SHA="libpcap-1.10.0"
+ARG LIBPCAP_GIT_SHA="libpcap-1.10.1"
 ARG TCPDUMP_GIT_URL="https://github.com/the-tcpdump-group/tcpdump.git"
-ARG TCPDUMP_GIT_SHA="tcpdump-4.99.0"
+ARG TCPDUMP_GIT_SHA="tcpdump-4.99.1"
 
 ARG IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 #IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2-next.git"
