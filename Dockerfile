@@ -22,6 +22,10 @@ ENV IPROUTE2_GIT_SHA="${IPROUTE2_GIT_SHA}"
 ARG BYOBU_URL="https://launchpad.net/byobu/trunk/5.133/+download/byobu_5.133.orig.tar.gz"
 ARG BYOBU_MD5="0ff03f3795cc08aae50c1ab117c03261 byobu.tar.gz"
 
+ARG SPARSE_URL="https://mirrors.edge.kernel.org/pub/software/devel/sparse/dist/sparse-0.6.3.tar.xz"
+ARG SPARSE_TARBALL="sparse.tar.xz"
+ARG SPARSE_SHA="d4f6dbad8409e8e20a19f164b2c16f1edf76438ff77cf291935fde081b61a899  ${SPARSE_TARBALL}"
+
 # dependencies for the script
 RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive \
@@ -34,7 +38,7 @@ RUN apt-get update && \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
 		libsmi2-dev libcap-ng-dev \
 		pkg-config libmnl-dev \
-		clang lld llvm libcap-dev \
+		clang lld llvm llvm-dev libcap-dev \
 		gdb crash dwarves \
 		iptables ebtables nftables vim psmisc bash-completion less \
 		gettext-base libevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
@@ -60,6 +64,17 @@ RUN cd /opt && \
 		./configure --prefix=/usr && \
 		make && \
 		sudo make install
+
+# Sparse
+RUN cd /opt && \
+    curl -L "${SPARSE_URL}" -o "${SPARSE_TARBALL}" && \
+    echo "${SPARSE_SHA}" | sha256sum --check && \
+    tar xJf "${SPARSE_TARBALL}" && \
+    cd "sparse-"* && \
+        make && \
+        make PREFIX=/usr install && \
+        cd .. && \
+    rm -rf "${SPARSE_TARBALL}" "sparse-"*
 
 # libpcap & tcpdump
 RUN cd /opt && \
