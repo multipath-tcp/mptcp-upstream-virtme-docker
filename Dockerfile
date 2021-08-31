@@ -16,7 +16,7 @@ ARG TCPDUMP_GIT_SHA="tcpdump-4.99.1"
 
 ARG IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 #IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2-next.git"
-ARG IPROUTE2_GIT_SHA="v5.13.0"
+ARG IPROUTE2_GIT_SHA="v5.14.0"
 ENV IPROUTE2_GIT_SHA="${IPROUTE2_GIT_SHA}"
 
 ARG BYOBU_URL="https://launchpad.net/byobu/trunk/5.133/+download/byobu_5.133.orig.tar.gz"
