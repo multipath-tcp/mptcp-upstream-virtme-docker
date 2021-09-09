@@ -779,6 +779,34 @@ go_expect() { local mode
 	analyze "${mode}" "${@}"
 }
 
+static_analysis() { local src obj ftmp
+	ftmp=$(mktemp)
+
+	for src in net/mptcp/*.c; do
+		obj="${src/%.c/.o}"
+		if [[ "${src}" = *"_test.mod.c" ]]; then
+			continue
+		fi
+
+		printinfo "Checking: ${src}"
+
+		touch "${src}"
+		if ! KCFLAGS="-Werror" make W=1 "${obj}"; then
+			printerr "Found make W=1 issues for ${src}"
+		fi
+
+		touch "${src}"
+		make C=1 "${obj}" >/dev/null 2>"${ftmp}" || true
+
+		if test -s "${ftmp}"; then
+			cat "${ftmp}"
+			printerr "Found make C=1 issues for ${src}"
+		fi
+	done
+
+	rm -f "${ftmp}"
+}
+
 clean() { local path
 	# remove symlinks we added as a workaround for the selftests
 	git clean -f -- "${USR_INCLUDE_DIR}"
@@ -899,6 +927,9 @@ case "${MODE}" in
 
 		# shellcheck disable=SC1090
 		source "${1}"
+		;;
+	"static" | "static-analysis")
+		static_analysis
 		;;
 	*)
 		printerr "Unknown mode: ${MODE}"
