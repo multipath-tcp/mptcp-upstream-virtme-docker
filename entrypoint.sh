@@ -216,6 +216,9 @@ gen_kconfig() { local kconfig=()
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
 
+	# Disable retpoline to accelerate tests
+	kconfig+=(-d RETPOLINE)
+
 	# extra config
 	if [ -n "${1}" ]; then
 		kconfig+=("${@}")
