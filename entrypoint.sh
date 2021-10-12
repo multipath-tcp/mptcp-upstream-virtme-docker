@@ -322,14 +322,24 @@ prepare() { local old_pwd mode
 	cd ../mptcp
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
 		printinfo "Packetdrill: not modifying the tolerance"
-	elif [ "${mode}" = "debug" ]; then
-		# Add higher tolerance in debug mode
-		git grep -l "^--tolerance_usecs" | \
-			xargs sed -i "s/^--tolerance_usecs=.*/&0/g"
 	else
-		# double the time in normal mode, CI can be quite loaded...
-		git grep -l "^--tolerance_usecs=1" | \
-			xargs sed -i "s/^--tolerance_usecs=1/--tolerance_usecs=2/g"
+		local pf val new_val
+		for pf in $(git grep -l "^--tolerance_usecs="); do
+			# shellcheck disable=SC2013 # to filter duplicated ones
+			for val in $(grep "^--tolerance_usecs=" "${pf}" | cut -d= -f2 | sort -u); do
+				if [ "${mode}" = "debug" ]; then
+					# Add higher tolerance in debug mode:
+					# the environment can be very slow
+					new_val=$((val * 10))
+				else
+					# double the time in normal mode:
+					# public CI can be quite loaded...
+					new_val=$((val * 2))
+				fi
+
+				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
+			done
+		done
 	fi
 	cd "${old_pwd}"
 
