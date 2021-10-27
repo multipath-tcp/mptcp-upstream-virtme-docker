@@ -302,6 +302,7 @@ prepare() { local old_pwd mode
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
+	local mptcp_connect_csum_tap="${RESULTS_DIR}/mptcp_connect_csum.tap"
 	local mptcp_join_csum_tap="${RESULTS_DIR}/mptcp_join_csum.tap"
 	local pktd_base="${RESULTS_DIR}/packetdrill"
 
@@ -452,6 +453,10 @@ run_mptcp_connect_mmap() {
 	_run_selftest_one_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
 }
 
+run_mptcp_connect_csum() {
+	_run_selftest_one_tap "${mptcp_connect_csum_tap}" ./mptcp_connect.sh -C
+}
+
 run_mptcp_join_csum() {
 	_run_selftest_one_tap "${mptcp_join_csum_tap}" ./mptcp_join.sh -C
 }
@@ -514,6 +519,7 @@ else
 	run_kunit
 	run_selftest_all
 	run_mptcp_connect_mmap
+	run_mptcp_connect_csum
 	run_mptcp_join_csum
 	run_packetdrill_all
 fi
