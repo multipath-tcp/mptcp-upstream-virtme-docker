@@ -247,11 +247,8 @@ build_modules() {
 	_make_o modules_install
 }
 
-build_selftests() {
-	# it doesn't seem OK to use a different output dir with our selftests
+build_headers() {
 	_make_o INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}/kselftest/usr" headers_install
-	_add_workaround_selftests
-	_make_o -C "${MPTCP_SELFTESTS_DIR}"
 }
 
 build_perf() {
@@ -268,44 +265,17 @@ build() {
 	build_kernel
 	build_modules
 	build_perf
-	build_selftests
+	build_headers
 }
 
-prepare() { local old_pwd mode
+build_selftests() {
+	# it doesn't seem OK to use a different output dir with our selftests
+	_add_workaround_selftests
+	_make_o -C "${MPTCP_SELFTESTS_DIR}"
+}
+
+build_packetdrill() { local old_pwd
 	old_pwd="${PWD}"
-	mode="${1:-}"
-
-	printinfo "Prepare the environment"
-
-	if is_ci; then
-		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${KERNEL_SRC}"
-
-		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
-
-		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
-	else
-		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
-		rm -rf "${RESULTS_DIR}"
-		mkdir -p "${RESULTS_DIR}"
-
-		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
-
-		# disable timeout
-		VIRTME_EXPECT_TIMEOUT="-1"
-	fi
-
-	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
-	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
-	CONCLUSION="${RESULTS_DIR}/${CONCLUSION}"
-
-	local kunit_tap="${RESULTS_DIR}/kunit.tap"
-	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
-	local pktd_base="${RESULTS_DIR}/packetdrill"
-
-	# for the kmods: TODO: still needed?
-	mkdir -p /lib/modules
 
 	# make sure we have the last stable tests
 	cd /opt/packetdrill/
@@ -342,6 +312,45 @@ prepare() { local old_pwd mode
 		done
 	fi
 	cd "${old_pwd}"
+}
+
+prepare() { local mode
+	mode="${1:-}"
+
+	printinfo "Prepare the environment"
+
+	if is_ci; then
+		# Root dir: not to have to go down dirs to get artifacts
+		RESULTS_DIR="${KERNEL_SRC}"
+
+		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+
+		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
+	else
+		# avoid override
+		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
+		rm -rf "${RESULTS_DIR}"
+		mkdir -p "${RESULTS_DIR}"
+
+		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+
+		# disable timeout
+		VIRTME_EXPECT_TIMEOUT="-1"
+	fi
+
+	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
+	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
+	CONCLUSION="${RESULTS_DIR}/${CONCLUSION}"
+
+	local kunit_tap="${RESULTS_DIR}/kunit.tap"
+	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
+	local pktd_base="${RESULTS_DIR}/packetdrill"
+
+	# for the kmods: TODO: still needed?
+	mkdir -p /lib/modules
+
+	build_selftests
+	build_packetdrill
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash -x
