@@ -71,6 +71,12 @@ These scripts are sourced and can used functions from the virtme script.
 
 ### Env vars
 
+#### Skip kernel build
+
+If you didn't change the kernel code, it can be useful to skip the compilation
+part. You can then set `INPUT_BUILD_SKIP=1` to save a few seconds to start the
+VM.
+
 #### Not blocking with questions
 
 You can set `INPUT_NO_BLOCK=1` env var not to block if these files are present.

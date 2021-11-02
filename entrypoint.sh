@@ -260,6 +260,11 @@ build_perf() {
 }
 
 build() {
+	if [ "${INPUT_BUILD_SKIP}" = 1 ]; then
+		printinfo "Skip kernel build"
+		return 0
+	fi
+
 	printinfo "Build the kernel"
 
 	build_kernel
