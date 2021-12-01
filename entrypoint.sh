@@ -514,6 +514,10 @@ fi
 
 # To exec different tests than the full suite
 if [ -f "${VIRTME_EXEC_RUN}" ]; then
+	echo -e "\n\n\tNot running all tests but:\n\n"
+	echo "-------- 8< --------"
+	cat "${VIRTME_EXEC_RUN}"
+	echo "-------- 8< --------"
 	source "${VIRTME_EXEC_RUN}"
 	# e.g.:
 	# run_selftest_one ./mptcp_join.sh -f
