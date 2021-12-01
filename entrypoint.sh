@@ -959,6 +959,7 @@ case "${MODE}" in
 		static_analysis
 		;;
 	*)
+		set +x
 		printerr "Unknown mode: ${MODE}"
 		echo -e "${COLOR_RED}"
 		usage
