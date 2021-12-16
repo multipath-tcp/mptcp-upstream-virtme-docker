@@ -82,6 +82,11 @@ VM.
 You can set `INPUT_NO_BLOCK=1` env var not to block if these files are present.
 This is useful if you need to do a `git bisect`.
 
+### Not stop after an error is detected with `run_loop`
+
+You can set `INPUT_RUN_LOOP_CONTINUE=1` env var to continue even if an error is
+detected. Failed iterations are loggued in `${CONCLUSION}.failed`.
+
 #### Packetdrill
 
 You can set `INPUT_PACKETDRILL_NO_SYNC=1` env var not to sync Packetdrill with

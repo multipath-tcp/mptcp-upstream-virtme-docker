@@ -22,6 +22,7 @@ fi
 : "${INPUT_NO_BLOCK:=0}"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
+: "${INPUT_RUN_LOOP_CONTINUE:=0}"
 
 KERNEL_SRC="${PWD}"
 
@@ -495,8 +496,14 @@ run_loop() { local i
 	i=1
 	while true; do
 		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
-		"\${@}" || break
-		has_call_trace && break
+		if ! "\${@}" || has_call_trace; then
+			echo -e "\n\n\t=== ERROR after \${i} attempts (\$(date -R)) ===\n\n"
+			if [ "${INPUT_RUN_LOOP_CONTINUE}" = "1" ]; then
+				echo "Attempt: \${i}" >> "${CONCLUSION}.failed"
+			else
+				break
+			fi
+		fi
 		i=\$((i+1))
 	done
 	echo -e "\n\n\tStopped after \${i} attempts\n\n"
