@@ -61,13 +61,14 @@ VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto -
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
 # TODO: kmemleak (or all the time?)
-# TODO: kfence (or all the time?)
+# kfence: only in non-debug mode, KASAN is more precise
 KCONFIG_EXTRA_CHECKS=(
 	-e KASAN -e KASAN_OUTLINE -d TEST_KASAN
 	-e PROVE_LOCKING -e DEBUG_LOCKDEP
 	-e PREEMPT -e DEBUG_PREEMPT
 	-e DEBUG_SLAVE -e DEBUG_PAGEALLOC -e DEBUG_MUTEXES -e DEBUG_SPINLOCK -e DEBUG_ATOMIC_SLEEP
 	-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
+	-d KFENCE
 )
 
 # results dir
@@ -213,6 +214,8 @@ gen_kconfig() { local kconfig=()
 		-e FTRACE -e FUNCTION_TRACER -e DYNAMIC_FTRACE
 		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
 	)
+
+	kconfig+=(-e KFENCE)
 
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
