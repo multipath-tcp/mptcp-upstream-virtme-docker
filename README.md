@@ -34,9 +34,8 @@ Without cloning this repo, you can quickly get a ready to use environment:
 
 ```bash
 cd <kernel source code>
-docker pull mptcp/mptcp-upstream-virtme-docker:latest
 docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
-  mptcp/mptcp-upstream-virtme-docker:latest \
+  --pull always mptcp/mptcp-upstream-virtme-docker:latest \
   <entrypoint options, see above>
 ```
 
