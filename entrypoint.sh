@@ -688,6 +688,7 @@ _print_summary_header() {
 
 	echo "== Summary =="
 	echo
+	echo "Ref: ${CIRRUS_TAG:-$(git describe --tags)}"
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
 	echo
