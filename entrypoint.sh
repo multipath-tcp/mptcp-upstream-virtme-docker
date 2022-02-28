@@ -314,7 +314,7 @@ build_packetdrill() { local old_pwd
 				else
 					# double the time in normal mode:
 					# public CI can be quite loaded...
-					new_val=$((val * 2))
+					new_val=$((val * 4))
 				fi
 
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
