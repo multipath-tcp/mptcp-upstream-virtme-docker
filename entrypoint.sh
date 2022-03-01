@@ -22,6 +22,7 @@ fi
 : "${INPUT_NO_BLOCK:=0}"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
+: "${INPUT_PACKETDRILL_STABLE:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
 
 KERNEL_SRC="${PWD}"
@@ -284,8 +285,10 @@ build_selftests() {
 	_make_o -C "${MPTCP_SELFTESTS_DIR}"
 }
 
-build_packetdrill() { local old_pwd
+build_packetdrill() { local old_pwd kversion branch
 	old_pwd="${PWD}"
+
+	kversion=$(make kernelversion | cut -d. -f-2)
 
 	# make sure we have the last stable tests
 	cd /opt/packetdrill/
@@ -293,7 +296,13 @@ build_packetdrill() { local old_pwd
 		printinfo "Packetdrill: no sync"
 	else
 		git fetch origin
-		git checkout -f "origin/${PACKETDRILL_GIT_BRANCH}"
+
+		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
+			branch="mptcp-${kversion}"
+		else
+			branch="${PACKETDRILL_GIT_BRANCH:-mptcp-net-next}"
+		fi
+		git checkout -f "origin/${branch}"
 	fi
 	cd gtests/net/packetdrill/
 	./configure

@@ -88,6 +88,9 @@ detected. Failed iterations are loggued in `${CONCLUSION}.failed`.
 
 #### Packetdrill
 
+You can set `INPUT_PACKETDRILL_STABLE=1` env var to use the branch for the
+current kernel version instead of the dev version following MPTCP net-next.
+
 You can set `INPUT_PACKETDRILL_NO_SYNC=1` env var not to sync Packetdrill with
 upstream. This is useful if you mount a local packetdrill repo in the image.
 
@@ -105,8 +108,10 @@ docker run \
   --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   manual
+
 cd /opt/packetdrill/gtests/net/
 ./packetdrill/run_all.py -lv mptcp/dss ## or any other subdirs
+
 # or
 cd /opt/packetdrill/gtests/net/mptcp/dss/ ## or any other subdirs
 ../../packetdrill/packetdrill -v dss_fin_server.pkt ## or any other tests
