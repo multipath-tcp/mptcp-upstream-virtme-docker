@@ -514,7 +514,14 @@ kmemleak_scan() {
 }
 
 # args: what needs to be executed
-run_loop() { local i
+run_loop() { local i tdir
+
+	tdir="${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
+	if ls "\${tdir}/"*.pcap &>/dev/null; then
+		mkdir -p "\${tdir}/pcaps"
+		mv "\${tdir}/"*.pcap "\${tdir}/pcaps"
+	fi
+
 	i=1
 	while true; do
 		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
@@ -526,6 +533,7 @@ run_loop() { local i
 				break
 			fi
 		fi
+		rm -f "\${tdir}/"*.pcap 2>/dev/null
 		i=\$((i+1))
 	done
 	echo -e "\n\n\tStopped after \${i} attempts\n\n"
