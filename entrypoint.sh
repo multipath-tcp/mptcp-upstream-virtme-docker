@@ -61,18 +61,6 @@ VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
 VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
-# kfence: only in non-debug mode, KASAN is more precise
-KCONFIG_EXTRA_CHECKS=(
-	-e KASAN -e KASAN_OUTLINE -d TEST_KASAN
-	-e PROVE_LOCKING -e DEBUG_LOCKDEP
-	-e PREEMPT -e DEBUG_PREEMPT
-	-e DEBUG_SLAVE -e DEBUG_PAGEALLOC -e DEBUG_MUTEXES -e DEBUG_SPINLOCK -e DEBUG_ATOMIC_SLEEP
-	-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
-	-e NET_NS_REFCNT_TRACKER
-	-e DEBUG_KMEMLEAK -e DEBUG_KMEMLEAK_AUTO_SCAN -d DEBUG_KMEMLEAK_DEFAULT_OFF
-	-d KFENCE
-)
-
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
 RESULTS_DIR=
@@ -199,8 +187,27 @@ _add_workaround_selftests() { local f
 }
 
 # $@: extra kconfig
-gen_kconfig() { local kconfig=()
+gen_kconfig() { local mode kconfig=()
+	mode="${1}"
+	shift
+
 	printinfo "Generate kernel config"
+
+	if [ "${mode}" = "debug" ]; then
+		kconfig+=(
+			-e KASAN -e KASAN_OUTLINE -d TEST_KASAN
+			-e PROVE_LOCKING -e DEBUG_LOCKDEP
+			-e PREEMPT -e DEBUG_PREEMPT
+			-e DEBUG_SLAVE -e DEBUG_PAGEALLOC -e DEBUG_MUTEXES -e DEBUG_SPINLOCK -e DEBUG_ATOMIC_SLEEP
+			-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
+			-e NET_NS_REFCNT_TRACKER
+			-e DEBUG_KMEMLEAK -e DEBUG_KMEMLEAK_AUTO_SCAN -d DEBUG_KMEMLEAK_DEFAULT_OFF
+		)
+	else
+		# low-overhead sampling-based memory safety error detector.
+		# Only in non-debug: KASAN is more precise
+		kconfig+=(-e KFENCE)
+	fi
 
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
@@ -209,7 +216,7 @@ gen_kconfig() { local kconfig=()
 	# note: we still need SHA1 for fallback tests with v0
 	kconfig+=(-e TUN -e CRYPTO_USER_API_HASH -e CRYPTO_SHA1)
 
-	# Debug info
+	# Debug info for developers
 	kconfig+=(
 		-e DEBUG_INFO -e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_DWARF4
 		-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT -e GDB_SCRIPTS
@@ -218,8 +225,6 @@ gen_kconfig() { local kconfig=()
 		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
 	)
 
-	kconfig+=(-e KFENCE)
-
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
 
@@ -227,9 +232,7 @@ gen_kconfig() { local kconfig=()
 	kconfig+=(-d RETPOLINE)
 
 	# extra config
-	if [ -n "${1}" ]; then
-		kconfig+=("${@}")
-	fi
+	kconfig+=("${@}")
 
 	_make_o defconfig
 
@@ -335,7 +338,7 @@ build_packetdrill() { local old_pwd kversion branch
 }
 
 prepare() { local mode
-	mode="${1:-}"
+	mode="${1}"
 
 	printinfo "Prepare the environment"
 
@@ -842,7 +845,6 @@ analyze() {
 # $@: args for kconfig
 go_manual() { local mode
 	mode="${1}"
-	shift
 
 	printinfo "Start: manual (${mode})"
 
@@ -855,7 +857,6 @@ go_manual() { local mode
 # $1: mode ; $2+: args for kconfig
 go_expect() { local mode
 	mode="${1}"
-	shift
 
 	printinfo "Start: auto (${mode})"
 
@@ -869,7 +870,7 @@ go_expect() { local mode
 	prepare "${mode}"
 	run_expect
 	ccache_stat
-	analyze "${mode}" "${@}"
+	analyze "${@}"
 }
 
 static_analysis() { local src obj ftmp
@@ -983,20 +984,20 @@ case "${MODE}" in
 		go_manual "normal" "${@}"
 		;;
 	"debug" | "manual-debug")
-		go_manual "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		go_manual "debug" "${@}"
 		;;
 	"expect-normal" | "auto-normal")
 		go_expect "normal" "${@}"
 		;;
 	"expect-debug" | "auto-debug")
-		go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		go_expect "debug" "${@}"
 		;;
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
 		# tests execution, it might hide bugs
 		go_expect "normal" "${@}"
 		make clean
-		go_expect "debug" "${KCONFIG_EXTRA_CHECKS[@]}" "${@}"
+		go_expect "debug" "${@}"
 		;;
 	"make")
 		_make_o "${@}"
