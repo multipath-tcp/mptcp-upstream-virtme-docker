@@ -195,18 +195,17 @@ gen_kconfig() { local mode kconfig=()
 
 	if [ "${mode}" = "debug" ]; then
 		kconfig+=(
-			-e KASAN -e KASAN_OUTLINE -d TEST_KASAN
-			-e PROVE_LOCKING -e DEBUG_LOCKDEP
-			-e PREEMPT -e DEBUG_PREEMPT
-			-e DEBUG_SLAVE -e DEBUG_PAGEALLOC -e DEBUG_MUTEXES -e DEBUG_SPINLOCK -e DEBUG_ATOMIC_SLEEP
-			-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
-			-e NET_NS_REFCNT_TRACKER
-			-e DEBUG_KMEMLEAK -e DEBUG_KMEMLEAK_AUTO_SCAN -d DEBUG_KMEMLEAK_DEFAULT_OFF
+			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
+			-d SLUB_DEBUG_ON # perf impact is too important
 		)
+
+		_make_o defconfig debug.config
 	else
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
+
+		_make_o defconfig
 	fi
 
 	# Extra options needed for MPTCP KUnit tests
@@ -233,8 +232,6 @@ gen_kconfig() { local mode kconfig=()
 
 	# extra config
 	kconfig+=("${@}")
-
-	_make_o defconfig
 
 	# KBUILD_OUTPUT is used by virtme
 	"${VIRTME_CONFIGKERNEL}" --arch=x86_64 --update
