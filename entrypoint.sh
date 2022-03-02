@@ -61,7 +61,6 @@ VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
 VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
-# TODO: kmemleak (or all the time?)
 # kfence: only in non-debug mode, KASAN is more precise
 KCONFIG_EXTRA_CHECKS=(
 	-e KASAN -e KASAN_OUTLINE -d TEST_KASAN
@@ -70,6 +69,7 @@ KCONFIG_EXTRA_CHECKS=(
 	-e DEBUG_SLAVE -e DEBUG_PAGEALLOC -e DEBUG_MUTEXES -e DEBUG_SPINLOCK -e DEBUG_ATOMIC_SLEEP
 	-e PROVE_RCU -e DEBUG_OBJECTS_RCU_HEAD
 	-e NET_NS_REFCNT_TRACKER
+	-e DEBUG_KMEMLEAK -e DEBUG_KMEMLEAK_AUTO_SCAN -d DEBUG_KMEMLEAK_DEFAULT_OFF
 	-d KFENCE
 )
 
@@ -81,6 +81,7 @@ RESULTS_DIR=
 OUTPUT_VIRTME=
 TESTS_SUMMARY=
 CONCLUSION="conclusion.txt"
+KMEMLEAK="kmemleak.txt"
 
 EXIT_STATUS=0
 EXIT_REASONS=()
@@ -360,6 +361,7 @@ prepare() { local mode
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/${CONCLUSION}"
+	KMEMLEAK="${RESULTS_DIR}/${KMEMLEAK}"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
@@ -449,7 +451,7 @@ _run_kunit() { local ko kunit
 }
 
 run_kunit() {
-	cd ${KERNEL_SRC}
+	cd "${KERNEL_SRC}"
 	_run_kunit | tee "${kunit_tap}"
 }
 
@@ -504,6 +506,13 @@ has_call_trace() {
 	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
+kmemleak_scan() {
+	if [ "${mode}" = "debug" ]; then
+		echo scan > /sys/kernel/debug/kmemleak
+		cat /sys/kernel/debug/kmemleak > "${KMEMLEAK}"
+	fi
+}
+
 # args: what needs to be executed
 run_loop() { local i
 	i=1
@@ -549,6 +558,10 @@ else
 	run_mptcp_connect_mmap
 	run_packetdrill_all
 fi
+
+cd "${KERNEL_SRC}"
+
+kmemleak_scan
 
 # To run commands before executing the tests
 if [ -f "${VIRTME_EXEC_POST}" ]; then
@@ -690,6 +703,20 @@ _print_timed_out() {
 	echo "Global Timeout"
 }
 
+_has_kmemleak() {
+	[ -s "${KMEMLEAK}" ]
+}
+
+_print_kmemleak() {
+	echo
+	_print_line
+	echo "KMemLeak:"
+	_print_line
+	cat "${KMEMLEAK}"
+	_print_line
+	echo "KMemLeak detected"
+}
+
 # $1: mode, rest: args for kconfig
 _print_summary_header() {
 	local mode="${1}"
@@ -786,6 +813,12 @@ analyze() {
 	if _has_timed_out; then
 		_print_timed_out | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${mode}" "Global Timeout"
+		EXIT_STATUS=1
+	fi
+
+	if _has_kmemleak; then
+		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "${mode}" "KMemLeak"
 		EXIT_STATUS=1
 	fi
 
