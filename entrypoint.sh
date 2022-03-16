@@ -289,7 +289,7 @@ build_selftests() {
 build_packetdrill() { local old_pwd kversion branch
 	old_pwd="${PWD}"
 
-	kversion=$(make kernelversion | cut -d. -f-2)
+	kversion=$(make -s kernelversion | cut -d. -f-2)
 
 	# make sure we have the last stable tests
 	cd /opt/packetdrill/
