@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 LABEL name=mptcp-upstream-virtme-docker
 
-ARG VIRTME_GIT_URL="git://git.kernel.org/pub/scm/utils/kernel/virtme/virtme.git"
+ARG VIRTME_GIT_URL="https://git.kernel.org/pub/scm/utils/kernel/virtme/virtme.git"
 ARG VIRTME_GIT_SHA="1ab5dea159016cd7a079811091d12d2d57a2c023"
 
 ARG PACKETDRILL_GIT_URL="https://github.com/multipath-tcp/packetdrill.git"
@@ -14,8 +14,8 @@ ARG LIBPCAP_GIT_SHA="libpcap-1.10.1"
 ARG TCPDUMP_GIT_URL="https://github.com/the-tcpdump-group/tcpdump.git"
 ARG TCPDUMP_GIT_SHA="tcpdump-4.99.1"
 
-ARG IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
-#IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2-next.git"
+ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
+#IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2-next.git"
 ARG IPROUTE2_GIT_SHA="v5.16.0"
 ENV IPROUTE2_GIT_SHA="${IPROUTE2_GIT_SHA}"
 
