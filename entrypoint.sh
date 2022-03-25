@@ -114,6 +114,11 @@ check_last_iproute() { local last curr
 		return 0
 	fi
 
+	# skip the check for stable, fine not to have the latest version
+	if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
+		return 0
+	fi
+
 	printinfo "Check IPRoute2 version"
 
 	last="$(_get_last_iproute_version)"
