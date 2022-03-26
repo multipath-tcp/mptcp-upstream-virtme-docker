@@ -25,6 +25,8 @@ fi
 : "${INPUT_PACKETDRILL_STABLE:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
 
+: "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
+
 KERNEL_SRC="${PWD}"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
@@ -277,10 +279,8 @@ build_selftests() {
 	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/usr/include" -C "${MPTCP_SELFTESTS_DIR}"
 }
 
-build_packetdrill() { local old_pwd kversion branch
+build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	old_pwd="${PWD}"
-
-	kversion=$(make -s kernelversion | cut -d. -f-2)
 
 	# make sure we have the last stable tests
 	cd /opt/packetdrill/
@@ -289,10 +289,29 @@ build_packetdrill() { local old_pwd kversion branch
 	else
 		git fetch origin
 
+		branch="${PACKETDRILL_GIT_BRANCH}"
 		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
-			branch="mptcp-${kversion}"
-		else
-			branch="${PACKETDRILL_GIT_BRANCH:-mptcp-net-next}"
+			kversion=$(make -s kernelversion | cut -d. -f-2) ## 5.17.0 or 5.17.0-rc8
+			kver_maj=${kversion%%.*} ## 5
+			kver_min=${kversion#*.} ## 17.0*
+			kver_min=${kver_min%%.*} ## 17
+
+			# without rc, it means we probably already merged with net-next
+			if [[ ! "${kversion}" =~ rc  ]]; then
+				kver_min=$((kver_min + 1))
+
+				# max .20 because Linus has 20 fingers
+				if [ ${kver_min} -gt 20 ]; then
+					kver_maj=$((kver_maj + 1))
+					kver_min=0
+				fi
+			fi
+
+			kversion="mptcp-${kver_maj}.${kver_min}"
+			# set the new branch only if it exists. If not, take the dev one
+			if git show-ref --quiet "refs/remotes/origin/${kversion}"; then
+				branch="${kversion}"
+			fi
 		fi
 		git checkout -f "origin/${branch}"
 	fi
