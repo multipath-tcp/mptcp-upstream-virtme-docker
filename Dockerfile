@@ -62,19 +62,19 @@ RUN cd /opt && \
 	tar xzf byobu.tar.gz && \
 	cd byobu-*/ && \
 		./configure --prefix=/usr && \
-		make && \
-		sudo make install
+		make -j"$(nproc)" -l"$(nproc)" && \
+		make install
 
 # Sparse
 RUN cd /opt && \
-    curl -L "${SPARSE_URL}" -o "${SPARSE_TARBALL}" && \
-    echo "${SPARSE_SHA}" | sha256sum --check && \
-    tar xJf "${SPARSE_TARBALL}" && \
-    cd "sparse-"* && \
-        make && \
-        make PREFIX=/usr install && \
-        cd .. && \
-    rm -rf "${SPARSE_TARBALL}" "sparse-"*
+	curl -L "${SPARSE_URL}" -o "${SPARSE_TARBALL}" && \
+	echo "${SPARSE_SHA}" | sha256sum --check && \
+	tar xJf "${SPARSE_TARBALL}" && \
+	cd "sparse-"* && \
+		make -j"$(nproc)" -l"$(nproc)" && \
+		make PREFIX=/usr install && \
+		cd .. && \
+	rm -rf "${SPARSE_TARBALL}" "sparse-"*
 
 # libpcap & tcpdump
 RUN cd /opt && \

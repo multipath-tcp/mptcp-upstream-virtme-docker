@@ -42,7 +42,6 @@ VIRTME_EXPECT_TIMEOUT="5400" # 90 minutes: auto mode on CI only
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
-USR_INCLUDE_DIR="usr/include"
 MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
@@ -187,12 +186,6 @@ _add_symlink() {
 	ln -sf "${src}" "${dst}"
 }
 
-_add_workaround_selftests() { local f
-	for f in "${VIRTME_BUILD_DIR}/${USR_INCLUDE_DIR}/"*; do
-		_add_symlink "${f}" "${USR_INCLUDE_DIR}/$(basename "${f}")"
-	done
-}
-
 # $@: extra kconfig
 gen_kconfig() { local mode kconfig=()
 	mode="${1}"
@@ -261,10 +254,6 @@ build_modules() {
 	_make_o modules_install
 }
 
-build_headers() {
-	_make_o INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}/kselftest/usr" headers_install
-}
-
 build_perf() {
 	cd tools/perf
 
@@ -284,13 +273,10 @@ build() {
 	build_kernel
 	build_modules
 	build_perf
-	build_headers
 }
 
 build_selftests() {
-	# it doesn't seem OK to use a different output dir with our selftests
-	_add_workaround_selftests
-	_make_o -C "${MPTCP_SELFTESTS_DIR}"
+	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/usr/include" -C "${MPTCP_SELFTESTS_DIR}"
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
@@ -922,14 +908,6 @@ static_analysis() { local src obj ftmp
 	rm -f "${ftmp}"
 }
 
-clean() { local path
-	# remove symlinks we added as a workaround for the selftests
-	git clean -f -- "${USR_INCLUDE_DIR}"
-	for path in $(_get_selftests_gen_files); do
-		rm -fv "${MPTCP_SELFTESTS_DIR}/${path}"
-	done
-}
-
 print_conclusion() { local rc=${1}
 	echo -n "${EXIT_TITLE}: "
 
@@ -944,11 +922,6 @@ print_conclusion() { local rc=${1}
 
 exit_trap() { local rc=${?}
 	set +x
-
-	# not needed on CI, remove some lines in the logs
-	if ! is_ci; then
-		clean
-	fi
 
 	echo -ne "\n${COLOR_BLUE}"
 	if [ "${EXPECT}" = 1 ]; then
