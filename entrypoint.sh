@@ -211,6 +211,9 @@ gen_kconfig() { local mode kconfig=()
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
+	# Options for BPF
+	kconfig+=(-e BPF_JIT -e BPF_SYSCALL)
+
 	# Extra options needed for packetdrill
 	# note: we still need SHA1 for fallback tests with v0
 	kconfig+=(-e TUN -e CRYPTO_USER_API_HASH -e CRYPTO_SHA1)
