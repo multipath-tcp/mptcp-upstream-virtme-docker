@@ -692,13 +692,16 @@ _print_line() {
 	echo "=========================================="
 }
 
+decode_stacktrace() {
+	./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
+}
+
 _print_call_trace_info() {
 	echo
 	_print_line
 	echo "Call Trace:"
 	_print_line
-	grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | \
-		./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
+	grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | decode_stacktrace
 	_print_line
 	echo "Call Trace found"
 }
@@ -730,7 +733,7 @@ _print_kmemleak() {
 	_print_line
 	echo "KMemLeak:"
 	_print_line
-	cat "${KMEMLEAK}"
+	cat "${KMEMLEAK}" | decode_stacktrace
 	_print_line
 	echo "KMemLeak detected"
 }
