@@ -696,7 +696,7 @@ _print_line() {
 }
 
 decode_stacktrace() {
-	./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${KERNEL_SRC}"
+	./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${VIRTME_BUILD_DIR}/.virtme_mods"
 }
 
 _print_call_trace_info() {
