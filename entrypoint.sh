@@ -24,6 +24,8 @@ fi
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
 : "${INPUT_PACKETDRILL_STABLE:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
+: "${INPUT_GIT_REV:=unknown-rev}"
+: "${INPUT_GIT_TAG:=unknown-tag}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 
@@ -361,7 +363,7 @@ prepare() { local mode
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 	else
 		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
+		RESULTS_DIR="${RESULTS_DIR_BASE}/${INPUT_GIT_REV}/${mode}"
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
@@ -748,7 +750,7 @@ _print_summary_header() {
 
 	echo "== Summary =="
 	echo
-	echo "Ref: ${CIRRUS_TAG:-$(git describe --tags)}"
+	echo "Ref: ${CIRRUS_TAG:-${INPUT_GIT_TAG}}"
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
 	echo

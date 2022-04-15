@@ -36,6 +36,7 @@ Without cloning this repo, you can quickly get a ready to use environment:
 cd <kernel source code>
 docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
   --pull always mptcp/mptcp-upstream-virtme-docker:latest \
+  -e "INPUT_GIT_REV=$(git rev-parse --short HEAD)" \
   <entrypoint options, see above>
 ```
 
