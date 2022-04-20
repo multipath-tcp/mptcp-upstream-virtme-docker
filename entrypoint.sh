@@ -349,6 +349,10 @@ prepare() { local mode
 
 	printinfo "Prepare the environment"
 
+	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
+	# this docker image
+	git config --global --add safe.directory "${KERNEL_SRC}"
+
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}"
