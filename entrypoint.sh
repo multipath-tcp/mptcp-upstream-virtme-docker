@@ -740,7 +740,7 @@ _print_kmemleak() {
 	_print_line
 	echo "KMemLeak:"
 	_print_line
-	cat "${KMEMLEAK}" | decode_stacktrace
+	decode_stacktrace < "${KMEMLEAK}"
 	_print_line
 	echo "KMemLeak detected"
 }
