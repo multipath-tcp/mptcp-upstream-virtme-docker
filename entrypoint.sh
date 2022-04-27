@@ -208,6 +208,23 @@ gen_kconfig() { local mode kconfig=()
 		_make_o defconfig
 	fi
 
+	# Debug info for developers
+	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
+
+	# We need more debug info but it is slow to generate
+	if [ "${mode}" = "btf" ]; then
+		kconfig+=(-e DEBUG_INFO_BTF)
+	else
+		kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
+	fi
+
+	# Debug tools for developers
+	kconfig+=(
+		-e DYNAMIC_DEBUG --set-val CONSOLE_LOGLEVEL_DEFAULT 8
+		-e FTRACE -e FUNCTION_TRACER -e DYNAMIC_FTRACE
+		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
+	)
+
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
@@ -217,15 +234,6 @@ gen_kconfig() { local mode kconfig=()
 	# Extra options needed for packetdrill
 	# note: we still need SHA1 for fallback tests with v0
 	kconfig+=(-e TUN -e CRYPTO_USER_API_HASH -e CRYPTO_SHA1)
-
-	# Debug info for developers
-	kconfig+=(
-		-e DEBUG_INFO -e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
-		-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT -e GDB_SCRIPTS
-		-e DYNAMIC_DEBUG --set-val CONSOLE_LOGLEVEL_DEFAULT 8
-		-e FTRACE -e FUNCTION_TRACER -e DYNAMIC_FTRACE
-		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
-	)
 
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
@@ -990,11 +998,17 @@ case "${MODE}" in
 	"debug" | "manual-debug")
 		go_manual "debug" "${@}"
 		;;
+	"btf" | "manual-btf")
+		go_manual "btf" "${@}"
+		;;
 	"expect-normal" | "auto-normal")
 		go_expect "normal" "${@}"
 		;;
 	"expect-debug" | "auto-debug")
 		go_expect "debug" "${@}"
+		;;
+	"expect-btf" | "auto-btf")
+		go_expect "btf" "${@}"
 		;;
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
