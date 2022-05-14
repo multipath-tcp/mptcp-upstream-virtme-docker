@@ -225,6 +225,9 @@ gen_kconfig() { local mode kconfig=()
 		-e FTRACE_SYSCALLS -e HIST_TRIGGERS
 	)
 
+	# Extra sanity checks in networking: for the moment, small checks
+	kconfig+=(-e DEBUG_NET)
+
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
