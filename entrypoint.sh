@@ -542,7 +542,7 @@ kmemleak_scan() {
 }
 
 # args: what needs to be executed
-run_loop() { local i tdir
+run_loop() { local i tdir rc=0
 
 	tdir="${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
 	if ls "\${tdir}/"*.pcap &>/dev/null; then
@@ -554,6 +554,7 @@ run_loop() { local i tdir
 	while true; do
 		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
 		if ! "\${@}" || has_call_trace; then
+			rc=1
 			echo -e "\n\n\t=== ERROR after \${i} attempts (\$(date -R)) ===\n\n"
 			if [ "${INPUT_RUN_LOOP_CONTINUE}" = "1" ]; then
 				echo "Attempt: \${i}" >> "${CONCLUSION}.failed"
@@ -565,6 +566,7 @@ run_loop() { local i tdir
 		i=\$((i+1))
 	done
 	echo -e "\n\n\tStopped after \${i} attempts\n\n"
+	return "\${rc}"
 }
 
 # To run commands before executing the tests
