@@ -556,9 +556,12 @@ run_loop_n() { local i tdir rc=0
 	i=1
 	while true; do
 		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
+
 		if ! "\${@}" || has_call_trace; then
 			rc=1
+
 			echo -e "\n\n\t=== ERROR after \${i} attempts (\$(date -R)) ===\n\n"
+
 			if [ "${INPUT_RUN_LOOP_CONTINUE}" = "1" ]; then
 				echo "Attempt: \${i}" >> "${CONCLUSION}.failed"
 			else
@@ -574,7 +577,9 @@ run_loop_n() { local i tdir rc=0
 
 		i=\$((i+1))
 	done
+
 	echo -e "\n\n\tStopped after \${i} attempts\n\n"
+
 	return "\${rc}"
 }
 
