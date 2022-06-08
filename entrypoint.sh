@@ -541,8 +541,11 @@ kmemleak_scan() {
 	fi
 }
 
-# args: what needs to be executed
-run_loop() { local i tdir rc=0
+# \$1: max iterations (<1 means no limit) ; args: what needs to be executed
+run_loop_n() { local i tdir rc=0
+
+	n=\${1}
+	shift
 
 	tdir="${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
 	if ls "\${tdir}/"*.pcap &>/dev/null; then
@@ -562,11 +565,22 @@ run_loop() { local i tdir rc=0
 				break
 			fi
 		fi
+
 		rm -f "\${tdir}/"*.pcap 2>/dev/null
+
+		if [ "\${i}" = "\${n}" ]; then
+			break
+		fi
+
 		i=\$((i+1))
 	done
 	echo -e "\n\n\tStopped after \${i} attempts\n\n"
 	return "\${rc}"
+}
+
+# args: what needs to be executed
+run_loop() {
+	run_loop_n 0 "\${@}"
 }
 
 # To run commands before executing the tests
