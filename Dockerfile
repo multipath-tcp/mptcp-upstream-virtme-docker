@@ -46,6 +46,7 @@ RUN apt-get update && \
 		libtap-formatter-junit-perl \
 		zstd \
 		wget xz-utils lftp cpio u-boot-tools \
+		cscope \
 		&& \
 	apt-get clean
 
