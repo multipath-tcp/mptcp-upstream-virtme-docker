@@ -65,15 +65,6 @@ RUN cd /opt && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
 
-# Sparse
-RUN cd /opt && \
-	git clone "${SPARSE_GIT_URL}" sparse && \
-	cd "sparse" && \
-		make -j"$(nproc)" -l"$(nproc)" && \
-		make PREFIX=/usr install && \
-		cd .. && \
-	rm -rf "sparse"
-
 # libpcap & tcpdump
 RUN cd /opt && \
 	git clone "${LIBPCAP_GIT_URL}" libpcap && \
@@ -89,15 +80,6 @@ RUN cd /opt && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
 
-# iproute
-RUN cd /opt && \
-	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
-	cd iproute2 && \
-		git checkout "${IPROUTE2_GIT_SHA}" && \
-		./configure && \
-		make -j"$(nproc)" -l"$(nproc)" && \
-		make install
-
 # packetdrill
 ENV PACKETDRILL_GIT_BRANCH "${PACKETDRILL_GIT_BRANCH}"
 RUN cd /opt && \
@@ -108,6 +90,24 @@ RUN cd /opt && \
 			./configure && \
 			make -j"$(nproc)" -l"$(nproc)" && \
 			ln -s /opt/packetdrill/gtests/net/packetdrill/packetdrill /usr/sbin/
+
+# Sparse
+RUN cd /opt && \
+	git clone "${SPARSE_GIT_URL}" sparse && \
+	cd "sparse" && \
+		make -j"$(nproc)" -l"$(nproc)" && \
+		make PREFIX=/usr install && \
+		cd .. && \
+	rm -rf "sparse"
+
+# iproute
+RUN cd /opt && \
+	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
+	cd iproute2 && \
+		git checkout "${IPROUTE2_GIT_SHA}" && \
+		./configure && \
+		make -j"$(nproc)" -l"$(nproc)" && \
+		make install
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
