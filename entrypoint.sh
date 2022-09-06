@@ -69,8 +69,8 @@ RESULTS_DIR=
 # log files
 OUTPUT_VIRTME=
 TESTS_SUMMARY=
-CONCLUSION="conclusion.txt"
-KMEMLEAK="kmemleak.txt"
+CONCLUSION=
+KMEMLEAK=
 
 EXIT_STATUS=0
 EXIT_REASONS=()
@@ -388,8 +388,8 @@ prepare() { local mode
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
-	CONCLUSION="${RESULTS_DIR}/${CONCLUSION}"
-	KMEMLEAK="${RESULTS_DIR}/${KMEMLEAK}"
+	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
+	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
@@ -967,7 +967,7 @@ exit_trap() { local rc=${?}
 
 	echo -ne "\n${COLOR_BLUE}"
 	if [ "${EXPECT}" = 1 ]; then
-		print_conclusion ${rc} | tee "${CONCLUSION}"
+		print_conclusion ${rc} | tee "${CONCLUSION:-"conclusion.txt"}"
 	fi
 	echo -e "${COLOR_RESET}"
 
