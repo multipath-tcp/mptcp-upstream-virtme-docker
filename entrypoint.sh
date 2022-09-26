@@ -209,7 +209,7 @@ gen_kconfig() { local mode kconfig=()
 	fi
 
 	# Debug info for developers
-	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
+	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF4 -e GDB_SCRIPTS)
 
 	# We need more debug info but it is slow to generate
 	if [ "${mode}" = "btf" ]; then
