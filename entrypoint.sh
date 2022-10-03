@@ -314,8 +314,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 			if [[ ! "${kversion}" =~ rc  ]]; then
 				kver_min=$((kver_min + 1))
 
-				# max .20 because Linus has 20 fingers
-				if [ ${kver_min} -gt 20 ]; then
+				# max .19 because Linus has 20 fingers
+				if [ ${kver_min} -gt 19 ]; then
 					kver_maj=$((kver_maj + 1))
 					kver_min=0
 				fi
