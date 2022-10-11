@@ -76,7 +76,9 @@ RUN cd /opt && \
 		cd gtests/net/packetdrill/ && \
 			./configure && \
 			make -j"$(nproc)" -l"$(nproc)" && \
-			ln -s /opt/packetdrill/gtests/net/packetdrill/packetdrill /usr/sbin/
+			ln -s /opt/packetdrill/gtests/net/packetdrill/packetdrill \
+			      /opt/packetdrill/gtests/net/packetdrill/run_all.py \
+				/usr/sbin/
 
 # Sparse
 ARG SPARSE_GIT_URL="git://git.kernel.org/pub/scm/devel/sparse/sparse.git"
