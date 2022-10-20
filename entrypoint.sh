@@ -256,6 +256,11 @@ gen_kconfig() { local mode kconfig=()
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}"
 
 	_make_o olddefconfig
+
+	if is_ci; then
+		# Useful to help reproduction
+		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd"
+	fi
 }
 
 build_kernel() {
