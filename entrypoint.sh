@@ -148,7 +148,7 @@ _check_source_exec_one() {
 		printinfo "This script file exists and will be used ${reason}: $(basename "${src}")"
 		cat -n "${src}"
 
-		if [ "${INPUT_NO_BLOCK}" = "1" ]; then
+		if [ is_ci || "${INPUT_NO_BLOCK}" = "1" ]; then
 			printinfo "Check source exec: not blocking"
 		else
 			print "Press Enter to continue (use 'INPUT_NO_BLOCK=1' to avoid this)"
