@@ -26,6 +26,11 @@ fi
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
+: "${CI_TIMEOUT_SEC:=7200}"
+
+TIMESTAMPS_SEC_START=$(date +%s)
+# CI only: estimated time before (clone) and after (artifacts) running this script
+VIRTME_EXPECT_TIMEOUT="360"
 
 KERNEL_SRC="${PWD}"
 
@@ -38,7 +43,6 @@ VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
-VIRTME_EXPECT_TIMEOUT="5400" # 90 minutes: auto mode on CI only
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -386,9 +390,6 @@ prepare() { local mode
 		mkdir -p "${RESULTS_DIR}"
 
 		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
-
-		# disable timeout
-		VIRTME_EXPECT_TIMEOUT="-1"
 	fi
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
@@ -644,7 +645,19 @@ run() {
 }
 
 run_expect() {
-	printinfo "Run the virtme script: expect"
+	local timestamps_sec_stop
+
+	if is_ci; then
+		timestamps_sec_stop=$(date +%s)
+
+		# max - compilation time - before/after script
+		VIRTME_EXPECT_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_EXPECT_TIMEOUT))
+	else
+		# disable timeout
+		VIRTME_EXPECT_TIMEOUT="-1"
+	fi
+
+	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TIMEOUT})"
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash -x
