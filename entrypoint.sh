@@ -30,7 +30,7 @@ fi
 
 TIMESTAMPS_SEC_START=$(date +%s)
 # CI only: estimated time before (clone) and after (artifacts) running this script
-VIRTME_EXPECT_TIMEOUT="360"
+VIRTME_EXPECT_TIMEOUT="480"
 
 KERNEL_SRC="${PWD}"
 
