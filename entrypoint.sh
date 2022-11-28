@@ -1055,6 +1055,7 @@ case "${MODE}" in
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
 		# tests execution, it might hide bugs
+		make -C "${MPTCP_SELFTESTS_DIR}" clean
 		go_expect "normal" "${@}"
 		make clean
 		go_expect "debug" "${@}"
