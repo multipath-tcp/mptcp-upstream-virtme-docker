@@ -24,6 +24,8 @@ fi
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
 : "${INPUT_PACKETDRILL_STABLE:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
+: "${INPUT_RUN_TESTS_ONLY:=""}"
+: "${INPUT_RUN_TESTS_EXCEPT:=""}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -152,7 +154,7 @@ _check_source_exec_one() {
 		printinfo "This script file exists and will be used ${reason}: $(basename "${src}")"
 		cat -n "${src}"
 
-		if [ is_ci || "${INPUT_NO_BLOCK}" = "1" ]; then
+		if is_ci || [ "${INPUT_NO_BLOCK}" = "1" ]; then
 			printinfo "Check source exec: not blocking"
 		else
 			print "Press Enter to continue (use 'INPUT_NO_BLOCK=1' to avoid this)"
@@ -399,7 +401,6 @@ prepare() { local mode
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
-	local pktd_base="${RESULTS_DIR}/packetdrill"
 
 	# for the kmods: TODO: still needed?
 	mkdir -p /lib/modules
@@ -414,6 +415,32 @@ prepare() { local mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
+
+# \$1: name of the test
+_can_run() { local tname
+	tname="\${1}"
+
+	# only some tests?
+	if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
+		if ! echo "${INPUT_RUN_TESTS_ONLY}" | grep -wq "\${tname}"; then
+			return 1
+		fi
+	fi
+
+	# not some tests?
+	if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
+		if echo "${INPUT_RUN_TESTS_EXCEPT}" | grep -wq "\${tname}"; then
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
+can_run() {
+	# Use the function name of the caller without the prefix
+	_can_run "\${FUNCNAME[1]#*_}"
+}
 
 # \$1: file ; \$2+: commands
 _tap() { local out tmp fname rc
@@ -485,6 +512,8 @@ _run_kunit() { local ko kunit
 }
 
 run_kunit() {
+	can_run || return 0
+
 	cd "${KERNEL_SRC}"
 	_run_kunit | tee "${kunit_tap}"
 }
@@ -496,10 +525,14 @@ _run_selftest_one_tap() {
 }
 
 # \$1: script file; rest: command to launch
-run_selftest_one() { local sf
+run_selftest_one() { local sf tap
 	sf=\$(basename \${1})
+	tap=selftest_\${sf:0:-3}
 	shift
-	_run_selftest_one_tap "${RESULTS_DIR}/selftest_\${sf:0:-3}.tap" "./\${sf}" "\${@}"
+
+	_can_run "\${tap}" || return 0
+
+	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}.tap" "./\${sf}" "\${@}"
 }
 
 run_selftest_all() { local sf
@@ -512,19 +545,25 @@ run_selftest_all() { local sf
 }
 
 run_mptcp_connect_mmap() {
+	can_run || return 0
+
 	_run_selftest_one_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
-run_packetdrill_one() { local pktd_dir="\${1}" pktd
-	pktd="\${pktd_dir:6}"
+run_packetdrill_one() { local pktd_dir pktd tap
+	pktd_dir="\${1}"
+	pktd="\${pktd_dir#*/}"
+	tap="packetdrill_\${pktd}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
 	fi
 
+	_can_run "\${tap}" || return 0
+
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${pktd_base}_\${pktd}.tap" \
+	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}.tap" \
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
@@ -534,6 +573,13 @@ run_packetdrill_all() { local pktd_dir
 	for pktd_dir in mptcp/*; do
 		run_packetdrill_one "\${pktd_dir}"
 	done
+}
+
+run_all() {
+	run_kunit
+	run_selftest_all
+	run_mptcp_connect_mmap
+	run_packetdrill_all
 }
 
 has_call_trace() {
@@ -549,7 +595,6 @@ kmemleak_scan() {
 
 # \$1: max iterations (<1 means no limit) ; args: what needs to be executed
 run_loop_n() { local i tdir rc=0
-
 	n=\${1}
 	shift
 
@@ -616,10 +661,7 @@ if [ -f "${VIRTME_EXEC_RUN}" ]; then
 	# run_loop run_selftest_one ./simult_flows.sh
 	# run_packetdrill_one mptcp/dss
 else
-	run_kunit
-	run_selftest_all
-	run_mptcp_connect_mmap
-	run_packetdrill_all
+	run_all
 fi
 
 cd "${KERNEL_SRC}"
@@ -1055,6 +1097,7 @@ case "${MODE}" in
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
 		# tests execution, it might hide bugs
+		make -C "${MPTCP_SELFTESTS_DIR}" clean
 		go_expect "normal" "${@}"
 		make clean
 		go_expect "debug" "${@}"
