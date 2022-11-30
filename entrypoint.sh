@@ -536,6 +536,13 @@ run_packetdrill_all() { local pktd_dir
 	done
 }
 
+run_all() {
+	run_kunit
+	run_selftest_all
+	run_mptcp_connect_mmap
+	run_packetdrill_all
+}
+
 has_call_trace() {
 	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
@@ -549,7 +556,6 @@ kmemleak_scan() {
 
 # \$1: max iterations (<1 means no limit) ; args: what needs to be executed
 run_loop_n() { local i tdir rc=0
-
 	n=\${1}
 	shift
 
@@ -616,10 +622,7 @@ if [ -f "${VIRTME_EXEC_RUN}" ]; then
 	# run_loop run_selftest_one ./simult_flows.sh
 	# run_packetdrill_one mptcp/dss
 else
-	run_kunit
-	run_selftest_all
-	run_mptcp_connect_mmap
-	run_packetdrill_all
+	run_all
 fi
 
 cd "${KERNEL_SRC}"
