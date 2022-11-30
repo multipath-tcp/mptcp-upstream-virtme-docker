@@ -24,6 +24,8 @@ fi
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
 : "${INPUT_PACKETDRILL_STABLE:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
+: "${INPUT_RUN_TESTS_ONLY:=""}"
+: "${INPUT_RUN_TESTS_EXCEPT:=""}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -414,6 +416,32 @@ TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
 
+# \$1: name of the test
+_can_run() { local tname
+	tname="\${1}"
+
+	# only some tests?
+	if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
+		if ! echo "${INPUT_RUN_TESTS_ONLY}" | grep -wq "\${tname}"; then
+			return 1
+		fi
+	fi
+
+	# not some tests?
+	if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
+		if echo "${INPUT_RUN_TESTS_EXCEPT}" | grep -wq "\${tname}"; then
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
+can_run() {
+	# Use the function name of the caller without the prefix
+	_can_run "\${FUNCNAME[1]#*_}"
+}
+
 # \$1: file ; \$2+: commands
 _tap() { local out tmp fname rc
 	out="\${1}"
@@ -484,6 +512,8 @@ _run_kunit() { local ko kunit
 }
 
 run_kunit() {
+	can_run || return 0
+
 	cd "${KERNEL_SRC}"
 	_run_kunit | tee "${kunit_tap}"
 }
@@ -495,10 +525,14 @@ _run_selftest_one_tap() {
 }
 
 # \$1: script file; rest: command to launch
-run_selftest_one() { local sf
+run_selftest_one() { local sf tap
 	sf=\$(basename \${1})
+	tap=selftest_\${sf:0:-3}
 	shift
-	_run_selftest_one_tap "${RESULTS_DIR}/selftest_\${sf:0:-3}.tap" "./\${sf}" "\${@}"
+
+	_can_run "\${tap}" || return 0
+
+	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}.tap" "./\${sf}" "\${@}"
 }
 
 run_selftest_all() { local sf
@@ -511,20 +545,25 @@ run_selftest_all() { local sf
 }
 
 run_mptcp_connect_mmap() {
+	can_run || return 0
+
 	_run_selftest_one_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
-run_packetdrill_one() { local pktd_dir pktd
+run_packetdrill_one() { local pktd_dir pktd tap
 	pktd_dir="\${1}"
 	pktd="\${pktd_dir#*/}"
+	tap="packetdrill_\${pktd}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
 	fi
 
+	_can_run "\${tap}" || return 0
+
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/packetdrill_\${pktd}.tap" \
+	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}.tap" \
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
