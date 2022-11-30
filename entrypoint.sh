@@ -399,7 +399,6 @@ prepare() { local mode
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
-	local pktd_base="${RESULTS_DIR}/packetdrill"
 
 	# for the kmods: TODO: still needed?
 	mkdir -p /lib/modules
@@ -516,15 +515,16 @@ run_mptcp_connect_mmap() {
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
-run_packetdrill_one() { local pktd_dir="\${1}" pktd
-	pktd="\${pktd_dir:6}"
+run_packetdrill_one() { local pktd_dir pktd
+	pktd_dir="\${1}"
+	pktd="\${pktd_dir#*/}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
 	fi
 
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${pktd_base}_\${pktd}.tap" \
+	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/packetdrill_\${pktd}.tap" \
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
