@@ -385,6 +385,14 @@ prepare() { local mode
 		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
 
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
+
+		if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
+			EXIT_TITLE="${EXIT_TITLE} (only: ${INPUT_RUN_TESTS_ONLY})"
+		fi
+
+		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
+			EXIT_TITLE="${EXIT_TITLE} (except: ${INPUT_RUN_TESTS_EXCEPT})"
+		fi
 	else
 		# avoid override
 		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
