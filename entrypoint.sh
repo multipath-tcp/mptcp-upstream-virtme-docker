@@ -387,11 +387,11 @@ prepare() { local mode
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 
 		if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (only: ${INPUT_RUN_TESTS_ONLY})"
+			EXIT_TITLE="${EXIT_TITLE} (only ${INPUT_RUN_TESTS_ONLY})"
 		fi
 
 		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (except: ${INPUT_RUN_TESTS_EXCEPT})"
+			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
 		fi
 	else
 		# avoid override
