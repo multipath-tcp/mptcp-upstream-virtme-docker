@@ -270,11 +270,18 @@ gen_kconfig() { local mode kconfig=()
 }
 
 build_kernel() {
-	_make_o
-	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
+	# undo BPFTrace and cie workaround
+	find "${VIRTME_BUILD_DIR}/include" \
+		-mindepth 1 -maxdepth 1 \
+		! -name 'config' ! -name 'generated' \
+		-type d -exec rm -r {} +
 
-	# for BPFTrace and cid
+	_make_o
+
+	# for BPFTrace and cie
 	cp -r include/ "${VIRTME_BUILD_DIR}"
+
+	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
 }
 
 build_modules() {
