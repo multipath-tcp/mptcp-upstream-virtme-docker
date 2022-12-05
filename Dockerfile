@@ -12,7 +12,7 @@ RUN apt-get update && \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
 		ca-certificates gnupg2 net-tools kmod \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
-		libsmi2-dev libcap-ng-dev \
+		tcpdump \
 		pkg-config libmnl-dev \
 		clang lld llvm llvm-dev libcap-dev \
 		gdb crash dwarves \
@@ -23,6 +23,7 @@ RUN apt-get update && \
 		zstd \
 		wget xz-utils lftp cpio u-boot-tools \
 		cscope \
+		bpftrace \
 		&& \
 	apt-get clean
 
@@ -42,25 +43,6 @@ RUN cd /opt && \
 	echo "${BYOBU_MD5}" | md5sum -c && \
 	tar xzf byobu.tar.gz && \
 	cd byobu-*/ && \
-		./configure --prefix=/usr && \
-		make -j"$(nproc)" -l"$(nproc)" && \
-		make install
-
-# libpcap & tcpdump
-ARG LIBPCAP_GIT_URL="https://github.com/the-tcpdump-group/libpcap.git"
-ARG LIBPCAP_GIT_SHA="libpcap-1.10.1"
-ARG TCPDUMP_GIT_URL="https://github.com/the-tcpdump-group/tcpdump.git"
-ARG TCPDUMP_GIT_SHA="tcpdump-4.99.1"
-RUN cd /opt && \
-	git clone "${LIBPCAP_GIT_URL}" libpcap && \
-	git clone "${TCPDUMP_GIT_URL}" tcpdump && \
-	cd libpcap && \
-		git checkout "${LIBPCAP_GIT_SHA}" && \
-		./configure --prefix=/usr && \
-		make -j"$(nproc)" -l"$(nproc)" && \
-		make install && \
-	cd ../tcpdump && \
-		git checkout "${TCPDUMP_GIT_SHA}" && \
 		./configure --prefix=/usr && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install

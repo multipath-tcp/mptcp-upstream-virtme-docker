@@ -271,7 +271,10 @@ gen_kconfig() { local mode kconfig=()
 
 build_kernel() {
 	_make_o
-	_make_o headers_install
+	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
+
+	# for BPFTrace and cid
+	cp -r include/ "${VIRTME_BUILD_DIR}"
 }
 
 build_modules() {
@@ -301,7 +304,7 @@ build() {
 }
 
 build_selftests() {
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/usr/include" -C "${MPTCP_SELFTESTS_DIR}"
+	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${MPTCP_SELFTESTS_DIR}"
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
@@ -409,9 +412,6 @@ prepare() { local mode
 
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
-
-	# for the kmods: TODO: still needed?
-	mkdir -p /lib/modules
 
 	build_selftests
 	build_packetdrill
