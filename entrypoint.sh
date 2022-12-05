@@ -417,8 +417,6 @@ prepare() { local mode
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
 
-	local kunit_tap="${RESULTS_DIR}/kunit.tap"
-
 	build_selftests
 	build_packetdrill
 
@@ -529,7 +527,7 @@ run_kunit() {
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-	_run_kunit | tee "${kunit_tap}"
+	_run_kunit | tee "${RESULTS_DIR}/kunit.tap"
 }
 
 # \$1: output tap file; rest: command to launch
