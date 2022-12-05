@@ -417,9 +417,6 @@ prepare() { local mode
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
 
-	local kunit_tap="${RESULTS_DIR}/kunit.tap"
-	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
-
 	build_selftests
 	build_packetdrill
 
@@ -530,7 +527,7 @@ run_kunit() {
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-	_run_kunit | tee "${kunit_tap}"
+	_run_kunit | tee "${RESULTS_DIR}/kunit.tap"
 }
 
 # \$1: output tap file; rest: command to launch
@@ -559,10 +556,16 @@ run_selftest_all() { local sf
 	done
 }
 
+_run_mptcp_connect_opt() { local t="\${1}"
+	shift
+
+	_run_selftest_one_tap "${RESULTS_DIR}/mptcp_connect_\${t}.tap" ./mptcp_connect.sh "\${@}"
+}
+
 run_mptcp_connect_mmap() {
 	can_run || return 0
 
-	_run_selftest_one_tap "${mptcp_connect_mmap_tap}" ./mptcp_connect.sh -m mmap
+	_run_mptcp_connect_opt mmap -m mmap
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
