@@ -272,6 +272,9 @@ gen_kconfig() { local mode kconfig=()
 build_kernel() {
 	_make_o
 	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
+
+	# for BPFTrace and cid
+	cp -r include/ "${VIRTME_BUILD_DIR}"
 }
 
 build_modules() {

@@ -23,6 +23,7 @@ RUN apt-get update && \
 		zstd \
 		wget xz-utils lftp cpio u-boot-tools \
 		cscope \
+		bpftrace \
 		&& \
 	apt-get clean
 
