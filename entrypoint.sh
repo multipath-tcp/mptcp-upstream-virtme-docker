@@ -410,9 +410,6 @@ prepare() { local mode
 	local kunit_tap="${RESULTS_DIR}/kunit.tap"
 	local mptcp_connect_mmap_tap="${RESULTS_DIR}/mptcp_connect_mmap.tap"
 
-	# for the kmods: TODO: still needed?
-	mkdir -p /lib/modules
-
 	build_selftests
 	build_packetdrill
 
