@@ -286,7 +286,9 @@ build_kernel() {
 
 build_modules() {
 	_make_o modules
-	_make_o modules_install
+
+	# virtme will mount a tmpfs there + symlink to .virtme_mods
+	mkdir -p /lib/modules
 }
 
 build_perf() {
