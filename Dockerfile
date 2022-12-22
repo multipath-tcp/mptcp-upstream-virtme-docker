@@ -28,8 +28,8 @@ RUN apt-get update && \
 	apt-get clean
 
 # virtme
-ARG VIRTME_GIT_URL="https://git.kernel.org/pub/scm/utils/kernel/virtme/virtme.git"
-ARG VIRTME_GIT_SHA="1ab5dea159016cd7a079811091d12d2d57a2c023"
+ARG VIRTME_GIT_URL="https://github.com/matttbe/virtme.git"
+ARG VIRTME_GIT_SHA="d384fd29cb2381e50ab54c19b1ed1dc2c6db2d20"
 RUN cd /opt && \
 	git clone "${VIRTME_GIT_URL}" && \
 	cd virtme && \
