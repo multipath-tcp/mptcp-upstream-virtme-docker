@@ -264,8 +264,8 @@ gen_kconfig() { local mode kconfig=()
 	_make_o olddefconfig
 
 	if is_ci; then
-		# Useful to help reproduction
-		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd"
+		# Useful to help reproducing issues later
+		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${KERNEL_SRC}/config.zstd"
 	fi
 }
 
