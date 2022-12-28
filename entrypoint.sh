@@ -108,6 +108,41 @@ printerr() {
 	print_color "${COLOR_RED}${*}" >&2
 }
 
+setup_env() {
+	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
+	# this docker image
+	git config --global --add safe.directory "${KERNEL_SRC}"
+
+	if is_ci; then
+		# Root dir: not to have to go down dirs to get artifacts
+		RESULTS_DIR="${KERNEL_SRC}"
+
+		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+
+		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
+
+		if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
+			EXIT_TITLE="${EXIT_TITLE} (only ${INPUT_RUN_TESTS_ONLY})"
+		fi
+
+		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
+			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
+		fi
+	else
+		# avoid override
+		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
+		rm -rf "${RESULTS_DIR}"
+		mkdir -p "${RESULTS_DIR}"
+
+		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+	fi
+
+	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
+	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
+	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
+	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
+}
+
 _get_last_iproute_version() {
 	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
 		grep "/tag/?h=v[0-9]" | \
@@ -265,7 +300,7 @@ gen_kconfig() { local mode kconfig=()
 
 	if is_ci; then
 		# Useful to help reproducing issues later
-		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${KERNEL_SRC}/config.zstd"
+		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd"
 	fi
 }
 
@@ -385,39 +420,6 @@ prepare() { local mode
 	mode="${1}"
 
 	printinfo "Prepare the environment"
-
-	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
-	# this docker image
-	git config --global --add safe.directory "${KERNEL_SRC}"
-
-	if is_ci; then
-		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${KERNEL_SRC}"
-
-		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
-
-		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
-
-		if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (only ${INPUT_RUN_TESTS_ONLY})"
-		fi
-
-		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
-		fi
-	else
-		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
-		rm -rf "${RESULTS_DIR}"
-		mkdir -p "${RESULTS_DIR}"
-
-		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
-	fi
-
-	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
-	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
-	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
-	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
 
 	build_selftests
 	build_packetdrill
@@ -977,6 +979,7 @@ go_manual() { local mode
 
 	printinfo "Start: manual (${mode})"
 
+	setup_env
 	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
@@ -991,6 +994,7 @@ go_expect() { local mode
 
 	EXPECT=1
 
+	setup_env
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
