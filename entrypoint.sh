@@ -1014,12 +1014,12 @@ static_analysis() { local src obj ftmp
 		printinfo "Checking: ${src}"
 
 		touch "${src}"
-		if ! KCFLAGS="-Werror" make W=1 "${obj}"; then
+		if ! KCFLAGS="-Werror" _make_o W=1 "${obj}"; then
 			printerr "Found make W=1 issues for ${src}"
 		fi
 
 		touch "${src}"
-		make C=1 "${obj}" >/dev/null 2>"${ftmp}" || true
+		_make_o C=1 "${obj}" >/dev/null 2>"${ftmp}" || true
 
 		if test -s "${ftmp}"; then
 			cat "${ftmp}"
@@ -1117,9 +1117,9 @@ case "${MODE}" in
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
 		# tests execution, it might hide bugs
-		make -C "${MPTCP_SELFTESTS_DIR}" clean
+		_make_o -C "${MPTCP_SELFTESTS_DIR}" clean
 		go_expect "normal" "${@}"
-		make clean
+		_make_o clean
 		go_expect "debug" "${@}"
 		;;
 	"make")
