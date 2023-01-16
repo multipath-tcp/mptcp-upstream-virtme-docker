@@ -29,7 +29,7 @@ RUN apt-get update && \
 
 # virtme
 ARG VIRTME_GIT_URL="https://github.com/matttbe/virtme.git"
-ARG VIRTME_GIT_SHA="d384fd29cb2381e50ab54c19b1ed1dc2c6db2d20"
+ARG VIRTME_GIT_SHA="a680c0861cf6f9dc6a8a821e9e58ae43c5e68435"
 RUN cd /opt && \
 	git clone "${VIRTME_GIT_URL}" && \
 	cd virtme && \
