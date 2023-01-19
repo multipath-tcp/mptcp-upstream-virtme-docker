@@ -49,6 +49,7 @@ VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
 MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
+MPTCP_SELFTESTS_CONFIG="${MPTCP_SELFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
@@ -292,7 +293,7 @@ gen_kconfig() { local mode kconfig=()
 	"${VIRTME_CONFIGKERNEL}" --arch=x86_64 --update
 
 	# Extra options are needed for MPTCP kselftests
-	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${MPTCP_SELFTESTS_DIR}/config"
+	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${MPTCP_SELFTESTS_CONFIG}"
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}"
 
@@ -327,6 +328,11 @@ build_modules() {
 }
 
 build_perf() {
+	if [ "${INPUT_BUILD_SKIP_PERF}" = 1  ]; then
+		printinfo "Skip perf build"
+		return 0
+	fi
+
 	cd tools/perf
 
 	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install
@@ -348,10 +354,20 @@ build() {
 }
 
 build_selftests() {
+	if [ "${INPUT_BUILD_SKIP_SELFTESTS}" = 1  ]; then
+		printinfo "Skip selftests build"
+		return 0
+	fi
+
 	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${MPTCP_SELFTESTS_DIR}"
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
+	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1  ]; then
+		printinfo "Skip Packetdrill build"
+		return 0
+	fi
+
 	old_pwd="${PWD}"
 
 	# make sure we have the last stable tests
@@ -1091,7 +1107,7 @@ if [ -z "${MODE}" ]; then
 fi
 shift
 
-if [ ! -s "net/mptcp/protocol.c" ]; then
+if [ ! -s "${MPTCP_SELFTESTS_CONFIG}" ]; then
 	printerr "Please be at the root of kernel source code with MPTCP (Upstream) support"
 	exit 1
 fi
