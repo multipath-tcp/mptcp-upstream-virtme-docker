@@ -327,6 +327,11 @@ build_modules() {
 }
 
 build_perf() {
+	if [ "${INPUT_BUILD_SKIP_PERF}" = 1  ]; then
+		printinfo "Skip perf build"
+		return 0
+	fi
+
 	cd tools/perf
 
 	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install
@@ -348,10 +353,20 @@ build() {
 }
 
 build_selftests() {
+	if [ "${INPUT_BUILD_SKIP_SELFTESTS}" = 1  ]; then
+		printinfo "Skip selftests build"
+		return 0
+	fi
+
 	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${MPTCP_SELFTESTS_DIR}"
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
+	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1  ]; then
+		printinfo "Skip Packetdrill build"
+		return 0
+	fi
+
 	old_pwd="${PWD}"
 
 	# make sure we have the last stable tests
