@@ -86,6 +86,7 @@ EXPECT=0
 VIRTME_EXEC_RUN="${KERNEL_SRC}/.virtme-exec-run"
 VIRTME_EXEC_PRE="${KERNEL_SRC}/.virtme-exec-pre"
 VIRTME_EXEC_POST="${KERNEL_SRC}/.virtme-exec-post"
+VIRTME_PREPARE_POST="${KERNEL_SRC}/.virtme-prepare-post"
 
 COLOR_RED="\E[1;31m"
 COLOR_GREEN="\E[1;32m"
@@ -716,6 +717,10 @@ fi
 echo "${VIRTME_SCRIPT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT}"
+
+	if [ -f "${VIRTME_PREPARE_POST}" ]; then
+		source "${VIRTME_PREPARE_POST}"
+	fi
 }
 
 run() {
