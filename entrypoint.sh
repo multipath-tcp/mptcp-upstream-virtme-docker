@@ -435,6 +435,11 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	cd "${old_pwd}"
 }
 
+prepare_hosts_file() {
+	# To fix: sudo: unable to resolve host (none): Name or service not known
+	echo "127.0.1.1 (none)" >> /etc/hosts
+}
+
 prepare() { local mode
 	mode="${1}"
 
@@ -442,6 +447,7 @@ prepare() { local mode
 
 	build_selftests
 	build_packetdrill
+	prepare_hosts_file
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash -x
@@ -721,6 +727,7 @@ EOF
 	chmod +x "${VIRTME_SCRIPT}"
 
 	if [ -f "${VIRTME_PREPARE_POST}" ]; then
+		# shellcheck source=/dev/null
 		source "${VIRTME_PREPARE_POST}"
 	fi
 }
