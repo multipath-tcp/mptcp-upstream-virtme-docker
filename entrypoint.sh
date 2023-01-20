@@ -721,6 +721,7 @@ EOF
 	chmod +x "${VIRTME_SCRIPT}"
 
 	if [ -f "${VIRTME_PREPARE_POST}" ]; then
+		# shellcheck source=/dev/null
 		source "${VIRTME_PREPARE_POST}"
 	fi
 }
