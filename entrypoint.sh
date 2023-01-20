@@ -240,6 +240,8 @@ gen_kconfig() { local mode kconfig=()
 		kconfig+=(
 			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
 			-d SLUB_DEBUG_ON # perf impact is too important
+			-e BOOTPARAM_SOFTLOCKUP_PANIC # instead of blocking
+			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		)
 
 		_make_o defconfig debug.config
