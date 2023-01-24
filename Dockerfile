@@ -17,7 +17,7 @@ RUN apt-get update && \
 		clang lld llvm llvm-dev libcap-dev \
 		gdb crash dwarves strace \
 		iptables ebtables nftables vim psmisc bash-completion less jq \
-		gettext-base libevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
+		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
 		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev \
 		libtap-formatter-junit-perl \
 		zstd \
