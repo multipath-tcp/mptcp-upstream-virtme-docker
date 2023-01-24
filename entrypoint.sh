@@ -292,6 +292,12 @@ gen_kconfig() { local mode kconfig=()
 	# Disable retpoline to accelerate tests
 	kconfig+=(-d RETPOLINE)
 
+	# Disable components we don't need
+	kconfig+=(
+		-d PCCARD -d MACINTOSH_DRIVERS -d SOUND -d USB_SUPPORT
+		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB
+	)
+
 	# extra config
 	kconfig+=("${@}")
 
