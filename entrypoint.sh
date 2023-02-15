@@ -408,10 +408,11 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 			kversion=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
 			kver_maj=${kversion%%.*} ## 5
 			kver_min=${kversion#*.} ## 17.0*
+			kver_mic=${kver_min#*.} ## 0
 			kver_min=${kver_min%%.*} ## 17
 
 			# without rc, it means we probably already merged with net-next
-			if [[ ! "${kversion}" =~ rc  ]]; then
+			if [[ ! "${kversion}" =~ rc ]] && [ "${kver_mic}" = 0 ]; then
 				kver_min=$((kver_min + 1))
 
 				# max .19 because Linus has 20 fingers
