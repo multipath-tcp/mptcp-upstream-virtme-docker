@@ -124,3 +124,12 @@ this mount and set the proper env var.
 VIRTME_PACKETDRILL_PATH=/PATH/TO/packetdrill \
   /PATH/TO/THIS/REPO/run-tests-dev.sh <entrypoint options, see above>
 ```
+
+If packetdrill itself is modified and to continue to use the same build
+environment, the recompilation can also be done from the running docker image:
+
+```bash
+docker exec -w /opt/packetdrill/gtests/net/packetdrill -it \
+  $(docker ps --filter ancestor=mptcp/mptcp-upstream-virtme-docker --format='{{.ID}}') \
+    make
+```
