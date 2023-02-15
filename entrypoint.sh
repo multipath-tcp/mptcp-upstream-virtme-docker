@@ -13,9 +13,23 @@ is_ci() {
 	[ "${CI}" = "true" ]
 }
 
-if is_ci || [ "${INPUT_TRACE}" = "1" ]; then
-	set -x
-fi
+trace_needed() {
+	is_ci || [ "${INPUT_TRACE}" = "1" ]
+}
+
+set_trace_on() {
+	if trace_needed; then
+		set -x
+	fi
+}
+
+set_trace_off() {
+	if trace_needed; then
+		set +x
+	fi
+}
+
+set_trace_on
 
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
@@ -423,6 +437,9 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
 		printinfo "Packetdrill: not modifying the tolerance"
 	else
+		# reduce debug logs: too much
+		set_trace_off
+
 		local pf val new_val
 		for pf in $(git grep -l "^--tolerance_usecs="); do
 			# shellcheck disable=SC2013 # to filter duplicated ones
@@ -440,6 +457,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
 			done
 		done
+
+		set_trace_on
 	fi
 	cd "${old_pwd}"
 }
