@@ -13,9 +13,23 @@ is_ci() {
 	[ "${CI}" = "true" ]
 }
 
-if is_ci || [ "${INPUT_TRACE}" = "1" ]; then
-	set -x
-fi
+trace_needed() {
+	is_ci || [ "${INPUT_TRACE}" = "1" ]
+}
+
+set_trace_on() {
+	if trace_needed; then
+		set -x
+	fi
+}
+
+set_trace_off() {
+	if trace_needed; then
+		set +x
+	fi
+}
+
+set_trace_on
 
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
@@ -66,7 +80,7 @@ mkdir -p \
 VIRTME_PROG_PATH="/opt/virtme"
 VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
 VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
-VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd)
+VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd --show-command)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
 # results dir
@@ -394,10 +408,11 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 			kversion=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
 			kver_maj=${kversion%%.*} ## 5
 			kver_min=${kversion#*.} ## 17.0*
+			kver_mic=${kver_min#*.} ## 0
 			kver_min=${kver_min%%.*} ## 17
 
 			# without rc, it means we probably already merged with net-next
-			if [[ ! "${kversion}" =~ rc  ]]; then
+			if [[ ! "${kversion}" =~ rc ]] && [ "${kver_mic}" = 0 ]; then
 				kver_min=$((kver_min + 1))
 
 				# max .19 because Linus has 20 fingers
@@ -423,6 +438,9 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
 		printinfo "Packetdrill: not modifying the tolerance"
 	else
+		# reduce debug logs: too much
+		set_trace_off
+
 		local pf val new_val
 		for pf in $(git grep -l "^--tolerance_usecs="); do
 			# shellcheck disable=SC2013 # to filter duplicated ones
@@ -440,6 +458,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
 			done
 		done
+
+		set_trace_on
 	fi
 	cd "${old_pwd}"
 }
