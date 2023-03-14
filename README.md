@@ -148,15 +148,15 @@ a few tips to use it elsewhere:
   to have to install new packages from `.virtme-prepare-post` each time you run
   the docker image. You can use our docker image as a base and then install
   other dependences:
-  ```
-  FROM mptcp/mptcp-upstream-virtme-docker:latest`
+  ```dockerfile
+  FROM mptcp/mptcp-upstream-virtme-docker:latest
 
   RUN apt-get update && apt-get install -y python3-pip python3-scapy
   ```
 
 
 - Skip the build steps you don't need, e.g.
-  ```
+  ```bash
   docker run (...) \
       -e INPUT_BUILD_SKIP_PERF=1 \
       -e INPUT_BUILD_SKIP_SELFTESTS=1 \
@@ -168,7 +168,7 @@ a few tips to use it elsewhere:
 
 - Specify the path to another selftests dir to test by using
   `INPUT_SELFTESTS_DIR` env var, e.g.
-  ```
+  ```bash
   docker run (...) \
       -e INPUT_SELFTESTS_DIR=tools/testing/selftests/tc-testing
       (...)
@@ -179,7 +179,7 @@ a few tips to use it elsewhere:
 
 An example:
 
-```
+```bash
 # Better to extend the docker image (but quick solution here), see above:
 cat <<'EOF' > ".virtme-prepare-post"
 apt-get update && apt-get install -y python3-pip python3-scapy
