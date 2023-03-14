@@ -276,7 +276,7 @@ gen_kconfig() { local mode kconfig=()
 	# We need more debug info but it is slow to generate
 	if [ "${mode}" = "btf" ]; then
 		kconfig+=(-e DEBUG_INFO_BTF)
-	elif is_ci; then
+	elif is_ci || [ "${mode}" != "debsym" ]; then
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
 	fi
 
