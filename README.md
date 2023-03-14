@@ -190,12 +190,12 @@ cat <<'EOF' > ".virtme-exec-run"
 run_selftest_all
 EOF
 
-# skip Packetdrill build (not needed) and run TC selftests
+# skip Packetdrill build (not needed), run TC selftests and add CONFIG_DUMMY
 docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
   -e INPUT_BUILD_SKIP_PACKETDRILL=1 \
   -e INPUT_SELFTESTS_DIR=tools/testing/selftests/tc-testing \
   --pull always mptcp/mptcp-upstream-virtme-docker:latest \
-  auto-normal
+  auto-normal -e DUMMY
 ```
 
 Feel free to contact us and/or open Pull Requests to support more cases.
