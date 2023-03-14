@@ -1,6 +1,7 @@
 #! /bin/bash
 #
-# The goal is to launch MPTCP kernel selftests
+# The goal is to launch (MPTCP) kernel selftests and more.
+# But also to provide a dev env for kernel developers or testers.
 #
 # Arguments:
 #   - "manual": to have a console in the VM. Additional args are for the kconfig
@@ -40,6 +41,7 @@ set_trace_on
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
 : "${INPUT_RUN_TESTS_ONLY:=""}"
 : "${INPUT_RUN_TESTS_EXCEPT:=""}"
+: "${INPUT_SELFTESTS_DIR:=""}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -62,8 +64,8 @@ VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
-MPTCP_SELFTESTS_DIR="tools/testing/selftests/net/mptcp"
-MPTCP_SELFTESTS_CONFIG="${MPTCP_SELFTESTS_DIR}/config"
+SELFTESTS_DIR="${INPUT_SELFTESTS_DIR:-tools/testing/selftests/net/mptcp}"
+SELFTESTS_CONFIG="${SELFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
@@ -276,7 +278,7 @@ gen_kconfig() { local mode kconfig=()
 	# We need more debug info but it is slow to generate
 	if [ "${mode}" = "btf" ]; then
 		kconfig+=(-e DEBUG_INFO_BTF)
-	elif is_ci; then
+	elif is_ci || [ "${mode}" != "debsym" ]; then
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
 	fi
 
@@ -318,8 +320,8 @@ gen_kconfig() { local mode kconfig=()
 	# KBUILD_OUTPUT is used by virtme
 	"${VIRTME_CONFIGKERNEL}" --arch=x86_64 --update
 
-	# Extra options are needed for MPTCP kselftests
-	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${MPTCP_SELFTESTS_CONFIG}"
+	# Extra options are needed for kselftests
+	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${SELFTESTS_CONFIG}"
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}"
 
@@ -385,7 +387,7 @@ build_selftests() {
 		return 0
 	fi
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${MPTCP_SELFTESTS_DIR}"
+	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${SELFTESTS_DIR}"
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
@@ -590,7 +592,7 @@ run_kunit() {
 
 # \$1: output tap file; rest: command to launch
 _run_selftest_one_tap() {
-	cd "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
+	cd "${KERNEL_SRC}/${SELFTESTS_DIR}"
 	_tap "\${@}"
 }
 
@@ -609,7 +611,7 @@ run_selftest_all() { local sf
 	# The following command re-do a slow headers install + compilation in a different dir
 	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
 
-	for sf in "${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}/"*.sh; do
+	for sf in "${KERNEL_SRC}/${SELFTESTS_DIR}/"*.sh; do
 		run_selftest_one "\${sf}"
 	done
 }
@@ -674,7 +676,7 @@ run_loop_n() { local i tdir rc=0
 	n=\${1}
 	shift
 
-	tdir="${KERNEL_SRC}/${MPTCP_SELFTESTS_DIR}"
+	tdir="${KERNEL_SRC}/${SELFTESTS_DIR}"
 	if ls "\${tdir}/"*.pcap &>/dev/null; then
 		mkdir -p "\${tdir}/pcaps"
 		mv "\${tdir}/"*.pcap "\${tdir}/pcaps"
@@ -821,7 +823,7 @@ EOF
 }
 
 _get_selftests_gen_files() {
-	grep TEST_GEN_FILES "${MPTCP_SELFTESTS_DIR}/Makefile" | cut -d= -f2
+	grep TEST_GEN_FILES "${SELFTESTS_DIR}/Makefile" | cut -d= -f2
 }
 
 ccache_stat() {
@@ -1150,7 +1152,7 @@ if [ -z "${MODE}" ]; then
 fi
 shift
 
-if [ ! -s "${MPTCP_SELFTESTS_CONFIG}" ]; then
+if [ ! -s "${SELFTESTS_CONFIG}" ]; then
 	printerr "Please be at the root of kernel source code with MPTCP (Upstream) support"
 	exit 1
 fi
@@ -1180,7 +1182,7 @@ case "${MODE}" in
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
 		# tests execution, it might hide bugs
-		_make_o -C "${MPTCP_SELFTESTS_DIR}" clean
+		_make_o -C "${SELFTESTS_DIR}" clean
 		go_expect "normal" "${@}"
 		_make_o clean
 		go_expect "debug" "${@}"

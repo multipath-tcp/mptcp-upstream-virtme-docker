@@ -133,3 +133,69 @@ docker exec -w /opt/packetdrill/gtests/net/packetdrill -it \
   $(docker ps --filter ancestor=mptcp/mptcp-upstream-virtme-docker --format='{{.ID}}') \
     make
 ```
+
+## Using for other subsystems than MPTCP
+
+These project has been initially created to validate modifications done in MPTCP
+Upstream project. But it can also be used to validate other subsystems. Here are
+a few tips to use it elsewhere:
+
+- If you only need to run extra steps at the "preparation" phase but keeping the
+  same docker image, write them in a `.virtme-prepare-post` file, e.g. to
+  compile iproute2 differently.
+
+- Similar to the previous point, you might prefer to extend the docker image not
+  to have to install new packages from `.virtme-prepare-post` each time you run
+  the docker image. You can use our docker image as a base and then install
+  other dependences:
+  ```
+  FROM mptcp/mptcp-upstream-virtme-docker:latest`
+
+  RUN apt-get update && apt-get install -y python3-pip python3-scapy
+  ```
+
+
+- Skip the build steps you don't need, e.g.
+  ```
+  docker run (...) \
+      -e INPUT_BUILD_SKIP_PERF=1 \
+      -e INPUT_BUILD_SKIP_SELFTESTS=1 \
+      -e INPUT_BUILD_SKIP_PACKETDRILL=1 \
+      (...) \
+      mptcp/mptcp-upstream-virtme-docker \
+      auto-normal
+  ```
+
+- Specify the path to another selftests dir to test by using
+  `INPUT_SELFTESTS_DIR` env var, e.g.
+  ```
+  docker run (...) \
+      -e INPUT_SELFTESTS_DIR=tools/testing/selftests/tc-testing
+      (...)
+  ```
+
+- Use `.virtme-exec-run` file (and similar) to execute different tests,
+  see above.
+
+An example:
+
+```
+# Better to extend the docker image (but quick solution here), see above:
+cat <<'EOF' > ".virtme-prepare-post"
+apt-get update && apt-get install -y python3-pip python3-scapy
+EOF
+
+# Only run the selftests
+cat <<'EOF' > ".virtme-exec-run"
+run_selftest_all
+EOF
+
+# skip Packetdrill build (not needed) and run TC selftests
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
+  -e INPUT_BUILD_SKIP_PACKETDRILL=1 \
+  -e INPUT_SELFTESTS_DIR=tools/testing/selftests/tc-testing \
+  --pull always mptcp/mptcp-upstream-virtme-docker:latest \
+  auto-normal
+```
+
+Feel free to contact us and/or open Pull Requests to support more cases.
