@@ -648,6 +648,10 @@ run_packetdrill_one() { local pktd_dir pktd tap
 run_packetdrill_all() { local pktd_dir
 	cd /opt/packetdrill/gtests/net/
 
+	# dry run just to "heat" up the environment: the first tests are always
+	# slower, especially with a debug kernel
+	./packetdrill/run_all.py mptcp/add_addr/add_addr4_server.pkt &>/dev/null || true
+
 	for pktd_dir in mptcp/*; do
 		run_packetdrill_one "\${pktd_dir}"
 	done
