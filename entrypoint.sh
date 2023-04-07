@@ -45,6 +45,7 @@ set_trace_on
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
+: "${VIRTME_ARCH:=x86_64}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
 # CI only: estimated time before (clone) and after (artifacts) running this script
@@ -82,7 +83,7 @@ mkdir -p \
 VIRTME_PROG_PATH="/opt/virtme"
 VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
 VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
-VIRTME_RUN_OPTS=(--net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd --show-command)
+VIRTME_RUN_OPTS=(--arch "${VIRTME_ARCH}" --net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd --show-command)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
 # results dir
@@ -266,7 +267,7 @@ gen_kconfig() { local mode kconfig=()
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
 
-		_make_o defconfig
+		_make_o defconfig "${VIRTME_ARCH}_defconfig"
 	fi
 
 	# Debug info for developers
@@ -318,7 +319,7 @@ gen_kconfig() { local mode kconfig=()
 	kconfig+=("${@}")
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" --arch=x86_64 --update
+	"${VIRTME_CONFIGKERNEL}" --arch "${VIRTME_ARCH}" --update
 
 	# Extra options are needed for kselftests
 	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${SELFTESTS_CONFIG}"
