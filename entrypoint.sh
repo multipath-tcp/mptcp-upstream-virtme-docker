@@ -487,6 +487,7 @@ prepare() { local mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
+export SELFTESTS_MPTCP_LIB_EXTRA_CHECKS=1
 
 # \$1: name of the test
 _can_run() { local tname
