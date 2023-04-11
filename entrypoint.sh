@@ -614,7 +614,9 @@ run_selftest_all() { local sf
 	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
 
 	for sf in "${KERNEL_SRC}/${SELFTESTS_DIR}/"*.sh; do
-		run_selftest_one "\${sf}"
+		if [ -x "\${sf}" ]; then
+			run_selftest_one "\${sf}"
+		fi
 	done
 }
 
