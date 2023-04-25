@@ -42,6 +42,7 @@ set_trace_on
 : "${INPUT_RUN_TESTS_ONLY:=""}"
 : "${INPUT_RUN_TESTS_EXCEPT:=""}"
 : "${INPUT_SELFTESTS_DIR:=""}"
+: "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -488,7 +489,7 @@ prepare() { local mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
-export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES=1
+export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
 
 # \$1: name of the test
 _can_run() { local tname
