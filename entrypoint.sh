@@ -539,11 +539,21 @@ _tap() { local out tmp fname rc
 
 	# summary
 	{
-		if [ \${rc} -eq 0 ]; then
-			echo "ok 1 test: \${fname}"
-		else
-			echo "not ok 1 test: \${fname} # exit=\${rc}"
-		fi
+		case \${rc} in
+			0)
+				echo "ok 1 test: \${fname}"
+				;;
+			4)
+				if [ "\${SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}" = "1" ]; then
+					echo "not ok 1 test: \${fname} # exit=\${rc}"
+				else
+					echo "ok 1 test: \${fname} # SKIP"
+				fi
+				;;
+			*)
+				echo "not ok 1 test: \${fname} # exit=\${rc}"
+				;;
+		esac
 	} | tee -a "\${out}"
 
 	# diagnostic at the end with TAP
