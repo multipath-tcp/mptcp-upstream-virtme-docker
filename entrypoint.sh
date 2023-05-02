@@ -138,7 +138,7 @@ setup_env() {
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${INPUT_CI_RESULTS_DIR:-${KERNEL_SRC}}"
+		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
 
 		VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS:-$(nproc)}")
 
