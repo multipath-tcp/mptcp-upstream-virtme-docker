@@ -10,16 +10,8 @@
 # We should manage all errors in this script
 set -e
 
-is_ci_one() {
-	[ "${CI}" = "true" ]
-}
-
-is_ci_multi() {
-	[ "${CI_MULTI}" = "true" ]
-}
-
 is_ci() {
-	is_ci_one || is_ci_multi
+	[ "${CI}" = "true" ]
 }
 
 trace_needed() {
@@ -51,6 +43,9 @@ set_trace_on
 : "${INPUT_RUN_TESTS_EXCEPT:=""}"
 : "${INPUT_SELFTESTS_DIR:=""}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
+: "${INPUT_CPUS:=""}"
+: "${INPUT_CI_RESULTS_DIR:=""}"
+: "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -141,11 +136,11 @@ setup_env() {
 	# this docker image
 	git config --global --add safe.directory "${KERNEL_SRC}"
 
-	if is_ci_one; then
+	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${KERNEL_SRC}"
+		RESULTS_DIR="${INPUT_CI_RESULTS_DIR:-${KERNEL_SRC}}"
 
-		VIRTME_RUN_OPTS+=(--cpus "$(nproc)")
+		VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS:-$(nproc)}")
 
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 
@@ -156,20 +151,13 @@ setup_env() {
 		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
 			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
 		fi
-	elif is_ci_multi; then
-		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/${mode}"
-		rm -rf "${RESULTS_DIR}"
-		mkdir -p "${RESULTS_DIR}"
-
-		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
 	else
 		# avoid override
 		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
-		VIRTME_RUN_OPTS+=(--cpus 2) # limit to 2 cores for now
+		VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS:-2}") # limit to 2 cores for now
 	fi
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
@@ -869,7 +857,7 @@ ccache_stat() {
 # $1: category ; $2: mode ; $3: reason
 _register_issue() { local msg
 	# only one mode in CI mode
-	if is_ci_one; then
+	if is_ci; then
 		msg="${1}: ${3}"
 	else
 		msg="${1} ('${2}' mode): ${3}"
@@ -1256,7 +1244,7 @@ case "${MODE}" in
 		exit 1
 esac
 
-if is_ci_one; then
+if is_ci && [ "${INPUT_CI_PRINT_EXIT_CODE}" = 1 ]; then
 	echo "==EXIT_STATUS=${EXIT_STATUS}=="
 else
 	exit "${EXIT_STATUS}"
