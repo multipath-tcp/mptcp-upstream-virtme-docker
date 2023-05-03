@@ -567,44 +567,46 @@ _tap() { local out tmp fname rc
 	return \${rc}
 }
 
-# $1: path to .ko file
-_insmod() {
-	if ! insmod "\${1}"; then
-		echo "not ok 1 test: insmod \${1} # exit=1"
-		return 1
-	fi
-}
-
-# kunit name
+# \$1: kunit path ; \$2: kunit test
 _kunit_result() {
-	if ! cat "/sys/kernel/debug/kunit/\${1}/results"; then
-		echo "not ok 1 test: kunit result \${1} # exit=1"
-		return 1
+	if ! grep -q "^KTAP" "\${1}" 2>/dev/null; then
+		echo "TAP version 14"
+		echo "1..1"
 	fi
 
+	if ! cat "\${1}"; then
+		echo "not ok 1 test: no kunit result \${2} # exit=1"
+		return 1
+	fi
 }
 
-_run_kunit() { local ko kunit
-	_insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko || return \${?}
+# \$1: .ko path
+run_kunit_one() { local ko kunit kunit_path
+	ko="\${1}"
 
-	echo "TAP version 14"
-	echo "1..$(echo "${VIRTME_BUILD_DIR}/net/mptcp/"*_test.ko | wc -w)"
+	kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
+	kunit="\${kunit:10:-8}" # remove net/mptcp (10) + _test.ko (8)
+	kunit="\${kunit//_/-}" # dash
+	kunit_path="/sys/kernel/debug/kunit/\${kunit}/results"
 
-	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
-		_insmod "\${ko}" || return \${?}
-
-		kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
-		kunit="\${kunit:10:-8}" # remove net/mptcp (10) + _test.ko (8)
-		kunit="\${kunit//_/-}" # dash
-		_kunit_result "\${kunit}" || return \${?}
-	done
+	insmod "\${ko}" || true # errors will also be visible below: no results
+	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap"
 }
 
-run_kunit() {
+run_kunit_core() {
+	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
+}
+
+run_kunit_all() { local ko
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-	_run_kunit | tee "${RESULTS_DIR}/kunit.tap"
+
+	run_kunit_core || return \${?}
+
+	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
+		run_kunit_one "\${ko}"
+	done
 }
 
 # \$1: output tap file; rest: command to launch
@@ -677,7 +679,7 @@ run_packetdrill_all() { local pktd_dir
 }
 
 run_all() {
-	run_kunit
+	run_kunit_all
 	run_selftest_all
 	run_mptcp_connect_mmap
 	run_packetdrill_all
