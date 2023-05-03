@@ -597,7 +597,7 @@ run_kunit_core() {
 	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
 }
 
-run_kunit_all() { local ko
+run_kunit_all() { local ko rc=0
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
@@ -605,8 +605,10 @@ run_kunit_all() { local ko
 	run_kunit_core || return \${?}
 
 	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
-		run_kunit_one "\${ko}"
+		run_kunit_one "\${ko}" || rc=\${?}
 	done
+
+	return \${rc}
 }
 
 # \$1: output tap file; rest: command to launch
@@ -626,15 +628,17 @@ run_selftest_one() { local sf tap
 	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}.tap" "./\${sf}" "\${@}"
 }
 
-run_selftest_all() { local sf
+run_selftest_all() { local sf rc=0
 	# The following command re-do a slow headers install + compilation in a different dir
 	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
 
 	for sf in "${KERNEL_SRC}/${SELFTESTS_DIR}/"*.sh; do
 		if [ -x "\${sf}" ]; then
-			run_selftest_one "\${sf}"
+			run_selftest_one "\${sf}" || rc=\${?}
 		fi
 	done
+
+	return \${rc}
 }
 
 _run_mptcp_connect_opt() { local t="\${1}"
@@ -666,7 +670,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
-run_packetdrill_all() { local pktd_dir
+run_packetdrill_all() { local pktd_dir rc=0
 	cd /opt/packetdrill/gtests/net/
 
 	# dry run just to "heat" up the environment: the first tests are always
@@ -674,8 +678,10 @@ run_packetdrill_all() { local pktd_dir
 	./packetdrill/run_all.py mptcp/add_addr/add_addr4_server.pkt &>/dev/null || true
 
 	for pktd_dir in mptcp/*; do
-		run_packetdrill_one "\${pktd_dir}"
+		run_packetdrill_one "\${pktd_dir}" || rc=\${?}
 	done
+
+	return \${rc}
 }
 
 run_all() {
