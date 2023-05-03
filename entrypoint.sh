@@ -493,6 +493,7 @@ prepare() { local mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
+KUNIT_CORE_LOADED=0
 export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
 
 # \$1: name of the test
@@ -567,44 +568,51 @@ _tap() { local out tmp fname rc
 	return \${rc}
 }
 
-# $1: path to .ko file
-_insmod() {
-	if ! insmod "\${1}"; then
-		echo "not ok 1 test: insmod \${1} # exit=1"
-		return 1
-	fi
-}
-
-# kunit name
+# \$1: kunit path ; \$2: kunit test
 _kunit_result() {
-	if ! cat "/sys/kernel/debug/kunit/\${1}/results"; then
-		echo "not ok 1 test: kunit result \${1} # exit=1"
-		return 1
+	if ! grep -q "^KTAP" "\${1}" 2>/dev/null; then
+		echo "TAP version 14"
+		echo "1..1"
 	fi
 
+	if ! cat "\${1}"; then
+		echo "not ok 1 test: no kunit result \${2} # exit=1"
+		return 1
+	fi
 }
 
-_run_kunit() { local ko kunit
-	_insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko || return \${?}
+run_kunit_core() {
+	[ "\${KUNIT_CORE_LOADED}" = 1 ] && return 0
 
-	echo "TAP version 14"
-	echo "1..$(echo "${VIRTME_BUILD_DIR}/net/mptcp/"*_test.ko | wc -w)"
-
-	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
-		_insmod "\${ko}" || return \${?}
-
-		kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
-		kunit="\${kunit:10:-8}" # remove net/mptcp (10) + _test.ko (8)
-		kunit="\${kunit//_/-}" # dash
-		_kunit_result "\${kunit}" || return \${?}
-	done
+	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
+	KUNIT_CORE_LOADED=1
 }
 
-run_kunit() {
+# \$1: .ko path
+run_kunit_one() { local ko kunit kunit_path
+	ko="\${1}"
+
+	kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
+	kunit="\${kunit:10:-8}" # remove net/mptcp (10) + _test.ko (8)
+	kunit="\${kunit//_/-}" # dash
+	kunit_path="/sys/kernel/debug/kunit/\${kunit}/results"
+
+	run_kunit_core || return \${?}
+
+	insmod "\${ko}" || true # errors will also be visible below: no results
+	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap"
+}
+
+run_kunit_all() { local ko rc=0
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-	_run_kunit | tee "${RESULTS_DIR}/kunit.tap"
+
+	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
+		run_kunit_one "\${ko}" || rc=\${?}
+	done
+
+	return \${rc}
 }
 
 # \$1: output tap file; rest: command to launch
@@ -624,15 +632,17 @@ run_selftest_one() { local sf tap
 	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}.tap" "./\${sf}" "\${@}"
 }
 
-run_selftest_all() { local sf
+run_selftest_all() { local sf rc=0
 	# The following command re-do a slow headers install + compilation in a different dir
 	#make O="${VIRTME_BUILD_DIR}" --silent -C tools/testing/selftests TARGETS=net/mptcp run_tests
 
 	for sf in "${KERNEL_SRC}/${SELFTESTS_DIR}/"*.sh; do
 		if [ -x "\${sf}" ]; then
-			run_selftest_one "\${sf}"
+			run_selftest_one "\${sf}" || rc=\${?}
 		fi
 	done
+
+	return \${rc}
 }
 
 _run_mptcp_connect_opt() { local t="\${1}"
@@ -664,7 +674,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
-run_packetdrill_all() { local pktd_dir
+run_packetdrill_all() { local pktd_dir rc=0
 	cd /opt/packetdrill/gtests/net/
 
 	# dry run just to "heat" up the environment: the first tests are always
@@ -672,12 +682,14 @@ run_packetdrill_all() { local pktd_dir
 	./packetdrill/run_all.py mptcp/add_addr/add_addr4_server.pkt &>/dev/null || true
 
 	for pktd_dir in mptcp/*; do
-		run_packetdrill_one "\${pktd_dir}"
+		run_packetdrill_one "\${pktd_dir}" || rc=\${?}
 	done
+
+	return \${rc}
 }
 
 run_all() {
-	run_kunit
+	run_kunit_all
 	run_selftest_all
 	run_mptcp_connect_mmap
 	run_packetdrill_all
