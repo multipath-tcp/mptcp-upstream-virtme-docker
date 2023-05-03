@@ -493,6 +493,7 @@ prepare() { local mode
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
+KUNIT_CORE_LOADED=0
 export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
 
 # \$1: name of the test
@@ -580,6 +581,13 @@ _kunit_result() {
 	fi
 }
 
+run_kunit_core() {
+	[ "\${KUNIT_CORE_LOADED}" = 1 ] && return 0
+
+	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
+	KUNIT_CORE_LOADED=1
+}
+
 # \$1: .ko path
 run_kunit_one() { local ko kunit kunit_path
 	ko="\${1}"
@@ -589,20 +597,16 @@ run_kunit_one() { local ko kunit kunit_path
 	kunit="\${kunit//_/-}" # dash
 	kunit_path="/sys/kernel/debug/kunit/\${kunit}/results"
 
+	run_kunit_core || return \${?}
+
 	insmod "\${ko}" || true # errors will also be visible below: no results
 	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap"
-}
-
-run_kunit_core() {
-	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
 }
 
 run_kunit_all() { local ko rc=0
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-
-	run_kunit_core || return \${?}
 
 	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
 		run_kunit_one "\${ko}" || rc=\${?}
