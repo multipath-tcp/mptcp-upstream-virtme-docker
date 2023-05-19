@@ -661,7 +661,7 @@ run_mptcp_connect_mmap() {
 run_packetdrill_one() { local pktd_dir pktd tap
 	pktd_dir="\${1}"
 	pktd="\${pktd_dir#*/}"
-	tap="packetdrill_\${pktd}"
+	tap="packetdrill_\${pktd//\//_}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
