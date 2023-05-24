@@ -87,7 +87,7 @@ mkdir -p \
 VIRTME_PROG_PATH="/opt/virtme"
 VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
 VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
-VIRTME_RUN_OPTS=(--arch "${VIRTME_ARCH}" --net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "${KERNEL_SRC}" --pwd --show-command)
+VIRTME_RUN_OPTS=(--arch "${VIRTME_ARCH}" --net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "." --pwd --show-command)
 VIRTME_RUN_OPTS+=(--kopt mitigations=off)
 
 # results dir
