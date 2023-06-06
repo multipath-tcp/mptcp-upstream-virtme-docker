@@ -1,4 +1,6 @@
 #!/bin/bash
+VIRTME_INTERACTIVE=""
+[ "${VIRTME_NO_INTERACTIVE}" != 1 ] && VIRTME_INTERACTIVE="-it"
 docker run \
 	-v "${PWD}:${PWD}:rw" \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
@@ -20,6 +22,6 @@ docker run \
 	-e "COMPILER" \
 	--privileged \
 	--rm \
-	-it \
+	${VIRTME_INTERACTIVE} \
 	"${DOCKER_VIRTME_NAME:-"mptcp/mptcp-upstream-virtme-docker:latest"}" \
 	"${@}"
