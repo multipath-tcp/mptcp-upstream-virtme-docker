@@ -477,7 +477,7 @@ prepare_hosts_file() {
 	echo "127.0.1.1 (none)" >> /etc/hosts
 }
 
-prepare() { local mode
+prepare() { local mode no_tap=1
 	mode="${1}"
 
 	printinfo "Prepare the environment"
@@ -485,6 +485,8 @@ prepare() { local mode
 	build_selftests
 	build_packetdrill
 	prepare_hosts_file
+
+	is_ci && no_tap=0
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash -x
@@ -495,6 +497,7 @@ RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
 KUNIT_CORE_LOADED=0
 export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
+export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 # \$1: name of the test
 _can_run() { local tname
@@ -523,10 +526,12 @@ can_run() {
 }
 
 # \$1: file ; \$2+: commands
-_tap() { local out tmp fname rc
-	out="\${1}"
+_tap() { local out out_subtests tmp fname rc
+	out="\${1}.tap"
+	out_subtests="\${1}_subtests.tap"
 	shift
 
+	rm -f "\${out}" "\${out_subtests}"
 	# With TAP, we have first the summary, then the diagnostic
 	tmp="\${out}.tmp"
 	fname="\$(basename \${out})"
@@ -562,7 +567,12 @@ _tap() { local out tmp fname rc
 	} | tee -a "\${out}"
 
 	# diagnostic at the end with TAP
-	cat "\${tmp}" >> "\${out}"
+	# Also extract subtests displayed at the end, if any, in a different file without "#"
+	awk "BEGIN { subtests=0 } {
+		if (\\\$0 ~ /^# TAP version /) { subtests=1 };
+		if (subtests == 0) { print >> \"\${out}\" }
+		else { for (i=2; i <= NF; i++) printf(\"%s\", ((i>2) ? OFS : \"\") \\\$i) >> \"\${out_subtests}\" ; printf(\"\n\") >> \"\${out_subtests}\" }
+	}" "\${tmp}"
 	rm -f "\${tmp}"
 
 	return \${rc}
@@ -584,7 +594,7 @@ _kunit_result() {
 run_kunit_core() {
 	[ "\${KUNIT_CORE_LOADED}" = 1 ] && return 0
 
-	_tap "${RESULTS_DIR}/kunit.tap" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
+	_tap "${RESULTS_DIR}/kunit" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
 	KUNIT_CORE_LOADED=1
 }
 
@@ -629,7 +639,7 @@ run_selftest_one() { local sf tap
 
 	_can_run "\${tap}" || return 0
 
-	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}.tap" "./\${sf}" "\${@}"
+	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}"
 }
 
 run_selftest_all() { local sf rc=0
@@ -648,7 +658,7 @@ run_selftest_all() { local sf rc=0
 _run_mptcp_connect_opt() { local t="\${1}"
 	shift
 
-	_run_selftest_one_tap "${RESULTS_DIR}/mptcp_connect_\${t}.tap" ./mptcp_connect.sh "\${@}"
+	_run_selftest_one_tap "${RESULTS_DIR}/mptcp_connect_\${t}" ./mptcp_connect.sh "\${@}"
 }
 
 run_mptcp_connect_mmap() {
@@ -670,7 +680,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 	_can_run "\${tap}" || return 0
 
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}.tap" \
+	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
 		./packetdrill/run_all.py -l -v \${pktd_dir}
 }
 
@@ -995,7 +1005,8 @@ _print_failed_tests() { local t
 
 _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
-	grep "^not ok " "${TESTS_SUMMARY}" | \
+	# we just want the main results, not the detailed ones for the moment
+	grep "^not ok [0-9]\+ test: " "${TESTS_SUMMARY}" | \
 		awk '{ print $5 }' | \
 		sort -u | \
 		sed "s/\.tap$//g"
