@@ -193,10 +193,9 @@ check_last_iproute() { local last curr
 	if [[ "${IPROUTE2_GIT_SHA}" == "v"* ]]; then
 		curr="${IPROUTE2_GIT_SHA}"
 		if [ "${curr}" = "${last}" ]; then
-			printinfo "Using the last version of IPRoute2: ${last}"
+			printinfo "IPRoute2: using the last version: ${last}"
 		else
-			printerr "Not the last version of IPRoute2: ${curr} < ${last}"
-			return 1
+			printerr "WARN: IPRoute2: not the last version: ${curr} < ${last}"
 		fi
 	else
 		printerr "TODO: check ip -V"
