@@ -984,7 +984,7 @@ _has_failed_tests() {
 
 _print_tests_result() {
 	echo "All tests:"
-	grep --no-filename -e "^ok " -e "^not ok " "${RESULTS_DIR}"/*.tap
+	grep --no-filename -e "^ok [0-9]\+ test:" -e "^not ok " "${RESULTS_DIR}"/*.tap
 }
 
 _print_failed_tests() { local t
@@ -996,7 +996,7 @@ _print_failed_tests() { local t
 			_print_line
 			echo "- $(basename "${t}"):"
 			echo
-			cat "${t}"
+			grep -v "^ok [0-9]\+ - " "${t}"
 		fi
 	done
 	_print_line
