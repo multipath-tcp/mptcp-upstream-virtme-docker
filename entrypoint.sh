@@ -849,7 +849,9 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "Timeout: sending Ctrl+C\n"
-		send "\x03"
+		send "\x03\r"
+		sleep 2
+		send "\x03\r"
 	} eof {
 		send_user "Unexpected stop of the VM\n"
 		exit 1
