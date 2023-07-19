@@ -46,6 +46,7 @@ set_trace_on
 : "${INPUT_CPUS:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
+: "${INPUT_EXPECT_TIMEOUT:="-1"}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -823,7 +824,7 @@ run_expect() {
 		VIRTME_EXPECT_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_EXPECT_TIMEOUT))
 	else
 		# disable timeout
-		VIRTME_EXPECT_TIMEOUT="-1"
+		VIRTME_EXPECT_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TIMEOUT})"
