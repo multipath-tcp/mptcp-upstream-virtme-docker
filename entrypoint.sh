@@ -775,7 +775,7 @@ fi
 if [ -f "${VIRTME_EXEC_RUN}" ]; then
 	echo -e "\n\n\tNot running all tests but:\n\n"
 	echo "-------- 8< --------"
-	cat "${VIRTME_EXEC_RUN}"
+	sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}"
 	echo "-------- 8< --------"
 	source "${VIRTME_EXEC_RUN}"
 	# e.g.:
