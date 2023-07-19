@@ -46,6 +46,7 @@ set_trace_on
 : "${INPUT_CPUS:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
+: "${INPUT_EXPECT_TIMEOUT:="-1"}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -775,7 +776,7 @@ fi
 if [ -f "${VIRTME_EXEC_RUN}" ]; then
 	echo -e "\n\n\tNot running all tests but:\n\n"
 	echo "-------- 8< --------"
-	cat "${VIRTME_EXEC_RUN}"
+	sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}"
 	echo "-------- 8< --------"
 	source "${VIRTME_EXEC_RUN}"
 	# e.g.:
@@ -823,7 +824,7 @@ run_expect() {
 		VIRTME_EXPECT_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_EXPECT_TIMEOUT))
 	else
 		# disable timeout
-		VIRTME_EXPECT_TIMEOUT="-1"
+		VIRTME_EXPECT_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TIMEOUT})"
@@ -849,7 +850,9 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "Timeout: sending Ctrl+C\n"
-		send "\x03"
+		send "\x03\r"
+		sleep 2
+		send "\x03\r"
 	} eof {
 		send_user "Unexpected stop of the VM\n"
 		exit 1
