@@ -569,7 +569,7 @@ _tap() { local out out_subtests tmp fname rc
 	# diagnostic at the end with TAP
 	# Also extract subtests displayed at the end, if any, in a different file without "#"
 	awk "BEGIN { subtests=0 } {
-		if (\\\$0 ~ /^# TAP version /) { subtests=1 };
+		if (subtests == 0 && \\\$0 ~ /^# TAP version /) { subtests=1 };
 		if (subtests == 0) { print >> \"\${out}\" }
 		else { for (i=2; i <= NF; i++) printf(\"%s\", ((i>2) ? OFS : \"\") \\\$i) >> \"\${out_subtests}\" ; printf(\"\n\") >> \"\${out_subtests}\" }
 	}" "\${tmp}"
