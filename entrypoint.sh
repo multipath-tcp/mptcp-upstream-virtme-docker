@@ -43,6 +43,7 @@ set_trace_on
 : "${INPUT_RUN_TESTS_EXCEPT:=""}"
 : "${INPUT_SELFTESTS_DIR:=""}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
+: "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
 : "${INPUT_CPUS:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
@@ -497,6 +498,7 @@ RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
 KUNIT_CORE_LOADED=0
 export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
+export SELFTESTS_MPTCP_LIB_COLOR_FORCE="${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}"
 export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 # \$1: name of the test
@@ -567,12 +569,14 @@ _tap() { local out out_subtests tmp fname rc
 	} | tee -a "\${out}"
 
 	# diagnostic at the end with TAP
+	# Strip colours: https://stackoverflow.com/a/18000433
 	# Also extract subtests displayed at the end, if any, in a different file without "#"
-	awk "BEGIN { subtests=0 } {
-		if (subtests == 0 && \\\$0 ~ /^# TAP version /) { subtests=1 };
-		if (subtests == 0) { print >> \"\${out}\" }
-		else { for (i=2; i <= NF; i++) printf(\"%s\", ((i>2) ? OFS : \"\") \\\$i) >> \"\${out_subtests}\" ; printf(\"\n\") >> \"\${out_subtests}\" }
-	}" "\${tmp}"
+	sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g" "\${tmp}" | \
+		awk "BEGIN { subtests=0 } {
+			if (subtests == 0 && \\\$0 ~ /^# TAP version /) { subtests=1 };
+			if (subtests == 0) { print >> \"\${out}\" }
+			else { for (i=2; i <= NF; i++) printf(\"%s\", ((i>2) ? OFS : \"\") \\\$i) >> \"\${out_subtests}\" ; printf(\"\n\") >> \"\${out_subtests}\" }
+		}"
 	rm -f "\${tmp}"
 
 	return \${rc}
