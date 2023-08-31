@@ -50,7 +50,7 @@ set_trace_on
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
-: "${CI_TIMEOUT_SEC:=7200}"
+: "${CI_TIMEOUT_SEC:=5400}"
 : "${VIRTME_ARCH:=x86_64}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
