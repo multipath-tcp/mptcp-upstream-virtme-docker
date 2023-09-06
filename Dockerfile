@@ -5,6 +5,8 @@ LABEL name=mptcp-upstream-virtme-docker
 # dependencies for the script
 RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive \
+	apt-get dist-upgrade -y && \
+	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
