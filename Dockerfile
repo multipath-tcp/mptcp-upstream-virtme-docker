@@ -5,6 +5,8 @@ LABEL name=mptcp-upstream-virtme-docker
 # dependencies for the script
 RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive \
+	apt-get dist-upgrade -y && \
+	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
@@ -75,7 +77,7 @@ RUN cd /opt && \
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
-ARG IPROUTE2_GIT_SHA="v6.4.0"
+ARG IPROUTE2_GIT_SHA="v6.5.0"
 ENV IPROUTE2_GIT_SHA="${IPROUTE2_GIT_SHA}"
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
