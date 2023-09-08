@@ -50,12 +50,15 @@ set_trace_on
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
-: "${CI_TIMEOUT_SEC:=5400}"
+: "${CI_TIMEOUT_SEC:=7200}"
 : "${VIRTME_ARCH:=x86_64}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
-# CI only: estimated time before (clone) and after (artifacts) running this script
-VIRTME_EXPECT_TIMEOUT="480"
+# CI only: estimated time before (clone + boot) and after (artifacts) running this script
+VIRTME_CI_ESTIMATED_EXTRA_TIME="540"
+
+# max time to boot: it should take less than one minute with a debug kernel, *3 to be safe
+VIRTME_EXPECT_BOOT_TIMEOUT="180"
 
 KERNEL_SRC="${PWD}"
 
@@ -822,13 +825,13 @@ run_expect() {
 		timestamps_sec_stop=$(date +%s)
 
 		# max - compilation time - before/after script
-		VIRTME_EXPECT_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_EXPECT_TIMEOUT))
+		VIRTME_EXPECT_TEST_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_CI_ESTIMATED_EXTRA_TIME))
 	else
 		# disable timeout
-		VIRTME_EXPECT_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
+		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
 
-	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TIMEOUT})"
+	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash -x
@@ -839,11 +842,22 @@ EOF
 	cat <<EOF > "${VIRTME_RUN_EXPECT}"
 #!/usr/bin/expect -f
 
-set timeout "${VIRTME_EXPECT_TIMEOUT}"
-
+set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
+expect {
+	"virtme-init: console is ttyS0\r" {
+		send_user "Starting the validation script\n"
+		send "\r"
+	} timeout {
+		send_user "Timeout: stopping\n"
+		exit 1
+	} eof {
+		send_user "Unexpected stop of the VM\n"
+		exit 1
+	}
+}
 
-expect "virtme-init: console is ttyS0\r"
+set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
 send -- "stdbuf -oL ${VIRTME_SCRIPT}\r"
 
 expect {
