@@ -846,15 +846,37 @@ set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
 expect {
 	"virtme-init: console is ttyS0\r" {
-		send_user "Starting the validation script\n"
+		send_user "Waiting for the console to be ready\n"
 		send "\r"
 	} timeout {
-		send_user "Timeout: stopping\n"
+		send_user "Timeout ttyS0: stopping\n"
 		exit 1
 	} eof {
-		send_user "Unexpected stop of the VM\n"
+		send_user "Unexpected stop of the VM (ttyS0)\n"
 		exit 1
 	}
+}
+
+set timeout "1"
+
+for {set i 0} {\$i < 60} {incr i 1} {
+	expect {
+		"root@" {
+			send_user "Starting the validation script (after \$i sec)\n"
+			break
+		} timeout {
+			sleep 1
+			send "\r"
+		} eof {
+			send_user "Unexpected stop of the VM (console)\n"
+			exit 1
+		}
+	}
+}
+
+if {\$i >= 60} {
+	send_user "Timeout console: stopping (\$i)\n"
+	exit 1
 }
 
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
