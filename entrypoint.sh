@@ -146,7 +146,7 @@ setup_env() {
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
 		mkdir -p "${RESULTS_DIR}"
 
-		VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS:-$(nproc)}")
+		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 
@@ -163,8 +163,10 @@ setup_env() {
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
-		VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS:-2}") # limit to 2 cores for now
+		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
 	fi
+
+	VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS}")
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
@@ -688,7 +690,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 
 	cd /opt/packetdrill/gtests/net/
 	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v -P $(($(nproc) * 2)) \${pktd_dir}
+		./packetdrill/run_all.py -l -v -P $((INPUT_CPUS * 2)) \${pktd_dir}
 }
 
 run_packetdrill_all() { local pktd_dir rc=0
