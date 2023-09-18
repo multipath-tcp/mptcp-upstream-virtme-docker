@@ -688,7 +688,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 
 	cd /opt/packetdrill/gtests/net/
 	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v \${pktd_dir}
+		./packetdrill/run_all.py -l -v -P $(($(nproc) * 2)) \${pktd_dir}
 }
 
 run_packetdrill_all() { local pktd_dir rc=0
