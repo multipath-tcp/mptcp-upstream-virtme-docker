@@ -48,7 +48,11 @@ set_trace_on
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
-: "${INPUT_MODE:="${1}"}"
+
+if [ -z "${INPUT_MODE}" ]; then
+	INPUT_MODE="${1}"
+	shift
+fi
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${CI_TIMEOUT_SEC:=7200}"
@@ -1237,7 +1241,6 @@ if [ -z "${INPUT_MODE}" ]; then
 	usage
 	exit 0
 fi
-shift
 
 if [ ! -s "${SELFTESTS_CONFIG}" ]; then
 	printerr "Please be at the root of kernel source code with MPTCP (Upstream) support"
