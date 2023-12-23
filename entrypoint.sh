@@ -47,6 +47,7 @@ set_trace_on
 : "${INPUT_CPUS:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
+: "${INPUT_CI_TIMEOUT_SEC:=7200}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 
 if [ -z "${INPUT_MODE}" ]; then
@@ -55,15 +56,14 @@ if [ -z "${INPUT_MODE}" ]; then
 fi
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
-: "${CI_TIMEOUT_SEC:=7200}"
 : "${VIRTME_ARCH:=x86_64}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
 # CI only: estimated time before (clone + boot) and after (artifacts) running this script
 VIRTME_CI_ESTIMATED_EXTRA_TIME="540"
 
-# max time to boot: it should take less than one minute with a debug kernel, *3 to be safe
-VIRTME_EXPECT_BOOT_TIMEOUT="180"
+# max time to boot: it should take less than one minute with a debug kernel, *5 to be safe
+VIRTME_EXPECT_BOOT_TIMEOUT="300"
 
 KERNEL_SRC="${PWD}"
 
@@ -832,7 +832,7 @@ run_expect() {
 		timestamps_sec_stop=$(date +%s)
 
 		# max - compilation time - before/after script
-		VIRTME_EXPECT_TEST_TIMEOUT=$((CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_CI_ESTIMATED_EXTRA_TIME))
+		VIRTME_EXPECT_TEST_TIMEOUT=$((INPUT_CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_CI_ESTIMATED_EXTRA_TIME))
 	else
 		# disable timeout
 		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"

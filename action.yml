@@ -9,6 +9,10 @@ inputs:
     description: 'Kernel mode to use (normal / debug)'
     required: false
     default: 'normal'
+  ci_timeout_sec:
+    description: 'Global timeout (sec)'
+    required: false
+    default: '20000'
 
 runs:
   using: 'docker'
