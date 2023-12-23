@@ -12,7 +12,7 @@ inputs:
   ci_timeout_sec:
     description: 'Global timeout (sec)'
     required: false
-    default: '20000'
+    default: '21800'
 
 runs:
   using: 'docker'
