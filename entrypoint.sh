@@ -55,6 +55,11 @@ if [ -z "${INPUT_MODE}" ]; then
 	shift
 fi
 
+# to be able to set an extra env var
+if [[ "${INPUT_EXTRA_ENV}" =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9]+$ ]]; then
+	eval "${INPUT_EXTRA_ENV}"
+fi
+
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
 : "${VIRTME_ARCH:=x86_64}"
 
