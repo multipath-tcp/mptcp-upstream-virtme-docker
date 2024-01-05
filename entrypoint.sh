@@ -543,7 +543,7 @@ can_run() {
 }
 
 # \$1: file ; \$2+: commands
-_tap() { local out out_subtests tmp fname rc
+_tap() { local out out_subtests tmp fname rc ok nok msg cmt
 	out="\${1}.tap"
 	out_subtests="\${1}_subtests.tap"
 	shift
@@ -552,6 +552,8 @@ _tap() { local out out_subtests tmp fname rc
 	# With TAP, we have first the summary, then the diagnostic
 	tmp="\${out}.tmp"
 	fname="\$(basename \${out})"
+	ok="ok 1 test: \${fname}"
+	nok="not \${ok}"
 
 	# init
 	{
@@ -565,23 +567,37 @@ _tap() { local out out_subtests tmp fname rc
 	rc=\${PIPESTATUS[0]}
 
 	# summary
-	{
-		case \${rc} in
-			0)
-				echo "ok 1 test: \${fname}"
-				;;
-			4)
-				if [ "\${SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}" = "1" ]; then
-					echo "not ok 1 test: \${fname} # exit=\${rc}"
-				else
-					echo "ok 1 test: \${fname} # SKIP"
-				fi
-				;;
-			*)
-				echo "not ok 1 test: \${fname} # exit=\${rc}"
-				;;
-		esac
-	} | tee -a "\${out}"
+	case \${rc} in
+		0)
+			msg="\${ok}"
+			;;
+		1)
+			msg="\${nok}"
+			cmt=FAIL
+			;;
+		2)
+			msg="\${nok}"
+			cmt=XFAIL
+			;;
+		3)
+			msg="\${nok}"
+			cmt=XPASS
+			;;
+		4)
+			cmt=SKIP
+			if [ "\${SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}" = "1" ]; then
+				msg="\${nok}"
+			else
+				msg="\${ok}"
+			fi
+			;;
+		*)
+			msg="\${nok}"
+			cmt="FAIL # exit=\${rc}"
+			;;
+	esac
+	# note: '#' is a directive, not a comment: we imitate kselftest/runner.sh
+	echo "\${msg}\${cmt+ # }\${cmt}" | tee -a "\${out}"
 
 	# diagnostic at the end with TAP
 	# Strip colours: https://stackoverflow.com/a/18000433
