@@ -543,7 +543,7 @@ can_run() {
 }
 
 # \$1: file ; \$2+: commands
-_tap() { local out out_subtests tmp fname rc ok nok msg cmt
+_tap() { local out out_subtests tmp fname rc ok nok msg cmt ts_s_start ts_s_stop
 	out="\${1}.tap"
 	out_subtests="\${1}_subtests.tap"
 	fname="\$(basename \${1})"
@@ -554,6 +554,7 @@ _tap() { local out out_subtests tmp fname rc ok nok msg cmt
 	tmp="\${out}.tmp"
 	ok="ok 1 test: \${fname}"
 	nok="not \${ok}"
+	ts_s_start=\$(date +%s)
 
 	# init
 	{
@@ -565,6 +566,7 @@ _tap() { local out out_subtests tmp fname rc ok nok msg cmt
 	"\${@}" 2>&1 | "\${TAP_PREFIX}" | tee "\${tmp}"
 	# output to stdout now to see the progression
 	rc=\${PIPESTATUS[0]}
+	ts_s_stop=\$(date +%s)
 
 	# summary
 	case \${rc} in
@@ -609,6 +611,8 @@ _tap() { local out out_subtests tmp fname rc ok nok msg cmt
 			else { for (i=2; i <= NF; i++) printf(\"%s\", ((i>2) ? OFS : \"\") \\\$i) >> \"\${out_subtests}\" ; printf(\"\n\") >> \"\${out_subtests}\" }
 		}"
 	rm -f "\${tmp}"
+
+	echo "# time=\$((ts_s_stop - ts_s_start))" | tee -a "\${out}"
 
 	return \${rc}
 }
