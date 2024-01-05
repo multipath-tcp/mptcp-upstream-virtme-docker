@@ -546,12 +546,12 @@ can_run() {
 _tap() { local out out_subtests tmp fname rc ok nok msg cmt
 	out="\${1}.tap"
 	out_subtests="\${1}_subtests.tap"
+	fname="\$(basename \${1})"
 	shift
 
 	rm -f "\${out}" "\${out_subtests}"
 	# With TAP, we have first the summary, then the diagnostic
 	tmp="\${out}.tmp"
-	fname="\$(basename \${out})"
 	ok="ok 1 test: \${fname}"
 	nok="not \${ok}"
 
