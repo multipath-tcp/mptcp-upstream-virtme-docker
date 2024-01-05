@@ -505,7 +505,11 @@ prepare() { local mode no_tap=1
 	is_ci && no_tap=0
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
-#! /bin/bash -x
+#! /bin/bash
+
+if [ "${CI}" = "true" ] || [ "${INPUT_TRACE}" = "1" ]; then
+	set -x
+fi
 
 # useful for virtme-exec-run
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
