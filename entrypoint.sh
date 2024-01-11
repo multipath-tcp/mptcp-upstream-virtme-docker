@@ -710,6 +710,12 @@ run_mptcp_connect_mmap() {
 	_run_mptcp_connect_opt mmap -m mmap
 }
 
+run_mptcp_connect_csum() {
+	can_run || return 0
+
+	_run_mptcp_connect_opt csum -C
+}
+
 # \$1: pktd_dir (e.g. mptcp/dss)
 run_packetdrill_one() { local pktd_dir pktd tap
 	pktd_dir="\${1}"
@@ -745,6 +751,7 @@ run_all() {
 	run_kunit_all
 	run_selftest_all
 	run_mptcp_connect_mmap
+	run_mptcp_connect_csum
 	run_packetdrill_all
 }
 
