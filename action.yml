@@ -10,9 +10,9 @@ inputs:
     required: false
     default: 'normal'
   ci_timeout_sec:
-    description: 'Global timeout (sec)'
+    description: 'Global timeout (sec), max 6h (21800 sec)'
     required: false
-    default: '21800'
+    default: '7200'
   extra_env:
     description: 'Extra env var to set to a specified value, e.g. INPUT_CPUS=2'
     required: false

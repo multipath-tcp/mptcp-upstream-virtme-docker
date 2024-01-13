@@ -291,6 +291,9 @@ gen_kconfig() { local mode kconfig=()
 		_make_o defconfig "${VIRTME_ARCH}_defconfig"
 	fi
 
+	# Reboot the VM instead of blocking in case of panic
+	kconfig+=(--set-val PANIC_TIMEOUT -1)
+
 	# Debug info for developers
 	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF4 -e GDB_SCRIPTS)
 
@@ -866,6 +869,9 @@ run_expect() {
 		# disable timeout
 		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
+
+	# avoid reboot, e.g. in case of panic
+	VIRTME_RUN_OPTS+=(--qemu-opts -no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
