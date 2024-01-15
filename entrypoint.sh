@@ -1113,6 +1113,9 @@ analyze() {
 
 	if is_ci; then
 		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
+
+		# remove prefix id (unique test) and comments (status, time)
+		sed -i 's/\(<testcase name="\)[0-9]\+[ -]*/\1/g;/<testcase name=/s/\s\+#.*">/">/g' "${RESULTS_DIR}"/*.tap.xml
 	fi
 
 	echo -ne "\n${COLOR_GREEN}"
