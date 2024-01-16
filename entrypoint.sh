@@ -705,7 +705,7 @@ run_selftest_all() { local sf rc=0
 _run_mptcp_connect_opt() { local t="mptcp_connect_\${1}"
 	shift
 
-	KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
+	MPTCP_LIB_KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
 }
 
 run_mptcp_connect_mmap() {
