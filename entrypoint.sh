@@ -81,6 +81,7 @@ VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
+VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -701,10 +702,10 @@ run_selftest_all() { local sf rc=0
 	return \${rc}
 }
 
-_run_mptcp_connect_opt() { local t="\${1}"
+_run_mptcp_connect_opt() { local t="mptcp_connect_\${1}"
 	shift
 
-	_run_selftest_one_tap "${RESULTS_DIR}/mptcp_connect_\${t}" ./mptcp_connect.sh "\${@}"
+	KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
 }
 
 run_mptcp_connect_mmap() {
@@ -894,7 +895,7 @@ expect {
 		send_user "Timeout ttyS0: stopping\n"
 		exit 1
 	} eof {
-		send_user "Unexpected stop of the VM (ttyS0)\n"
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (ttyS0)\n"
 		exit 1
 	}
 }
@@ -910,7 +911,7 @@ for {set i 0} {\$i < 60} {incr i 1} {
 			sleep 1
 			send "\r"
 		} eof {
-			send_user "Unexpected stop of the VM (console)\n"
+			send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (console)\n"
 			exit 1
 		}
 	}
@@ -933,7 +934,7 @@ expect {
 		sleep 2
 		send "\x03\r"
 	} eof {
-		send_user "Unexpected stop of the VM\n"
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP}\n"
 		exit 1
 	}
 }
@@ -1016,6 +1017,16 @@ _print_call_trace_info() {
 
 _get_call_trace_status() {
 	echo "$(grep -c "Call Trace:" "${OUTPUT_VIRTME}") Call Trace(s)"
+}
+
+_has_unexpected_stop() {
+	grep -q "${VIRTME_SCRIPT_UNEXPECTED_STOP}" "${OUTPUT_VIRTME}"
+}
+
+_print_unexpected_stop() {
+	echo
+	_print_line
+	echo "${VIRTME_SCRIPT_UNEXPECTED_STOP}: see above"
 }
 
 _has_timed_out() {
@@ -1143,7 +1154,11 @@ analyze() {
 		fi
 	fi
 
-	if _has_timed_out; then
+	if _has_unexpected_stop; then
+		_print_unexpected_stop | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "${mode}" "${VIRTME_SCRIPT_UNEXPECTED_STOP}"
+		EXIT_STATUS=1
+	elif _has_timed_out; then
 		_print_timed_out | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${mode}" "Global Timeout"
 		EXIT_STATUS=1
