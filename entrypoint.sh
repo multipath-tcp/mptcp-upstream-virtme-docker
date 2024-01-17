@@ -506,7 +506,12 @@ prepare() { local mode no_tap=1
 	build_packetdrill
 	prepare_hosts_file
 
-	is_ci && no_tap=0
+	if is_ci; then
+		no_tap=0 # we want subtests
+		if [ "${mode}" == "debug" ]; then
+			INPUT_MAX_THREADS=${INPUT_CPUS} ## avoid too many concurrent work
+		fi
+	fi
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
@@ -520,9 +525,19 @@ TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
 OUTPUT_VIRTME="${OUTPUT_VIRTME}"
 KUNIT_CORE_LOADED=0
+MAX_THREADS=${INPUT_MAX_THREADS:-$((INPUT_CPUS * 2))}
 export SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES="${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES}"
 export SELFTESTS_MPTCP_LIB_COLOR_FORCE="${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}"
 export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
+
+set_max_threads() {
+	# if QEmu without KVM support
+	if [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
+	   [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; then
+		MAX_THREADS=$((MAX_THREADS / 2)) # avoid too many concurrent work
+	fi
+}
+
 
 # \$1: name of the test
 _can_run() { local tname
@@ -705,7 +720,7 @@ run_selftest_all() { local sf rc=0
 _run_mptcp_connect_opt() { local t="mptcp_connect_\${1}"
 	shift
 
-	KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
+	MPTCP_LIB_KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
 }
 
 run_mptcp_connect_mmap() {
@@ -728,7 +743,7 @@ run_packetdrill_one() { local pktd_dir pktd tap
 
 	cd /opt/packetdrill/gtests/net/
 	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v -P $((INPUT_CPUS * 2)) \${pktd_dir}
+		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir}
 }
 
 run_packetdrill_all() { local pktd_dir rc=0
@@ -808,6 +823,8 @@ run_loop_n() { local i tdir rc=0
 run_loop() {
 	run_loop_n 0 "\${@}"
 }
+
+set_max_threads
 
 # To run commands before executing the tests
 if [ -f "${VIRTME_EXEC_PRE}" ]; then
