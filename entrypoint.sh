@@ -103,8 +103,17 @@ mkdir -p \
 VIRTME_PROG_PATH="/opt/virtme"
 VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
 VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
-VIRTME_RUN_OPTS=(--arch "${VIRTME_ARCH}" --net --memory 2048M --kdir "${VIRTME_BUILD_DIR}" --mods=auto --rwdir "." --pwd --show-command)
-VIRTME_RUN_OPTS+=(--kopt mitigations=off)
+VIRTME_RUN_OPTS_DEFAULT=(
+	--arch "${VIRTME_ARCH}"
+	--net
+	--memory 2048M
+	--kdir "${VIRTME_BUILD_DIR}"
+	--mods=auto
+	--rwdir "."
+	--pwd
+	--show-command
+	--kopt mitigations=off
+)
 
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
@@ -177,7 +186,10 @@ setup_env() {
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
 	fi
 
-	VIRTME_RUN_OPTS+=(--cpus "${INPUT_CPUS}")
+	VIRTME_RUN_OPTS=(
+		"${VIRTME_RUN_OPTS_DEFAULT[@]}"
+		--cpus "${INPUT_CPUS}"
+	)
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
