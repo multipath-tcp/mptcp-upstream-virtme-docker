@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:23.10
 
 LABEL name=mptcp-upstream-virtme-docker
 
@@ -20,7 +20,7 @@ RUN apt-get update && \
 		gdb crash dwarves strace \
 		iptables ebtables nftables vim psmisc bash-completion less jq \
 		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
-		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev \
+		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev python3-docutils \
 		libtap-formatter-junit-perl \
 		zstd \
 		wget xz-utils lftp cpio u-boot-tools \
@@ -31,7 +31,7 @@ RUN apt-get update && \
 
 # virtme
 ARG VIRTME_GIT_URL="https://github.com/matttbe/virtme.git"
-ARG VIRTME_GIT_SHA="a680c0861cf6f9dc6a8a821e9e58ae43c5e68435"
+ARG VIRTME_GIT_SHA="57c440a1dce4476638d67a2d1aead5bdcced0de7" # include a fix for modules on linux >= 6.2 and QEmu > 6
 RUN cd /opt && \
 	git clone "${VIRTME_GIT_URL}" && \
 	cd virtme && \
@@ -66,7 +66,7 @@ RUN cd /opt && \
 
 # Sparse
 ARG SPARSE_GIT_URL="git://git.kernel.org/pub/scm/devel/sparse/sparse.git"
-ARG SPARSE_GIT_SHA="ce1a6720f69e6233ec9abd4e9aae5945e05fda41" # include a fix for 'unreplaced' issues
+ARG SPARSE_GIT_SHA="09411a7a5127516a0741eb1bd8762642fa9197ce" # include a fix for 'unreplaced' issues and llvm 16
 RUN cd /opt && \
 	git clone "${SPARSE_GIT_URL}" sparse && \
 	cd "sparse" && \
