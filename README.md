@@ -199,3 +199,20 @@ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
 ```
 
 Feel free to contact us and/or open Pull Requests to support more cases.
+
+## Compilation issues with Perf or Objtools
+
+If you see such messages:
+
+```
+Makefile.config:458: *** No gnu/libc-version.h found, please install glibc-dev[el].  Stop.
+```
+
+This can happen when switching between major versions of the compiler. In this
+case, it will be required to clean the build dir in `.virtme/build`, e.g.
+
+```bash
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}"--rm -it \
+  mptcp/mptcp-upstream-virtme-docker:latest \
+  cmd rm -r .virtme/build/tools
+```
