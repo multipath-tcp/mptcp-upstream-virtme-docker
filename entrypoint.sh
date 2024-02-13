@@ -799,14 +799,14 @@ _run_bpftest_one_tap() {
 }
 
 # \$1: script file; rest: command to launch
-run_bpftest_one() { local sf tap
-	sf=\$(basename \${1})
-	tap=bpftest_\${sf}
-	shift
+run_bpftest_one() { local bf bt tap
+	bf=\$(basename \${1})
+	bt=\${2}
+	tap=bpftest_\${bf}_\${bt}
 
 	_can_run "\${tap}" || return 0
 
-	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}"
+	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${bf}" -t "\${bt}"
 }
 
 run_bpftest_all() {
@@ -815,13 +815,13 @@ run_bpftest_all() {
 
 		for sf in "${VIRTME_BUILD_DIR}/"test_progs*; do
 			if [ -x "\${sf}" ]; then
-				run_bpftest_one "\${sf}" "-t" "mptcp" || rc=\${?}
+				run_bpftest_one "\${sf}" mptcp || rc=\${?}
 			fi
 		done
 
 		return \${rc}
 	else
-		echo "skip bpftest, only run it in btf mode"
+		echo "Skip BPF tests: only supported in the 'btf' mode"
 	fi
 }
 
