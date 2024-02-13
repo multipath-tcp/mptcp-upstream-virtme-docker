@@ -794,7 +794,7 @@ run_packetdrill_all() { local pktd_dir rc=0
 
 # \$1: output tap file; rest: command to launch
 _run_bpftest_one_tap() {
-	cd "${KERNEL_SRC}/${BPFTESTS_DIR}"
+	cd "${VIRTME_BUILD_DIR}"
 	_tap "\${@}"
 }
 
@@ -813,7 +813,7 @@ run_bpftest_all() {
 	if [ "${mode}" = "btf" ]; then
 		local sf rc=0
 
-		for sf in "${KERNEL_SRC}/${BPFTESTS_DIR}/"test_progs*; do
+		for sf in "${VIRTME_BUILD_DIR}/"test_progs*; do
 			if [ -x "\${sf}" ]; then
 				run_bpftest_one "\${sf}" "-t" "mptcp" || rc=\${?}
 			fi
