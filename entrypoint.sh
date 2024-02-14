@@ -309,6 +309,9 @@ gen_kconfig() { local mode kconfig=()
 	# Reboot the VM instead of blocking in case of panic
 	kconfig+=(--set-val PANIC_TIMEOUT -1)
 
+	# stop at the first oops, no need to continue in a bad state
+	kconfig+=(-e PANIC_ON_OOPS)
+
 	# Debug info for developers
 	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF4 -e GDB_SCRIPTS)
 
