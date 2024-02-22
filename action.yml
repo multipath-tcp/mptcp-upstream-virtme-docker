@@ -16,6 +16,10 @@ inputs:
   extra_env:
     description: 'Extra env var to set to a specified value, e.g. INPUT_CPUS=2'
     required: false
+  packetdrill_stable:
+    description: 'Set to 1 to checkout the stable branch for this version (if any)'
+    required: false
+    default: '0'
 
 runs:
   using: 'docker'
