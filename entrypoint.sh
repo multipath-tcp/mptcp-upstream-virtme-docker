@@ -49,6 +49,7 @@ set_trace_on
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=7200}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
+: "${INPUT_BUILD_SKIP_PERF:=1}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
