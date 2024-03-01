@@ -14,8 +14,12 @@ is_ci() {
 	[ "${CI}" = "true" ]
 }
 
+is_github_action() {
+	[ "${GITHUB_ACTIONS}" = "true" ]
+}
+
 trace_needed() {
-	is_ci || [ "${INPUT_TRACE}" = "1" ]
+	[ "${INPUT_TRACE}" = "1" ]
 }
 
 set_trace_on() {
@@ -49,6 +53,7 @@ set_trace_on
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=7200}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
+: "${INPUT_BUILD_SKIP_PERF:=1}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
@@ -138,6 +143,7 @@ VIRTME_PREPARE_POST="${KERNEL_SRC}/.virtme-prepare-post"
 
 COLOR_RED="\E[1;31m"
 COLOR_GREEN="\E[1;32m"
+COLOR_YELLOW="\E[1;33m"
 COLOR_BLUE="\E[1;34m"
 COLOR_RESET="\E[0m"
 
@@ -158,7 +164,29 @@ printerr() {
 	print_color "${COLOR_RED}${*}" >&2
 }
 
+if is_github_action; then
+	# $1: description
+	log_section_start() {
+		echo -e "\n::group::${COLOR_YELLOW}${*}${COLOR_RESET}"
+	}
+
+	log_section_end() {
+		echo -e "::endgroup::\n"
+	}
+else
+	# $1: description
+	log_section_start() {
+		printinfo "${@}"
+	}
+
+	log_section_end() {
+		true
+	}
+fi
+
 setup_env() {
+	log_section_start "Setup environment"
+
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
 	# this docker image
 	git config --global --add safe.directory "${KERNEL_SRC}"
@@ -197,6 +225,8 @@ setup_env() {
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
+
+	log_section_end
 }
 
 _get_last_iproute_version() {
@@ -218,7 +248,7 @@ check_last_iproute() { local last curr
 		return 0
 	fi
 
-	printinfo "Check IPRoute2 version"
+	log_section_start "Check IPRoute2 version"
 
 	last="$(_get_last_iproute_version)"
 
@@ -234,6 +264,7 @@ check_last_iproute() { local last curr
 		exit 1
 	fi
 
+	log_section_end
 }
 
 _check_source_exec_one() {
@@ -254,11 +285,13 @@ _check_source_exec_one() {
 }
 
 check_source_exec_all() {
-	printinfo "Check extented exec files"
+	log_section_start "Check extented exec files"
 
 	_check_source_exec_one "${VIRTME_EXEC_PRE}" "before the tests suite"
 	_check_source_exec_one "${VIRTME_EXEC_RUN}" "to replace the execution of the whole tests suite"
 	_check_source_exec_one "${VIRTME_EXEC_POST}" "after the tests suite"
+
+	log_section_end
 }
 
 _make() {
@@ -287,7 +320,7 @@ gen_kconfig() { local mode kconfig=()
 	mode="${1}"
 	shift
 
-	printinfo "Generate kernel config"
+	log_section_start "Generate kernel config"
 
 	if [ "${mode}" = "debug" ]; then
 		kconfig+=(
@@ -380,9 +413,13 @@ gen_kconfig() { local mode kconfig=()
 		# Useful to help reproducing issues later
 		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd"
 	fi
+
+	log_section_end
 }
 
 build_kernel() {
+	log_section_start "Build kernel"
+
 	# undo BPFTrace and cie workaround
 	find "${VIRTME_BUILD_DIR}/include" \
 		-mindepth 1 -maxdepth 1 \
@@ -391,30 +428,47 @@ build_kernel() {
 
 	_make_o
 
+	log_section_end
+}
+
+install_kernel_headers() {
+	log_section_start "Install kernel headers"
+
 	# for BPFTrace and cie
 	cp -r include/ "${VIRTME_BUILD_DIR}"
 
 	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
+
+	log_section_end
+
 }
 
 build_modules() {
+	log_section_start "Build kernel modules"
+
 	_make_o modules
 
 	# virtme will mount a tmpfs there + symlink to .virtme_mods
 	mkdir -p /lib/modules
+
+	log_section_end
 }
 
 build_perf() {
 	if [ "${INPUT_BUILD_SKIP_PERF}" = 1 ]; then
-		printinfo "Skip perf build"
+		printinfo "Skip Perf build"
 		return 0
 	fi
+
+	log_section_start "Build Perf"
 
 	cd tools/perf
 
 	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install
 
 	cd "${KERNEL_SRC}"
+
+	log_section_end
 }
 
 build() {
@@ -423,9 +477,8 @@ build() {
 		return 0
 	fi
 
-	printinfo "Build the kernel"
-
 	build_kernel
+	install_kernel_headers
 	build_modules
 	build_perf
 }
@@ -436,7 +489,11 @@ build_selftests() {
 		return 0
 	fi
 
+	log_section_start "Build the selftests $(basename "${SELFTESTS_DIR}")"
+
 	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${SELFTESTS_DIR}"
+
+	log_section_end
 }
 
 build_bpftests() {
@@ -445,7 +502,11 @@ build_bpftests() {
 		return 0
 	fi
 
+	log_section_start "Build BPFTests"
+
 	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${BPFTESTS_DIR}"
+
+	log_section_end
 }
 
 build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
@@ -453,6 +514,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 		printinfo "Skip Packetdrill build"
 		return 0
 	fi
+
+	log_section_start "Build Packetdrill"
 
 	old_pwd="${PWD}"
 
@@ -522,6 +585,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 		set_trace_on
 	fi
 	cd "${old_pwd}"
+
+	log_section_end
 }
 
 prepare_hosts_file() {
@@ -551,7 +616,7 @@ prepare() { local mode no_tap=1
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
 
-if [ "${CI}" = "true" ] || [ "${INPUT_TRACE}" = "1" ]; then
+if [ "${INPUT_TRACE}" = "1" ]; then
 	set -x
 fi
 
@@ -573,6 +638,25 @@ set_max_threads() {
 	fi
 }
 
+if [ "${GITHUB_ACTIONS}" = "true" ]; then
+	# \$1: description
+	log_section_start() {
+		echo -e "\n::group::${COLOR_YELLOW}\${*}${COLOR_RESET}"
+	}
+
+	log_section_end() {
+		echo -e "::endgroup::\n"
+	}
+else
+	# \$1: description
+	log_section_start() {
+		echo -e "${COLOR_BLUE}\${*}${COLOR_RESET}"
+	}
+
+	log_section_end() {
+		true
+	}
+fi
 
 # \$1: name of the test
 _can_run() { local tname
@@ -704,10 +788,14 @@ run_kunit_one() { local ko kunit kunit_path
 	kunit="\${kunit//_/-}" # dash
 	kunit_path="/sys/kernel/debug/kunit/\${kunit}/results"
 
+	log_section_start "KUnit Test: \${kunit}"
+
 	run_kunit_core || return \${?}
 
 	insmod "\${ko}" || true # errors will also be visible below: no results
 	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap"
+
+	log_section_end
 }
 
 run_kunit_all() { local ko rc=0
@@ -736,7 +824,9 @@ run_selftest_one() { local sf tap
 
 	_can_run "\${tap}" || return 0
 
+	log_section_start "Selftest Test: \${sf}"
 	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}"
+	log_section_end
 }
 
 run_selftest_all() { local sf rc=0
@@ -776,9 +866,11 @@ run_packetdrill_one() { local pktd_dir pktd tap
 
 	_can_run "\${tap}" || return 0
 
+	log_section_start "Packetdrill Test: \${pktd}"
 	cd /opt/packetdrill/gtests/net/
 	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
 		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir}
+	log_section_end
 }
 
 run_packetdrill_all() { local pktd_dir rc=0
@@ -809,7 +901,9 @@ run_bpftest_one() { local bf bt tap
 
 	_can_run "\${tap}" || return 0
 
+	log_section_start "BPF Test: \${bf} -t \${bt}"
 	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${bf}" -t "\${bt}"
+	log_section_end
 }
 
 run_bpftest_all() {
@@ -860,12 +954,12 @@ run_loop_n() { local i tdir rc=0
 
 	i=1
 	while true; do
-		echo -e "\n\n\t=== Attempt: \${i} (\$(date -R)) ===\n\n"
+		echo -e "\n\n\t=== ${COLOR_BLUE}Attempt: \${i} (\$(date -R))${COLOR_RESET} ===\n\n"
 
 		if ! "\${@}" || has_call_trace; then
 			rc=1
 
-			echo -e "\n\n\t=== ERROR after \${i} attempts (\$(date -R)) ===\n\n"
+			echo -e "\n\n\t=== ${COLOR_RED}ERROR after \${i} attempts (\$(date -R))${COLOR_RESET} ===\n\n"
 
 			if [ "${INPUT_RUN_LOOP_CONTINUE}" = "1" ]; then
 				echo "Attempt: \${i}" >> "${CONCLUSION}.failed"
@@ -883,7 +977,7 @@ run_loop_n() { local i tdir rc=0
 		i=\$((i+1))
 	done
 
-	echo -e "\n\n\tStopped after \${i} attempts\n\n"
+	echo -e "\n\n\t${COLOR_BLUE}Stopped after \${i} attempts${COLOR_RESET}\n\n"
 
 	return "\${rc}"
 }
@@ -907,7 +1001,7 @@ fi
 
 # To exec different tests than the full suite
 if [ -f "${VIRTME_EXEC_RUN}" ]; then
-	echo -e "\n\n\tNot running all tests but:\n\n-------- 8< --------\n\$(sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}")\n-------- 8< --------\n\n"
+	echo -e "\n\n\t${COLOR_YELLOW}Not running all tests but:${COLOR_RESET}\n\n-------- 8< --------\n\$(sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}")\n-------- 8< --------\n\n"
 	source "${VIRTME_EXEC_RUN}"
 	# e.g.:
 	# run_selftest_one ./mptcp_join.sh -f
@@ -964,6 +1058,7 @@ run_expect() {
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash -x
+echo -e "$(log_section_start "Boot VM")"
 "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
@@ -978,9 +1073,11 @@ expect {
 		send_user "Waiting for the console to be ready\n"
 		send "\r"
 	} timeout {
+		send_user "\n$(log_section_end)"
 		send_user "Timeout ttyS0: stopping\n"
 		exit 1
 	} eof {
+		send_user "\n$(log_section_end)"
 		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (ttyS0)\n"
 		exit 1
 	}
@@ -991,12 +1088,14 @@ set timeout "1"
 for {set i 0} {\$i < 60} {incr i 1} {
 	expect {
 		"root@" {
+			send_user "\n$(log_section_end)"
 			send_user "Starting the validation script (after \$i sec)\n"
 			break
 		} timeout {
 			sleep 1
 			send "\r"
 		} eof {
+			send_user "\n$(log_section_end)"
 			send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (console)\n"
 			exit 1
 		}
@@ -1004,6 +1103,7 @@ for {set i 0} {\$i < 60} {incr i 1} {
 }
 
 if {\$i >= 60} {
+	send_user "\n$(log_section_end)"
 	send_user "Timeout console: stopping (\$i)\n"
 	exit 1
 }
@@ -1015,6 +1115,7 @@ expect {
 	"${VIRTME_SCRIPT_END}\r" {
 		send_user "validation script ended with success\n"
 	} timeout {
+		send_user "\n$(log_section_end)"
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
@@ -1041,7 +1142,9 @@ _get_selftests_gen_files() {
 
 ccache_stat() {
 	if is_ci; then
+		log_section_start "CCache Stats"
 		ccache -s
+		log_section_end
 	fi
 }
 
