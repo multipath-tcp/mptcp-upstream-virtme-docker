@@ -19,7 +19,7 @@ is_github_action() {
 }
 
 trace_needed() {
-	is_ci || [ "${INPUT_TRACE}" = "1" ]
+	[ "${INPUT_TRACE}" = "1" ]
 }
 
 set_trace_on() {
@@ -616,7 +616,7 @@ prepare() { local mode no_tap=1
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
 
-if [ "${CI}" = "true" ] || [ "${INPUT_TRACE}" = "1" ]; then
+if [ "${INPUT_TRACE}" = "1" ]; then
 	set -x
 fi
 
