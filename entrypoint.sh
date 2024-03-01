@@ -812,8 +812,10 @@ run_kunit_all() { local ko rc=0
 
 # \$1: output tap file; rest: command to launch
 _run_selftest_one_tap() {
+	log_section_start "Selftest Test: \${*:2}"
 	cd "${KERNEL_SRC}/${SELFTESTS_DIR}"
 	_tap "\${@}"
+	log_section_end
 }
 
 # \$1: script file; rest: command to launch
@@ -824,9 +826,7 @@ run_selftest_one() { local sf tap
 
 	_can_run "\${tap}" || return 0
 
-	log_section_start "Selftest Test: \${sf}"
 	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}"
-	log_section_end
 }
 
 run_selftest_all() { local sf rc=0
@@ -1057,8 +1057,9 @@ run_expect() {
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
-#! /bin/bash -x
+#! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
+set -x
 "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
