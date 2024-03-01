@@ -1057,8 +1057,9 @@ run_expect() {
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
-#! /bin/bash -x
+#! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
+set -x
 "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
