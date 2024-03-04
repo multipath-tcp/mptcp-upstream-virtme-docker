@@ -1,8 +1,14 @@
 #!/bin/bash
+
 VIRTME_INTERACTIVE=""
 [ "${VIRTME_NO_INTERACTIVE}" != 1 ] && VIRTME_INTERACTIVE="-it"
+
+# host is different if worktree are used
+VIRTME_GIT_DIR="$(realpath "$(git rev-parse --git-common-dir)")"
+
 docker run \
 	-v "${PWD}:${PWD}:rw" \
+	-v "${VIRTME_GIT_DIR}:${VIRTME_GIT_DIR}:ro" \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-w "${PWD}" \
 	-e "INPUT_TRACE" \
