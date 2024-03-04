@@ -189,7 +189,7 @@ setup_env() {
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
 	# this docker image
-	git config --global --add safe.directory "${KERNEL_SRC}"
+	git config --global --add safe.directory "${KERNEL_SRC}" || true
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
@@ -209,7 +209,7 @@ setup_env() {
 		fi
 	else
 		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD)/${mode}"
+		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${mode}"
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
@@ -1254,7 +1254,7 @@ _print_summary_header() {
 
 	echo "== Summary =="
 	echo
-	echo "Ref: ${CIRRUS_TAG:-$(git describe --tags)}"
+	echo "Ref: ${CIRRUS_TAG:-$(git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "Unknown")}"
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
 	echo
