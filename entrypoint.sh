@@ -1254,7 +1254,7 @@ _print_summary_header() {
 
 	echo "== Summary =="
 	echo
-	echo "Ref: ${CIRRUS_TAG:-$(git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "Unknown")}"
+	echo "Ref: ${GITHUB_REF_NAME:-${CIRRUS_TAG:-$(git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "Unknown")}}"
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
 	echo
