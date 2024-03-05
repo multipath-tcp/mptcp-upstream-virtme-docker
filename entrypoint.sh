@@ -316,7 +316,7 @@ _add_symlink() {
 }
 
 # $@: extra kconfig
-gen_kconfig() { local mode kconfig=()
+gen_kconfig() { local mode kconfig=() rc=0
 	mode="${1}"
 	shift
 
@@ -330,13 +330,13 @@ gen_kconfig() { local mode kconfig=()
 			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		)
 
-		_make_o defconfig debug.config
+		_make_o defconfig debug.config || rc=${?}
 	else
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
 
-		_make_o defconfig "${VIRTME_ARCH}_defconfig"
+		_make_o defconfig "${VIRTME_ARCH}_defconfig" || rc=${?}
 	fi
 
 	# Reboot the VM instead of blocking in case of panic
@@ -400,24 +400,26 @@ gen_kconfig() { local mode kconfig=()
 	kconfig+=("${@}")
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" --arch "${VIRTME_ARCH}" --update
+	"${VIRTME_CONFIGKERNEL}" --arch "${VIRTME_ARCH}" --update || rc=${?}
 
 	# Extra options are needed for kselftests
-	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${SELFTESTS_CONFIG}"
+	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${SELFTESTS_CONFIG}" || rc=${?}
 
-	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}"
+	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}" || rc=${?}
 
-	_make_o olddefconfig
+	_make_o olddefconfig || rc=${?}
 
 	if is_ci; then
 		# Useful to help reproducing issues later
-		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd"
+		zstd -19 -T0 "${VIRTME_KCONFIG}" -o "${RESULTS_DIR}/config.zstd" || rc=${?}
 	fi
 
 	log_section_end
+
+	return ${rc}
 }
 
-build_kernel() {
+build_kernel() { local rc=0
 	log_section_start "Build kernel"
 
 	# undo BPFTrace and cie workaround
@@ -426,35 +428,41 @@ build_kernel() {
 		! -name 'config' ! -name 'generated' \
 		-type d -exec rm -r {} +
 
-	_make_o
+	_make_o || rc=${?}
 
 	log_section_end
+
+	return ${rc}
 }
 
-install_kernel_headers() {
+install_kernel_headers() { local rc=0
 	log_section_start "Install kernel headers"
 
 	# for BPFTrace and cie
 	cp -r include/ "${VIRTME_BUILD_DIR}"
 
-	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}"
+	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}" || rc=${?}
 
 	log_section_end
 
+	return ${rc}
+
 }
 
-build_modules() {
+build_modules() { local rc=0
 	log_section_start "Build kernel modules"
 
-	_make_o modules
+	_make_o modules || rc=${?}
 
 	# virtme will mount a tmpfs there + symlink to .virtme_mods
 	mkdir -p /lib/modules
 
 	log_section_end
+
+	return ${rc}
 }
 
-build_perf() {
+build_perf() { local rc=0
 	if [ "${INPUT_BUILD_SKIP_PERF}" = 1 ]; then
 		printinfo "Skip Perf build"
 		return 0
@@ -464,11 +472,13 @@ build_perf() {
 
 	cd tools/perf
 
-	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install
+	_make O="${VIRTME_PERF_DIR}" DESTDIR=/usr install || rc=${?}
 
 	cd "${KERNEL_SRC}"
 
 	log_section_end
+
+	return ${rc}
 }
 
 build() {
@@ -483,7 +493,7 @@ build() {
 	build_perf
 }
 
-build_selftests() {
+build_selftests() { local rc=0
 	if [ "${INPUT_BUILD_SKIP_SELFTESTS}" = 1 ]; then
 		printinfo "Skip selftests build"
 		return 0
@@ -491,12 +501,14 @@ build_selftests() {
 
 	log_section_start "Build the selftests $(basename "${SELFTESTS_DIR}")"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${SELFTESTS_DIR}"
+	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${SELFTESTS_DIR}" || rc=${?}
 
 	log_section_end
+
+	return ${rc}
 }
 
-build_bpftests() {
+build_bpftests() { local rc=0
 	if [ "${INPUT_BUILD_SKIP_BPFTESTS}" = 1 ]; then
 		printinfo "Skip bpftests build"
 		return 0
@@ -504,12 +516,14 @@ build_bpftests() {
 
 	log_section_start "Build BPFTests"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${BPFTESTS_DIR}"
+	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${BPFTESTS_DIR}" || rc=${?}
 
 	log_section_end
+
+	return ${rc}
 }
 
-build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
+build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
 	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1 ]; then
 		printinfo "Skip Packetdrill build"
 		return 0
@@ -555,7 +569,7 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	fi
 	cd gtests/net/packetdrill/
 	./configure
-	_make
+	_make || rc=${?}
 
 	cd ../mptcp
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
@@ -587,6 +601,8 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch
 	cd "${old_pwd}"
 
 	log_section_end
+
+	return ${rc}
 }
 
 prepare_hosts_file() {
@@ -780,7 +796,7 @@ run_kunit_core() {
 }
 
 # \$1: .ko path
-run_kunit_one() { local ko kunit kunit_path
+run_kunit_one() { local ko kunit kunit_path rc=0
 	ko="\${1}"
 
 	kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
@@ -793,9 +809,11 @@ run_kunit_one() { local ko kunit kunit_path
 	run_kunit_core || return \${?}
 
 	insmod "\${ko}" || true # errors will also be visible below: no results
-	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap"
+	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap" || rc=\${?}
 
 	log_section_end
+
+	return \${rc}
 }
 
 run_kunit_all() { local ko rc=0
@@ -812,21 +830,23 @@ run_kunit_all() { local ko rc=0
 
 # \$1: output tap file; rest: command to launch
 _run_selftest_one_tap() {
-	log_section_start "Selftest Test: \${*:2}"
 	cd "${KERNEL_SRC}/${SELFTESTS_DIR}"
 	_tap "\${@}"
-	log_section_end
 }
 
 # \$1: script file; rest: command to launch
-run_selftest_one() { local sf tap
+run_selftest_one() { local sf tap rc=0
 	sf=\$(basename \${1})
 	tap=selftest_\${sf:0:-3}
 	shift
 
 	_can_run "\${tap}" || return 0
 
-	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}"
+	log_section_start "Selftest Test: ./\${sf}\${1:+ \${*}}"
+	_run_selftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${sf}" "\${@}" || rc=\${?}
+	log_section_end
+
+	return \${rc}
 }
 
 run_selftest_all() { local sf rc=0
@@ -842,10 +862,14 @@ run_selftest_all() { local sf rc=0
 	return \${rc}
 }
 
-_run_mptcp_connect_opt() { local t="mptcp_connect_\${1}"
+_run_mptcp_connect_opt() { local t="mptcp_connect_\${1}" rc=0
 	shift
 
-	MPTCP_LIB_KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}"
+	log_section_start "Selftest Test: ./mptcp_connect.sh \${*}"
+	MPTCP_LIB_KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}" || rc=\${?}
+	log_section_end
+
+	return \${rc}
 }
 
 run_mptcp_connect_mmap() {
@@ -855,7 +879,7 @@ run_mptcp_connect_mmap() {
 }
 
 # \$1: pktd_dir (e.g. mptcp/dss)
-run_packetdrill_one() { local pktd_dir pktd tap
+run_packetdrill_one() { local pktd_dir pktd tap rc=0
 	pktd_dir="\${1}"
 	pktd="\${pktd_dir#*/}"
 	tap="packetdrill_\${pktd//\//_}"
@@ -869,8 +893,10 @@ run_packetdrill_one() { local pktd_dir pktd tap
 	log_section_start "Packetdrill Test: \${pktd}"
 	cd /opt/packetdrill/gtests/net/
 	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir}
+		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir} || rc=\${?}
 	log_section_end
+
+	return \${rc}
 }
 
 run_packetdrill_all() { local pktd_dir rc=0
@@ -894,7 +920,7 @@ _run_bpftest_one_tap() {
 }
 
 # \$1: script file; rest: command to launch
-run_bpftest_one() { local bf bt tap
+run_bpftest_one() { local bf bt tap rc=0
 	bf=\$(basename \${1})
 	bt=\${2}
 	tap=bpftest_\${bf}_\${bt}
@@ -902,8 +928,10 @@ run_bpftest_one() { local bf bt tap
 	_can_run "\${tap}" || return 0
 
 	log_section_start "BPF Test: \${bf} -t \${bt}"
-	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${bf}" -t "\${bt}"
+	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${bf}" -t "\${bt}" || rc=\${?}
 	log_section_end
+
+	return \${rc}
 }
 
 run_bpftest_all() {
