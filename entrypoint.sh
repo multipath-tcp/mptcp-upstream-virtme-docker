@@ -61,7 +61,7 @@ if [ -z "${INPUT_MODE}" ]; then
 fi
 
 # to be able to set an extra env var
-if [[ "${INPUT_EXTRA_ENV}" =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9]+$ ]]; then
+if [[ "${INPUT_EXTRA_ENV}" =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9_]+$ ]]; then
 	eval "${INPUT_EXTRA_ENV}"
 fi
 
