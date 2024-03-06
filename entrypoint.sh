@@ -935,6 +935,8 @@ run_bpftest_one() { local bf bt tap rc=0
 }
 
 run_bpftest_all() {
+	can_run || return 0
+
 	if [ "${mode}" = "btf" ]; then
 		local sf rc=0
 
