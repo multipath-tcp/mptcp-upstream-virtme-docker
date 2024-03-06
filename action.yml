@@ -20,6 +20,10 @@ inputs:
     description: 'Set to 1 to checkout the stable branch for this version (if any)'
     required: false
     default: '0'
+  trace:
+    description: 'Enable set -x'
+    required: false
+    default: '0'
 
 runs:
   using: 'docker'
