@@ -925,8 +925,6 @@ run_bpftest_one() { local bf bt tap rc=0
 	bt=\${2}
 	tap=bpftest_\${bf}_\${bt}
 
-	_can_run "\${tap}" || return 0
-
 	log_section_start "BPF Test: \${bf} -t \${bt}"
 	_run_bpftest_one_tap "${RESULTS_DIR}/\${tap}" "./\${bf}" -t "\${bt}" || rc=\${?}
 	log_section_end
