@@ -8,7 +8,7 @@ RUN apt-get update && \
 	apt-get dist-upgrade -y && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
-		build-essential libncurses5-dev gcc libssl-dev bc bison \
+		build-essential libncurses5-dev gcc libssl-dev bc bison automake \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
 		python3 python3-pkg-resources busybox \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
@@ -38,13 +38,14 @@ RUN cd /opt && \
 		git checkout "${VIRTME_GIT_SHA}"
 
 # byobu (not to have a dep to iproute2)
-ARG BYOBU_URL="https://launchpad.net/byobu/trunk/5.133/+download/byobu_5.133.orig.tar.gz"
-ARG BYOBU_MD5="0ff03f3795cc08aae50c1ab117c03261 byobu.tar.gz"
+ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.12.tar.gz"
+ARG BYOBU_SUM="abb000331858609dfda9214115705506249f69237625633c80487abe2093dd45  byobu.tar.gz"
 RUN cd /opt && \
 	curl -L "${BYOBU_URL}" -o byobu.tar.gz && \
-	echo "${BYOBU_MD5}" | md5sum -c && \
+	echo "${BYOBU_SUM}" | sha256sum -c && \
 	tar xzf byobu.tar.gz && \
 	cd byobu-*/ && \
+		./autogen.sh && \
 		./configure --prefix=/usr && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
