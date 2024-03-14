@@ -112,6 +112,7 @@ VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
 VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
 VIRTME_RUN_OPTS_DEFAULT=(
 	--arch "${VIRTME_ARCH}"
+	--name "mptcpdev"  # hostname
 	--net
 	--memory 2048M
 	--kdir "${VIRTME_BUILD_DIR}"
@@ -605,11 +606,6 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
 	return ${rc}
 }
 
-prepare_hosts_file() {
-	# To fix: sudo: unable to resolve host (none): Name or service not known
-	echo "127.0.1.1 (none)" >> /etc/hosts
-}
-
 prepare() { local mode no_tap=1
 	mode="${1}"
 
@@ -620,7 +616,6 @@ prepare() { local mode no_tap=1
 		build_bpftests
 	fi
 	build_packetdrill
-	prepare_hosts_file
 
 	if is_ci; then
 		no_tap=0 # we want subtests
