@@ -8,9 +8,10 @@ RUN apt-get update && \
 	apt-get dist-upgrade -y && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
-		build-essential libncurses5-dev gcc libssl-dev bc bison \
+		build-essential libncurses5-dev gcc libssl-dev bc bison automake \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
-		python3 python3-pkg-resources busybox \
+		python3 python3-pip python3-pkg-resources file virtiofsd \
+		busybox-static coreutils python3-requests libvirt-clients udev \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
 		ca-certificates gnupg2 net-tools kmod \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
@@ -29,22 +30,15 @@ RUN apt-get update && \
 		&& \
 	apt-get clean
 
-# virtme
-ARG VIRTME_GIT_URL="https://github.com/matttbe/virtme.git"
-ARG VIRTME_GIT_SHA="57c440a1dce4476638d67a2d1aead5bdcced0de7" # include a fix for modules on linux >= 6.2 and QEmu > 6
-RUN cd /opt && \
-	git clone "${VIRTME_GIT_URL}" && \
-	cd virtme && \
-		git checkout "${VIRTME_GIT_SHA}"
-
 # byobu (not to have a dep to iproute2)
-ARG BYOBU_URL="https://launchpad.net/byobu/trunk/5.133/+download/byobu_5.133.orig.tar.gz"
-ARG BYOBU_MD5="0ff03f3795cc08aae50c1ab117c03261 byobu.tar.gz"
+ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.12.tar.gz"
+ARG BYOBU_SUM="abb000331858609dfda9214115705506249f69237625633c80487abe2093dd45  byobu.tar.gz"
 RUN cd /opt && \
 	curl -L "${BYOBU_URL}" -o byobu.tar.gz && \
-	echo "${BYOBU_MD5}" | md5sum -c && \
+	echo "${BYOBU_SUM}" | sha256sum -c && \
 	tar xzf byobu.tar.gz && \
 	cd byobu-*/ && \
+		./autogen.sh && \
 		./configure --prefix=/usr && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
@@ -75,6 +69,10 @@ RUN cd /opt && \
 		make PREFIX=/usr install && \
 		cd .. && \
 	rm -rf "sparse"
+
+# Virtme NG
+ARG VIRTME_NG_VERSION="1.22"
+RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"

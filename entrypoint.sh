@@ -107,18 +107,20 @@ mkdir -p \
 	"${VIRTME_PERF_DIR}" \
 	"${CCACHE_DIR}"
 
-VIRTME_PROG_PATH="/opt/virtme"
-VIRTME_CONFIGKERNEL="${VIRTME_PROG_PATH}/virtme-configkernel"
-VIRTME_RUN="${VIRTME_PROG_PATH}/virtme-run"
+VIRTME_CONFIGKERNEL="virtme-configkernel"
+VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS_DEFAULT=(
 	--arch "${VIRTME_ARCH}"
+	--name "mptcpdev"  # hostname
 	--net
+	--no-virtme-ng-init  # see https://github.com/arighi/virtme-ng/issues/90
 	--memory 2048M
 	--kdir "${VIRTME_BUILD_DIR}"
 	--mods=auto
-	--rwdir "."
+	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
 	--show-command
+	--verbose --show-boot-console
 	--kopt mitigations=off
 )
 
@@ -315,12 +317,18 @@ _add_symlink() {
 	ln -sf "${src}" "${dst}"
 }
 
-# $@: extra kconfig
-gen_kconfig() { local mode kconfig=() rc=0
-	mode="${1}"
-	shift
+# $1: normal/expect ; $2: mode ; [rest: extra kconfig]
+gen_kconfig() { local type mode kconfig=() vck rc=0
+	type="${1}"
+	mode="${2}"
+	shift 2
 
 	log_section_start "Generate kernel config"
+
+	vck=(--arch "${VIRTME_ARCH}" --defconfig --custom "${SELFTESTS_CONFIG}")
+
+	# workaround for vng 1.22: https://github.com/arighi/virtme-ng/pull/91
+	rm -f "${VIRTME_KCONFIG}"
 
 	if [ "${mode}" = "debug" ]; then
 		kconfig+=(
@@ -330,17 +338,17 @@ gen_kconfig() { local mode kconfig=() rc=0
 			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		)
 
-		_make_o defconfig debug.config || rc=${?}
+		vck+=(--custom kernel/configs/debug.config)
 	else
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
-
-		_make_o defconfig "${VIRTME_ARCH}_defconfig" || rc=${?}
 	fi
 
-	# Reboot the VM instead of blocking in case of panic
-	kconfig+=(--set-val PANIC_TIMEOUT -1)
+	if [ "${type}" = "expect" ]; then
+		# Reboot the VM instead of blocking in case of panic
+		kconfig+=(--set-val PANIC_TIMEOUT -1)
+	fi
 
 	# stop at the first oops, no need to continue in a bad state
 	kconfig+=(-e PANIC_ON_OOPS)
@@ -353,9 +361,7 @@ gen_kconfig() { local mode kconfig=() rc=0
 
 	# We need more debug info but it is slow to generate
 	if [ "${mode}" = "btf" ]; then
-		kconfig+=(-e DEBUG_INFO_BTF)
-		# Extra options are needed for bpftests
-		./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${BPFTESTS_CONFIG}"
+		vck+=(--custom "${BPFTESTS_CONFIG}")
 		kconfig+=(-e DEBUG_INFO_BTF_MODULES -e MODULE_ALLOW_BTF_MISMATCH)
 		# Fix ./include/linux/if.h:28:10: fatal error:
 		#		sys/socket.h: no such file or directory
@@ -400,10 +406,7 @@ gen_kconfig() { local mode kconfig=() rc=0
 	kconfig+=("${@}")
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" --arch "${VIRTME_ARCH}" --update || rc=${?}
-
-	# Extra options are needed for kselftests
-	./scripts/kconfig/merge_config.sh -m "${VIRTME_KCONFIG}" "${SELFTESTS_CONFIG}" || rc=${?}
+	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" || rc=${?}
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}" || rc=${?}
 
@@ -605,11 +608,6 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
 	return ${rc}
 }
 
-prepare_hosts_file() {
-	# To fix: sudo: unable to resolve host (none): Name or service not known
-	echo "127.0.1.1 (none)" >> /etc/hosts
-}
-
 prepare() { local mode no_tap=1
 	mode="${1}"
 
@@ -620,7 +618,6 @@ prepare() { local mode no_tap=1
 		build_bpftests
 	fi
 	build_packetdrill
-	prepare_hosts_file
 
 	if is_ci; then
 		no_tap=0 # we want subtests
@@ -1097,13 +1094,14 @@ EOF
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
+# or with the new init: virtme-ng-init: initialization done
 expect {
-	"virtme-init: console is ttyS0\r" {
-		send_user "Waiting for the console to be ready\n"
+	"virtme-init: Setting hostname to mptcpdev...\r" {
+		send_user "Waiting for the virtme-init to be ready\n"
 		send "\r"
 	} timeout {
 		send_user "\n$(log_section_end)"
-		send_user "Timeout ttyS0: stopping\n"
+		send_user "Timeout virtme-init: stopping\n"
 		exit 1
 	} eof {
 		send_user "\n$(log_section_end)"
@@ -1160,8 +1158,7 @@ expect eof
 EOF
 	chmod +x "${VIRTME_RUN_EXPECT}"
 
-	# for an unknown reason, we cannot use "--script-sh", qemu is not
-	# started, no debug. As a workaround, we use expect.
+	# We could use "--script-sh", but we use expect to catch timeout, etc.
 	"${VIRTME_RUN_EXPECT}" | tee "${OUTPUT_VIRTME}"
 }
 
@@ -1404,7 +1401,7 @@ go_manual() { local mode
 	printinfo "Start: manual (${mode})"
 
 	setup_env
-	gen_kconfig "${@}"
+	gen_kconfig "manual" "${@}"
 	build
 	prepare "${mode}"
 	run
@@ -1422,7 +1419,7 @@ go_expect() { local mode
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
-	gen_kconfig "${@}"
+	gen_kconfig "expect" "${@}"
 	build
 	prepare "${mode}"
 	run_expect
