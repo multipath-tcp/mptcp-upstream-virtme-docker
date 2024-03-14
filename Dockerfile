@@ -10,7 +10,8 @@ RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison automake \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
-		python3 python3-pkg-resources busybox \
+		python3 python3-pip python3-pkg-resources file virtiofsd \
+		busybox-static coreutils python3-requests libvirt-clients udev \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
 		ca-certificates gnupg2 net-tools kmod \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
@@ -28,14 +29,6 @@ RUN apt-get update && \
 		bpftrace \
 		&& \
 	apt-get clean
-
-# virtme
-ARG VIRTME_GIT_URL="https://github.com/matttbe/virtme.git"
-ARG VIRTME_GIT_SHA="57c440a1dce4476638d67a2d1aead5bdcced0de7" # include a fix for modules on linux >= 6.2 and QEmu > 6
-RUN cd /opt && \
-	git clone "${VIRTME_GIT_URL}" && \
-	cd virtme && \
-		git checkout "${VIRTME_GIT_SHA}"
 
 # byobu (not to have a dep to iproute2)
 ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.12.tar.gz"
@@ -76,6 +69,10 @@ RUN cd /opt && \
 		make PREFIX=/usr install && \
 		cd .. && \
 	rm -rf "sparse"
+
+# Virtme NG
+ARG VIRTME_NG_VERSION="1.22"
+RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
