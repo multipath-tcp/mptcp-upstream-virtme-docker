@@ -316,10 +316,11 @@ _add_symlink() {
 	ln -sf "${src}" "${dst}"
 }
 
-# $@: extra kconfig
-gen_kconfig() { local mode kconfig=() rc=0
-	mode="${1}"
-	shift
+# $1: normal/expect ; $2: mode ; [rest: extra kconfig]
+gen_kconfig() { local type mode kconfig=() rc=0
+	type="${1}"
+	mode="${2}"
+	shift 2
 
 	log_section_start "Generate kernel config"
 
@@ -340,8 +341,10 @@ gen_kconfig() { local mode kconfig=() rc=0
 		_make_o defconfig "${VIRTME_ARCH}_defconfig" || rc=${?}
 	fi
 
-	# Reboot the VM instead of blocking in case of panic
-	kconfig+=(--set-val PANIC_TIMEOUT -1)
+	if [ "${type}" = "expect" ]; then
+		# Reboot the VM instead of blocking in case of panic
+		kconfig+=(--set-val PANIC_TIMEOUT -1)
+	fi
 
 	# stop at the first oops, no need to continue in a bad state
 	kconfig+=(-e PANIC_ON_OOPS)
@@ -1399,7 +1402,7 @@ go_manual() { local mode
 	printinfo "Start: manual (${mode})"
 
 	setup_env
-	gen_kconfig "${@}"
+	gen_kconfig "manual" "${@}"
 	build
 	prepare "${mode}"
 	run
@@ -1417,7 +1420,7 @@ go_expect() { local mode
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
-	gen_kconfig "${@}"
+	gen_kconfig "expect" "${@}"
 	build
 	prepare "${mode}"
 	run_expect
