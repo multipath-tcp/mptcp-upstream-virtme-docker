@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
 
 VIRTME_INTERACTIVE=""
 [ "${VIRTME_NO_INTERACTIVE}" != 1 ] && VIRTME_INTERACTIVE="-it"

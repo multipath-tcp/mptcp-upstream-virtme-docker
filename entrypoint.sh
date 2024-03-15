@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: GPL-2.0
 #
 # The goal is to launch (MPTCP) kernel selftests and more.
 # But also to provide a dev env for kernel developers or testers.
