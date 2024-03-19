@@ -1,4 +1,5 @@
 #! /bin/bash
+# SPDX-License-Identifier: GPL-2.0
 #
 # The goal is to launch (MPTCP) kernel selftests and more.
 # But also to provide a dev env for kernel developers or testers.
@@ -1327,6 +1328,18 @@ _get_failed_tests_status() { local t fails=()
 	echo "${#fails[@]} failed test(s): ${fails[*]}"
 }
 
+_gen_results_files() {
+	LANG=C tap2junit "${RESULTS_DIR}"/*.tap
+
+	# remove prefix id (unique test) and comments (status, time)
+	sed -i 's/\(<testcase name="\)[0-9]\+[ -]*/\1/g;/<testcase name=/s/\s\+#.*">/">/g' "${RESULTS_DIR}"/*.tap.xml
+
+	LANG=C /tap2json.py \
+		--output "${RESULTS_DIR}/results.json" \
+		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
+		"${RESULTS_DIR}/*.tap"
+}
+
 # $1: mode, rest: args for kconfig
 analyze() {
 	# reduce log that could be wrongly interpreted
@@ -1338,10 +1351,7 @@ analyze() {
 	printinfo "Analyze results"
 
 	if is_ci; then
-		LANG=C tap2junit "${RESULTS_DIR}"/*.tap
-
-		# remove prefix id (unique test) and comments (status, time)
-		sed -i 's/\(<testcase name="\)[0-9]\+[ -]*/\1/g;/<testcase name=/s/\s\+#.*">/">/g' "${RESULTS_DIR}"/*.tap.xml
+		_gen_results_files || true
 	fi
 
 	echo -ne "\n${COLOR_GREEN}"

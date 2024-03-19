@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 name: 'MPTCP Upstream Tests Action'
 description: 'Tests Linux kernel MPTCP Upstream changes'
 inputs:

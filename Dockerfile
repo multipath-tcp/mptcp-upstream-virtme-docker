@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 FROM ubuntu:23.10
 
 LABEL name=mptcp-upstream-virtme-docker
@@ -98,6 +99,6 @@ ENV CCACHE_COMPRESS true
 ENV KBUILD_BUILD_TIMESTAMP "0"
 ENV GCC_COLORS error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
 
-COPY entrypoint.sh /
+COPY entrypoint.sh tap2json.py /
 
 ENTRYPOINT ["/entrypoint.sh"]
