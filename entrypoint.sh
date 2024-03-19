@@ -1337,6 +1337,7 @@ _gen_results_files() {
 	LANG=C /tap2json.py \
 		--output "${RESULTS_DIR}/results.json" \
 		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
+		--only-fails \
 		"${RESULTS_DIR}"/*.tap
 }
 
