@@ -1337,7 +1337,7 @@ _gen_results_files() {
 	LANG=C /tap2json.py \
 		--output "${RESULTS_DIR}/results.json" \
 		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
-		"${RESULTS_DIR}/*.tap"
+		"${RESULTS_DIR}"/*.tap
 }
 
 # $1: mode, rest: args for kconfig
