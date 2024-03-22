@@ -788,9 +788,9 @@ _kunit_result() {
 
 run_kunit_core() {
 	[ "\${KUNIT_CORE_LOADED}" = 1 ] && return 0
+	KUNIT_CORE_LOADED=1
 
 	_tap "${RESULTS_DIR}/kunit" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
-	KUNIT_CORE_LOADED=1
 }
 
 # \$1: .ko path
