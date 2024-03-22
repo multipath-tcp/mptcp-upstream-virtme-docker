@@ -1289,9 +1289,20 @@ _has_failed_tests() {
 	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
 }
 
+# $1: prefix
+_print_tests_results_subtests() { local tap
+	for tap in "${RESULTS_DIR}/${1}"*.tap; do
+		[[ "${tap}" = *"_*.tap" ]] && continue
+		if ! grep -q "^not ok " "${tap}"; then
+			echo "ok 1 test: $(basename "${tap}" ".tap")"
+		fi
+	done
+}
+
 _print_tests_result() {
 	echo "All tests:"
-	grep --no-filename -e "^ok [0-9]\+ test:" -e "^not ok " "${RESULTS_DIR}"/*.tap
+	grep --no-filename -e "^ok 1 test: " -e "^not ok " "${RESULTS_DIR}"/*.tap
+	_print_tests_results_subtests "kunit_"
 }
 
 _print_failed_tests() { local t
