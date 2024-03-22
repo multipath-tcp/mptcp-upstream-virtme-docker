@@ -622,9 +622,6 @@ prepare() { local mode no_tap=1
 
 	if is_ci; then
 		no_tap=0 # we want subtests
-		if [ "${mode}" == "debug" ]; then
-			INPUT_MAX_THREADS=${INPUT_CPUS} ## avoid too many concurrent work
-		fi
 	fi
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
@@ -646,8 +643,9 @@ export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 set_max_threads() {
 	# if QEmu without KVM support
-	if [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
-	   [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; then
+	if [ "${mode}" == "debug" ] ||
+	   { [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
+	     [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; }; then
 		MAX_THREADS=$((MAX_THREADS / 2)) # avoid too many concurrent work
 	fi
 }
