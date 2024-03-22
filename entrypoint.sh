@@ -877,7 +877,7 @@ run_mptcp_connect_mmap() {
 # \$1: packetdrill TAP file, \$2: TAP prefix
 _packetdrill_result() {
 	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
-		sed -i "s#\${PWD}/##g" "\${1}" # remove long path
+		sed -i "s#\${PWD}/#packetdrill: #g" "\${1}" # remove long path + prefix
 		return 0
 	fi
 
