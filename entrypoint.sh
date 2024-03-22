@@ -874,11 +874,27 @@ run_mptcp_connect_mmap() {
 	_run_mptcp_connect_opt mmap -m mmap
 }
 
+# \$1: packetdrill TAP file, \$2: TAP prefix
+_packetdrill_result() {
+	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
+		sed -i "s#\${PWD}/##g" "\${1}" # remove long path
+		return 0
+	fi
+
+	{
+		echo "TAP version 13"
+		echo "1..1"
+		echo "not ok 1 test: \${2} # no result"
+	} > "\${1}"
+
+	return 1
+}
+
 # \$1: pktd_dir (e.g. mptcp/dss)
 run_packetdrill_one() { local pktd_dir pktd tap rc=0
 	pktd_dir="\${1}"
-	pktd="\${pktd_dir#*/}"
-	tap="packetdrill_\${pktd//\//_}"
+	pktd="\$(basename "\${pktd_dir}" ".pkt")" # remove ext just in case
+	tap="packetdrill_\${pktd}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
@@ -888,8 +904,9 @@ run_packetdrill_one() { local pktd_dir pktd tap rc=0
 
 	log_section_start "Packetdrill Test: \${pktd}"
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir} || rc=\${?}
+	PYTHONUNBUFFERED=1 ./packetdrill/run_all.py -t "${RESULTS_DIR}" \
+		-l -v -P \${MAX_THREADS} \${pktd_dir} || rc=\${?}
+	_packetdrill_result "${RESULTS_DIR}/\${tap}.tap" "\${tap}" || rc=\${?}
 	log_section_end
 
 	return \${rc}
@@ -1303,6 +1320,7 @@ _print_tests_result() {
 	echo "All tests:"
 	grep --no-filename -e "^ok 1 test: " -e "^not ok " "${RESULTS_DIR}"/*.tap
 	_print_tests_results_subtests "kunit_"
+	_print_tests_results_subtests "packetdrill_"
 }
 
 _print_failed_tests() { local t
