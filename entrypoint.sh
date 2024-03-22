@@ -779,7 +779,7 @@ _kunit_result() {
 	fi
 
 	if ! cat "\${1}"; then
-		echo "not ok 1 test: no kunit result \${2} # exit=1"
+		echo "not ok 1 test: \${2} # no kunit result"
 		return 1
 	fi
 }
