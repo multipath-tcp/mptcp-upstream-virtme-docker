@@ -622,9 +622,6 @@ prepare() { local mode no_tap=1
 
 	if is_ci; then
 		no_tap=0 # we want subtests
-		if [ "${mode}" == "debug" ]; then
-			INPUT_MAX_THREADS=${INPUT_CPUS} ## avoid too many concurrent work
-		fi
 	fi
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
@@ -646,8 +643,9 @@ export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 set_max_threads() {
 	# if QEmu without KVM support
-	if [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
-	   [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; then
+	if [ "${mode}" == "debug" ] ||
+	   { [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
+	     [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; }; then
 		MAX_THREADS=$((MAX_THREADS / 2)) # avoid too many concurrent work
 	fi
 }
@@ -781,16 +779,16 @@ _kunit_result() {
 	fi
 
 	if ! cat "\${1}"; then
-		echo "not ok 1 test: no kunit result \${2} # exit=1"
+		echo "not ok 1 test: \${2} # no kunit result"
 		return 1
 	fi
 }
 
 run_kunit_core() {
 	[ "\${KUNIT_CORE_LOADED}" = 1 ] && return 0
+	KUNIT_CORE_LOADED=1
 
 	_tap "${RESULTS_DIR}/kunit" insmod ${VIRTME_BUILD_DIR}/lib/kunit/kunit.ko
-	KUNIT_CORE_LOADED=1
 }
 
 # \$1: .ko path
@@ -876,11 +874,27 @@ run_mptcp_connect_mmap() {
 	_run_mptcp_connect_opt mmap -m mmap
 }
 
+# \$1: packetdrill TAP file, \$2: TAP prefix
+_packetdrill_result() {
+	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
+		sed -i "s#\${PWD}/##g" "\${1}" # remove long path
+		return 0
+	fi
+
+	{
+		echo "TAP version 13"
+		echo "1..1"
+		echo "not ok 1 test: \${2} # no result"
+	} > "\${1}"
+
+	return 1
+}
+
 # \$1: pktd_dir (e.g. mptcp/dss)
 run_packetdrill_one() { local pktd_dir pktd tap rc=0
 	pktd_dir="\${1}"
-	pktd="\${pktd_dir#*/}"
-	tap="packetdrill_\${pktd//\//_}"
+	pktd="\$(basename "\${pktd_dir}" ".pkt")" # remove ext just in case
+	tap="packetdrill_\${pktd}"
 
 	if [ "\${pktd}" = "common" ]; then
 		return 0
@@ -890,8 +904,9 @@ run_packetdrill_one() { local pktd_dir pktd tap rc=0
 
 	log_section_start "Packetdrill Test: \${pktd}"
 	cd /opt/packetdrill/gtests/net/
-	PYTHONUNBUFFERED=1 _tap "${RESULTS_DIR}/\${tap}" \
-		./packetdrill/run_all.py -l -v -P \${MAX_THREADS} \${pktd_dir} || rc=\${?}
+	PYTHONUNBUFFERED=1 ./packetdrill/run_all.py -t "${RESULTS_DIR}" \
+		-l -v -P \${MAX_THREADS} \${pktd_dir} || rc=\${?}
+	_packetdrill_result "${RESULTS_DIR}/\${tap}.tap" "\${tap}" || rc=\${?}
 	log_section_end
 
 	return \${rc}
@@ -1291,9 +1306,21 @@ _has_failed_tests() {
 	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
 }
 
+# $1: prefix
+_print_tests_results_subtests() { local tap
+	for tap in "${RESULTS_DIR}/${1}"*.tap; do
+		[[ "${tap}" = *"_*.tap" ]] && continue
+		if ! grep -q "^not ok " "${tap}"; then
+			echo "ok 1 test: $(basename "${tap}" ".tap")"
+		fi
+	done
+}
+
 _print_tests_result() {
 	echo "All tests:"
-	grep --no-filename -e "^ok [0-9]\+ test:" -e "^not ok " "${RESULTS_DIR}"/*.tap
+	grep --no-filename -e "^ok 1 test: " -e "^not ok " "${RESULTS_DIR}"/*.tap
+	_print_tests_results_subtests "kunit_"
+	_print_tests_results_subtests "packetdrill_"
 }
 
 _print_failed_tests() { local t
