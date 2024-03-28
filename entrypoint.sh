@@ -1317,7 +1317,8 @@ _print_tests_results_subtests() { local tap ok
 
 _print_tests_result() {
 	echo "All tests:"
-	grep --no-filename -e "^ok [0-9]\+ test: " -e "^not ok " "${RESULTS_DIR}"/*.tap
+	# only from the main tests
+	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
 }
@@ -1331,7 +1332,7 @@ _print_failed_tests() { local t
 			_print_line
 			echo "- $(basename "${t}"):"
 			echo
-			grep -v "^ok [0-9]\+ - " "${t}"
+			grep -v "^ok [0-9]\+ " "${t}"
 		fi
 	done
 	_print_line
@@ -1340,7 +1341,7 @@ _print_failed_tests() { local t
 _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
 	# we just want the main results, not the detailed ones for the moment
-	grep "^not ok [0-9]\+ test: " "${TESTS_SUMMARY}" | \
+	grep "^not ok 1 test: " "${TESTS_SUMMARY}" | \
 		awk '{ print $5 }' | \
 		sort -u | \
 		sed "s/\.tap$//g"
