@@ -1307,10 +1307,10 @@ _has_failed_tests() {
 }
 
 # $1: prefix
-_print_tests_results_subtests() { local tap ok="ok"
+_print_tests_results_subtests() { local tap ok
 	for tap in "${RESULTS_DIR}/${1}"*.tap; do
 		[[ "${tap}" = *"_*.tap" ]] && continue
-		grep -q "^not ok " "${tap}" && ok="not ok"
+		grep -q "^not ok " "${tap}" && ok="not ok" || ok="ok"
 		echo "${ok} 1 test: $(basename "${tap}" ".tap")"
 	done
 }
