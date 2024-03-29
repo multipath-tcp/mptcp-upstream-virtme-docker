@@ -113,7 +113,6 @@ VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS_DEFAULT=(
 	--arch "${VIRTME_ARCH}"
 	--name "mptcpdev"  # hostname
-	--net
 	--memory 2048M
 	--kdir "${VIRTME_BUILD_DIR}"
 	--mods=auto
@@ -186,7 +185,7 @@ else
 	}
 fi
 
-setup_env() {
+setup_env() { local net=()
 	log_section_start "Setup environment"
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
@@ -209,6 +208,8 @@ setup_env() {
 		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
 			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
 		fi
+
+		# The CI doesn't need to access to the outside world, so no '--net'
 	else
 		# avoid override
 		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${mode}"
@@ -216,11 +217,15 @@ setup_env() {
 		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
+
+		# add net support, can be useful, but delay the start of the tests (~1 sec?)
+		net=("--net")
 	fi
 
 	VIRTME_RUN_OPTS=(
 		"${VIRTME_RUN_OPTS_DEFAULT[@]}"
 		--cpus "${INPUT_CPUS}"
+		"${net[@]}"
 	)
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
