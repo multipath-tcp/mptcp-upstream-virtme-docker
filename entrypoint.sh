@@ -322,11 +322,10 @@ _add_symlink() {
 	ln -sf "${src}" "${dst}"
 }
 
-# $1: normal/expect ; $2: mode ; [rest: extra kconfig]
-gen_kconfig() { local type mode kconfig=() vck rc=0
-	type="${1}"
-	mode="${2}"
-	shift 2
+# $1: mode ; [rest: extra kconfig]
+gen_kconfig() { local mode kconfig=() vck rc=0
+	mode="${1}"
+	shift
 
 	log_section_start "Generate kernel config"
 
@@ -345,11 +344,6 @@ gen_kconfig() { local type mode kconfig=() vck rc=0
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
-	fi
-
-	if [ "${type}" = "expect" ]; then
-		# Reboot the VM instead of blocking in case of panic
-		kconfig+=(--set-val PANIC_TIMEOUT -1)
 	fi
 
 	# stop at the first oops, no need to continue in a bad state
@@ -1093,8 +1087,8 @@ run_expect() {
 		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
 
-	# avoid reboot, e.g. in case of panic
-	VIRTME_RUN_OPTS+=(--qemu-opts -no-reboot)
+	# force a stop in case of panic, but avoid a reboot in "expect" mode
+	VIRTME_RUN_OPTS+=(--kopt panic=-1 --qemu-opts -no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
@@ -1439,7 +1433,7 @@ go_manual() { local mode
 	printinfo "Start: manual (${mode})"
 
 	setup_env
-	gen_kconfig "manual" "${@}"
+	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
 	run
@@ -1457,7 +1451,7 @@ go_expect() { local mode
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
-	gen_kconfig "expect" "${@}"
+	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
 	run_expect
