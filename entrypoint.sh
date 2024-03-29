@@ -113,8 +113,6 @@ VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS_DEFAULT=(
 	--arch "${VIRTME_ARCH}"
 	--name "mptcpdev"  # hostname
-	--net
-	--no-virtme-ng-init  # see https://github.com/arighi/virtme-ng/issues/90
 	--memory 2048M
 	--kdir "${VIRTME_BUILD_DIR}"
 	--mods=auto
@@ -187,7 +185,7 @@ else
 	}
 fi
 
-setup_env() {
+setup_env() { local net=()
 	log_section_start "Setup environment"
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
@@ -210,6 +208,8 @@ setup_env() {
 		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
 			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
 		fi
+
+		# The CI doesn't need to access to the outside world, so no '--net'
 	else
 		# avoid override
 		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${mode}"
@@ -217,11 +217,15 @@ setup_env() {
 		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
+
+		# add net support, can be useful, but delay the start of the tests (~1 sec?)
+		net=("--net")
 	fi
 
 	VIRTME_RUN_OPTS=(
 		"${VIRTME_RUN_OPTS_DEFAULT[@]}"
 		--cpus "${INPUT_CPUS}"
+		"${net[@]}"
 	)
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
@@ -318,18 +322,14 @@ _add_symlink() {
 	ln -sf "${src}" "${dst}"
 }
 
-# $1: normal/expect ; $2: mode ; [rest: extra kconfig]
-gen_kconfig() { local type mode kconfig=() vck rc=0
-	type="${1}"
-	mode="${2}"
-	shift 2
+# $1: mode ; [rest: extra kconfig]
+gen_kconfig() { local mode kconfig=() vck rc=0
+	mode="${1}"
+	shift
 
 	log_section_start "Generate kernel config"
 
 	vck=(--arch "${VIRTME_ARCH}" --defconfig --custom "${SELFTESTS_CONFIG}")
-
-	# workaround for vng 1.22: https://github.com/arighi/virtme-ng/pull/91
-	rm -f "${VIRTME_KCONFIG}"
 
 	if [ "${mode}" = "debug" ]; then
 		kconfig+=(
@@ -344,11 +344,6 @@ gen_kconfig() { local type mode kconfig=() vck rc=0
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
 		kconfig+=(-e KFENCE)
-	fi
-
-	if [ "${type}" = "expect" ]; then
-		# Reboot the VM instead of blocking in case of panic
-		kconfig+=(--set-val PANIC_TIMEOUT -1)
 	fi
 
 	# stop at the first oops, no need to continue in a bad state
@@ -1092,8 +1087,8 @@ run_expect() {
 		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
 	fi
 
-	# avoid reboot, e.g. in case of panic
-	VIRTME_RUN_OPTS+=(--qemu-opts -no-reboot)
+	# force a stop in case of panic, but avoid a reboot in "expect" mode
+	VIRTME_RUN_OPTS+=(--kopt panic=-1 --qemu-opts -no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
@@ -1110,14 +1105,13 @@ EOF
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
-# or with the new init: virtme-ng-init: initialization done
 expect {
-	"virtme-init: Setting hostname to mptcpdev...\r" {
-		send_user "Waiting for the virtme-init to be ready\n"
+	"virtme-ng-init: initialization done\r" {
+		send_user "Waiting for the console to be ready\n"
 		send "\r"
 	} timeout {
 		send_user "\n$(log_section_end)"
-		send_user "Timeout virtme-init: stopping\n"
+		send_user "Timeout virtme-ng-init: stopping\n"
 		exit 1
 	} eof {
 		send_user "\n$(log_section_end)"
@@ -1439,7 +1433,7 @@ go_manual() { local mode
 	printinfo "Start: manual (${mode})"
 
 	setup_env
-	gen_kconfig "manual" "${@}"
+	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
 	run
@@ -1457,7 +1451,7 @@ go_expect() { local mode
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
-	gen_kconfig "expect" "${@}"
+	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
 	run_expect

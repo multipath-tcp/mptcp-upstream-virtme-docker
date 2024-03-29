@@ -71,10 +71,6 @@ RUN cd /opt && \
 		cd .. && \
 	rm -rf "sparse"
 
-# Virtme NG
-ARG VIRTME_NG_VERSION="1.22"
-RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
-
 # iproute
 ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
 ARG IPROUTE2_GIT_SHA="v6.8.0"
@@ -86,6 +82,10 @@ RUN cd /opt && \
 		./configure && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
+
+# Virtme NG
+ARG VIRTME_NG_VERSION="1.23"
+RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
