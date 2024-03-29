@@ -114,7 +114,6 @@ VIRTME_RUN_OPTS_DEFAULT=(
 	--arch "${VIRTME_ARCH}"
 	--name "mptcpdev"  # hostname
 	--net
-	--no-virtme-ng-init  # see https://github.com/arighi/virtme-ng/issues/90
 	--memory 2048M
 	--kdir "${VIRTME_BUILD_DIR}"
 	--mods=auto
@@ -327,9 +326,6 @@ gen_kconfig() { local type mode kconfig=() vck rc=0
 	log_section_start "Generate kernel config"
 
 	vck=(--arch "${VIRTME_ARCH}" --defconfig --custom "${SELFTESTS_CONFIG}")
-
-	# workaround for vng 1.22: https://github.com/arighi/virtme-ng/pull/91
-	rm -f "${VIRTME_KCONFIG}"
 
 	if [ "${mode}" = "debug" ]; then
 		kconfig+=(
@@ -1110,14 +1106,13 @@ EOF
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
-# or with the new init: virtme-ng-init: initialization done
 expect {
-	"virtme-init: Setting hostname to mptcpdev...\r" {
-		send_user "Waiting for the virtme-init to be ready\n"
+	"virtme-ng-init: initialization done\r" {
+		send_user "Waiting for the console to be ready\n"
 		send "\r"
 	} timeout {
 		send_user "\n$(log_section_end)"
-		send_user "Timeout virtme-init: stopping\n"
+		send_user "Timeout virtme-ng-init: stopping\n"
 		exit 1
 	} eof {
 		send_user "\n$(log_section_end)"
