@@ -7,10 +7,13 @@ VIRTME_INTERACTIVE=""
 # host is different if worktree are used
 VIRTME_GIT_DIR="$(realpath "$(git rev-parse --git-common-dir)")"
 
+HOME_DIR="$(realpath "$(dirname "${0}")/.home")"
+
 docker run \
 	-v "${PWD}:${PWD}:rw" \
 	-v "${VIRTME_GIT_DIR}:${VIRTME_GIT_DIR}:ro" \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
+	-v "${HOME_DIR}:/root" \
 	-w "${PWD}" \
 	-e "INPUT_TRACE" \
 	-e "INPUT_NO_BLOCK" \
