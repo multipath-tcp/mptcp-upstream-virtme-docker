@@ -72,9 +72,8 @@ RUN cd /opt && \
 	rm -rf "sparse"
 
 # iproute
-ARG IPROUTE2_GIT_URL="https://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
-ARG IPROUTE2_GIT_SHA="v6.8.0"
-ENV IPROUTE2_GIT_SHA="${IPROUTE2_GIT_SHA}"
+ARG IPROUTE2_GIT_URL="https://github.com/multipath-tcp/iproute2.git"
+ARG IPROUTE2_GIT_SHA="591f0654c8980c6c516152b3cf19b814451f3301" # next + last time counters
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
 	cd iproute2 && \
