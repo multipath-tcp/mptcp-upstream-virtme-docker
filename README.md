@@ -1,10 +1,10 @@
 # MPTCP Upstream Virtme Docker
 
-This repo contains files to build a vitual environment with virtme to validate
+This repo contains files to build a virtual environment with Virtme to validate
 [mptcp_net-next](https://github.com/multipath-tcp/mptcp_net-next) repo.
 
-The idea here is to have automatic builds to published a docker that can be used
-by devs and CI.
+The idea here is to have automatic builds to publish a docker image that can be
+used by devs and CI.
 
 ## Entrypoint options
 
@@ -13,7 +13,7 @@ When launching the docker image, you have to specify the mode you want to use:
 - `manual-normal`: This will compile a kernel without a debug config and leave
   you with a shell prompt.
 - `manual-debug`: Same but with a kernel debug config.
-- `auto-normal`: All the automatic tests are ran in a kernel without a debug
+- `auto-normal`: All the automatic tests are run in a kernel without a debug
   config.
 - `auto-debug`: Same but with a kernel debug config.
 - `auto-all`: Same but both non-debug and debug config are used.
@@ -63,10 +63,10 @@ This will build and start the docker image.
 - `.virtme-exec-run`
 - `.virtme-exec-post`
 
-`pre` and `post` are ran before and after the tests suite. `run` is ran instead
-of the tests suite.
+`pre` and `post` are run before and after the tests' suite. `run` is run instead
+of the tests' suite.
 
-These scripts are sourced and can used functions from the virtme script.
+These scripts are sourced and can use functions from the virtme script.
 
 ### Env vars
 
@@ -84,7 +84,7 @@ This is useful if you need to do a `git bisect`.
 ### Not stop after an error is detected with `run_loop`
 
 You can set `INPUT_RUN_LOOP_CONTINUE=1` env var to continue even if an error is
-detected. Failed iterations are loggued in `${CONCLUSION}.failed`.
+detected. Failed iterations are logged in `${CONCLUSION}.failed`.
 
 #### Packetdrill
 
