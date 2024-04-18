@@ -58,7 +58,7 @@ set_trace_on
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
-	shift
+	shift || true # none set
 fi
 
 # to be able to set an extra env var
@@ -1532,6 +1532,7 @@ usage() {
 
 
 if [ -z "${INPUT_MODE}" ]; then
+	set +x
 	usage
 	exit 0
 fi
