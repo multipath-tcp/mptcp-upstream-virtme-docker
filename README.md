@@ -10,17 +10,22 @@ used by devs and CI.
 
 When launching the docker image, you have to specify the mode you want to use:
 
-- `manual-normal`: This will compile a kernel without a debug config and leave
-  you with a shell prompt.
-- `manual-debug`: Same but with a kernel debug config.
-- `auto-normal`: All the automatic tests are run in a kernel without a debug
-  config.
-- `auto-debug`: Same but with a kernel debug config.
-- `auto-all`: Same but both non-debug and debug config are used.
-- `make`: run the make command with optional parameters.
-- `make.cross`: run Intel's make.cross command with optional parameters.
-- `cmd`: run the given command.
-- `src`: source a given script file.
+- `manual-*`: Build the kernel and dependences, start a VM, then leave you with
+  a shell prompt inside the VM:
+  - `manual-normal`: With a non-debug kernel config.
+  - `manual-debug`: With a debug kernel config.
+  - `manual-btf`: With BTF support (needed for BPF features).
+- `auto-*`: Build the kernel and dependences, start a VM, then run all the
+  automatic tests from the VM:
+  - `auto-normal`: With a non-debug kernel config.
+  - `auto-debug`: With a debug kernel config.
+  - `auto-all`: First with a non-debug, then a debug kernel config.
+  - `auto-btf`: With BTF support (needed for BPF features).
+- `make`: Run the `make` command with optional parameters.
+- `make.cross`: Run Intel's `make.cross` command with optional parameters.
+- `cmd`: Run the given command in the docker image (not in the VM), e.g.
+  `cmd bash` to have a prompt
+- `src`: `source` a given script file.
 - `help`: display all possible commands.
 
 All the `manual-*` and `auto-*` options accept optional arguments for
