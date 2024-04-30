@@ -78,10 +78,14 @@ VIRTME_EXPECT_BOOT_TIMEOUT="300"
 
 KERNEL_SRC="${PWD}"
 
+# used to pass environment variables to the VM
+BASH_PROFILE="/root/.bash_profile"
+
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
+VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
 
 VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
@@ -612,6 +616,12 @@ prepare() { local mode no_tap=1
 	if is_ci; then
 		no_tap=0 # we want subtests
 	fi
+
+	cat <<EOF > "${BASH_PROFILE}"
+export KERNEL_BUILD_DIR="${VIRTME_BUILD_DIR}"
+export KERNEL_SRC_DIR="${KERNEL_SRC}"
+export PATH="\${PATH}:${VIRTME_TOOLS_SBIN_DIR}"
+EOF
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
