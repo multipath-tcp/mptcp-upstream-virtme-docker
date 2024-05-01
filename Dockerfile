@@ -9,7 +9,7 @@ RUN apt-get update && \
 	apt-get dist-upgrade -y && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
-		build-essential libncurses5-dev gcc libssl-dev bc bison automake \
+		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
 		python3 python3-pip python3-pkg-resources file virtiofsd \
 		busybox-static coreutils python3-requests libvirt-clients udev \
@@ -19,7 +19,7 @@ RUN apt-get update && \
 		tcpdump \
 		pkg-config libmnl-dev \
 		clang lld llvm llvm-dev libcap-dev \
-		gdb crash dwarves strace \
+		gdb gdb-multiarch crash dwarves strace trace-cmd \
 		iptables ebtables nftables vim psmisc bash-completion less jq \
 		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
 		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev python3-docutils \
