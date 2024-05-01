@@ -75,6 +75,14 @@ These scripts are sourced and can use functions from the virtme script.
 
 ### Env vars
 
+Env vars can be set to change the behaviour of the script. When using the Docker
+command, you need to specify the `-e` parameter, e.g. to set
+`INPUT_BUILD_SKIP=1`:
+
+```bash
+docker run -e INPUT_BUILD_SKIP=1 (...) mptcp/mptcp-upstream-virtme-docker:latest (...)
+```
+
 #### Skip kernel build
 
 If you didn't change the kernel code, it can be useful to skip the compilation
@@ -217,7 +225,7 @@ This can happen when switching between major versions of the compiler. In this
 case, it will be required to clean the build dir in `.virtme/build`, e.g.
 
 ```bash
-docker run -v "${PWD}:${PWD}:rw" -w "${PWD}"--rm -it \
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   cmd rm -r .virtme/build/tools
 ```
