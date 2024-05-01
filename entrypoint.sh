@@ -35,6 +35,10 @@ set_trace_off() {
 	fi
 }
 
+with_clang() {
+	[ "${INPUT_CLANG}" = "1" ]
+}
+
 set_trace_on
 
 # The behaviour can be changed with 'input' env var
@@ -83,6 +87,7 @@ BASH_PROFILE="/root/.bash_profile"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
+with_clang && VIRTME_BUILD_DIR+="-clang"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
@@ -102,6 +107,7 @@ BPFTESTS_CONFIG="${BPFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
+with_clang && CCACHE_DIR+="-clang"
 
 export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
 export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
@@ -299,12 +305,20 @@ check_source_exec_all() {
 	log_section_end
 }
 
-_make() {
+read -ra MAKE_ARGS <<< "${INPUT_MAKE_ARGS}"
+with_clang && MAKE_ARGS+=(LLVM=1 LLVM_IAS=1 CC=clang ARCH="${VIRTME_ARCH}")
+MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
+
+_make_j() {
 	make -j"$(nproc)" -l"$(nproc)" "${@}"
 }
 
+_make() {
+	_make_j "${MAKE_ARGS[@]}" "${@}"
+}
+
 _make_o() {
-	_make O="${VIRTME_BUILD_DIR}" "${@}"
+	_make_j "${MAKE_ARGS_O[@]}" "${@}"
 }
 
 # $1: source ; $2: target
@@ -348,7 +362,13 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=(-e PANIC_ON_OOPS)
 
 	# Debug info for developers
-	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF4 -e GDB_SCRIPTS)
+	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
+	if with_clang; then
+		kconfig+=(-e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT)
+	else
+		# decode_stacktrace.sh script reports '??:?' with GCC and DWARF5
+		kconfig+=(-e DEBUG_INFO_DWARF4)
+	fi
 
 	# Compressed (old/new option)
 	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZLIB)
@@ -400,7 +420,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=("${@}")
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" || rc=${?}
+	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" "${MAKE_ARGS_O[@]}" || rc=${?}
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}" || rc=${?}
 
@@ -1592,6 +1612,9 @@ case "${INPUT_MODE}" in
 		COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
 			COMPILER="${COMPILER}" \
 				"${MAKE_CROSS}" "${@}"
+		;;
+	"defconfig")
+		gen_kconfig "${@:-normal}"
 		;;
 	"cmd" | "command")
 		"${@}"

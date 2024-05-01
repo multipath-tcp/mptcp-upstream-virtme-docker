@@ -9,6 +9,6 @@ fi
 export INPUT_NO_BLOCK="${INPUT_NO_BLOCK:-1}"
 
 bash "-${-}" "${DIR}/build.sh"
-docker system prune --filter "label=name=mptcp-upstream-virtme-docker" -f
+docker system prune --filter "label=name=mptcp-upstream-virtme-docker" -f >&2
 
 bash "-${-}" "${DIR}/run.sh" "${@}"
