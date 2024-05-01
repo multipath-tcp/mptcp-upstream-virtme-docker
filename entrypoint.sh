@@ -299,12 +299,14 @@ check_source_exec_all() {
 	log_section_end
 }
 
+MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
+
 _make() {
 	make -j"$(nproc)" -l"$(nproc)" "${@}"
 }
 
 _make_o() {
-	_make O="${VIRTME_BUILD_DIR}" "${@}"
+	_make "${MAKE_ARGS_O[@]}" "${@}"
 }
 
 # $1: source ; $2: target
@@ -400,7 +402,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=("${@}")
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" || rc=${?}
+	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" "${MAKE_ARGS_O[@]}" || rc=${?}
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}" || rc=${?}
 
