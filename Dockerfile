@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 
 LABEL name=mptcp-upstream-virtme-docker
 
