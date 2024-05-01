@@ -299,14 +299,19 @@ check_source_exec_all() {
 	log_section_end
 }
 
+read -ra MAKE_ARGS <<< "${INPUT_MAKE_ARGS}"
 MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
 
-_make() {
+_make_j() {
 	make -j"$(nproc)" -l"$(nproc)" "${@}"
 }
 
+_make() {
+	_make_j "${MAKE_ARGS[@]}" "${@}"
+}
+
 _make_o() {
-	_make "${MAKE_ARGS_O[@]}" "${@}"
+	_make_j "${MAKE_ARGS_O[@]}" "${@}"
 }
 
 # $1: source ; $2: target
