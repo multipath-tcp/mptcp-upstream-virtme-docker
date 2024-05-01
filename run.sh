@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0
 
 VIRTME_INTERACTIVE=""
+test -t 1 && VIRTME_INTERACTIVE="-t"
 [ "${VIRTME_NO_INTERACTIVE}" != 1 ] && VIRTME_INTERACTIVE="-it"
 
 # host is different if worktree are used
