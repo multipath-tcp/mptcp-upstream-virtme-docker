@@ -16,6 +16,7 @@ docker run \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-v "${HOME_DIR}:/root" \
 	-w "${PWD}" \
+	-e "INPUT_CLANG" \
 	-e "INPUT_TRACE" \
 	-e "INPUT_NO_BLOCK" \
 	-e "INPUT_RUN_LOOP_CONTINUE" \

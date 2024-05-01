@@ -89,6 +89,10 @@ If you didn't change the kernel code, it can be useful to skip the compilation
 part. You can then set `INPUT_BUILD_SKIP=1` to save a few seconds to start the
 VM.
 
+#### Use CLang instead of GCC
+
+Simply set `INPUT_CLANG=1` env var with all the commands you use.
+
 #### Not blocking with questions
 
 You can set `INPUT_NO_BLOCK=1` env var not to block if these files are present.
@@ -227,5 +231,5 @@ case, it will be required to clean the build dir in `.virtme/build`, e.g.
 ```bash
 docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
-  cmd rm -r .virtme/build/tools
+  cmd rm -r .virtme/build*/tools
 ```
