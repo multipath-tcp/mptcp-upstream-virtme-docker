@@ -1,0 +1,6 @@
+#! /bin/bash
+# SPDX-License-Identifier: GPL-2.0
+
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -t \
+	mptcp/mptcp-upstream-virtme-docker:latest \
+	cmd clangd "${@}"

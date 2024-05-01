@@ -233,3 +233,25 @@ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   cmd rm -r .virtme/build*/tools
 ```
+
+## Working with VSCode
+
+If you use [VSCode for Linux kernel development](https://github.com/FlorentRevest/linux-kernel-vscode)
+add-on, you can configure it to use this docker image: simply copy all files
+from the [`vscode`](/tree/main/vscode) directory in your `.vscode` dir from the
+kernel source (or use symbolic links).
+
+Notes:
+- The VSCode add-on needs some modifications, see
+  [PR #5](https://github.com/FlorentRevest/linux-kernel-vscode/pull/5) and
+  [PR #6](https://github.com/FlorentRevest/linux-kernel-vscode/pull/6). If these
+  PRs are not merged, you can use
+  [this fork](https://github.com/matttbe/linux-kernel-vscode/) (`virtme-support`
+  branch) for the moment.
+- If you build the Docker image yourself, you can use a symbolic link instead of
+  the `clangd` script:
+  ```bash
+  ln -s /PATH/TO/mptcp-upstream-virtme-docker/run-tests-dev-cmd.sh .vscode/mptcp-virtme-clangd
+  ```
+- CLang will be used by VSCode, e.g. to generate `compile_commands.json`. You
+  then need to launch docker commands with `-e INPUT_CLANG=1`

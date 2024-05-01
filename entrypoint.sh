@@ -1613,6 +1613,9 @@ case "${INPUT_MODE}" in
 			COMPILER="${COMPILER}" \
 				"${MAKE_CROSS}" "${@}"
 		;;
+	"defconfig")
+		gen_kconfig "${@:-normal}"
+		;;
 	"cmd" | "command")
 		"${@}"
 		;;
