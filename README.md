@@ -58,6 +58,16 @@ cd <kernel source code>
 
 This will build and start the docker image.
 
+To avoid using long paths, you can create symlinks:
+
+```bash
+cd <kernel source code>
+ln -s /PATH/TO/THIS/REPO/run-tests-dev.sh .virtme.sh
+ln -s /PATH/TO/THIS/REPO/run-tests-dev-clang.sh .virtme-clang.sh
+```
+
+Then simply call `./.virtme.sh` or `.virtme-clang.sh`.
+
 ## Extension
 
 ### Files
