@@ -6,15 +6,25 @@
 
 export VIRTME_NO_INTERACTIVE=1
 export INPUT_CLANG="1"
-export MAKE="./.virtme.sh make"
 export SILENT_BUILD_FLAG=" "
 export SPINNER=0
+export MAKE
 
 cd "${SCRIPT_DIR}/.." || exit 1
 
+if [ -f ".virtme-clang.sh" ]; then
+	VIRTME_CMD=(bash -e ./.virtme-clang.sh)
+else
+	VIRTME_CMD=(docker run --rm -t
+			-e INPUT_CLANG=1
+			-v "${PWD}:${PWD}:rw" -w "${PWD}"
+			mptcp/mptcp-upstream-virtme-docker:latest)
+fi
+MAKE="${VIRTME_CMD[*]} make"
+
 defconfig() {
 	if [ ! -f .virtme/build-clang/.config ]; then
-		./.virtme.sh defconfig
+		"${VIRTME_CMD[@]}" defconfig
 	fi
 }
 
