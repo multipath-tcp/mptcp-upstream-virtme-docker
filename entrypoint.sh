@@ -91,6 +91,7 @@ with_clang && VIRTME_BUILD_DIR+="-clang"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
+VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
 
 VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
@@ -116,7 +117,9 @@ mkdir -p \
 	"${VIRTME_BUILD_DIR}" \
 	"${VIRTME_SCRIPTS_DIR}" \
 	"${VIRTME_PERF_DIR}" \
+	"${VIRTME_CACHE_DIR}" \
 	"${CCACHE_DIR}"
+chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
 
 VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"

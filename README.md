@@ -248,10 +248,6 @@ Notes:
   PRs are not merged, you can use
   [this fork](https://github.com/matttbe/linux-kernel-vscode/) (`virtme-support`
   branch) for the moment.
-- If you build the Docker image yourself, you can use a symbolic link instead of
-  the `clangd` script:
-  ```bash
-  ln -s /PATH/TO/mptcp-upstream-virtme-docker/run-tests-dev-cmd.sh .vscode/mptcp-virtme-clangd
-  ```
-- CLang will be used by VSCode, e.g. to generate `compile_commands.json`. You
-  then need to launch docker commands with `-e INPUT_CLANG=1`
+- CLang will be used by VSCode instead of GCC. It is then required to launch all
+  docker commands with `-e INPUT_CLANG=1`, see above.
+- CLangD will be used on the host machine, not in the Docker.
