@@ -18,7 +18,7 @@ RUN apt-get update && \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
 		tcpdump \
 		pkg-config libmnl-dev \
-		clang clangd lld llvm llvm-dev libcap-dev \
+		clang clangd clang-tidy lld llvm llvm-dev libcap-dev \
 		gdb gdb-multiarch crash dwarves strace trace-cmd \
 		iptables ebtables nftables vim psmisc bash-completion less jq \
 		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
