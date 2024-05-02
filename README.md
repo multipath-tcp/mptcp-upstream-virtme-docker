@@ -239,7 +239,8 @@ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -it \
 If you use [VSCode for Linux kernel development](https://github.com/FlorentRevest/linux-kernel-vscode)
 add-on, you can configure it to use this docker image: simply copy all files
 from the [`vscode`](/tree/main/vscode) directory in your `.vscode` dir from the
-kernel source (or use symbolic links).
+kernel source (or use symbolic links). `.clangd` needs to be placed at the root
+of the kernel source directory.
 
 Notes:
 - The VSCode add-on needs some modifications, see
