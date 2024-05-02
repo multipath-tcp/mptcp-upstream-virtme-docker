@@ -6,7 +6,7 @@
 
 export VIRTME_NO_INTERACTIVE=1
 export INPUT_CLANG="1"
-export MAKE="./.virtme.sh make"
+export MAKE="bash -e ./.virtme.sh make"
 export SILENT_BUILD_FLAG=" "
 export SPINNER=0
 
