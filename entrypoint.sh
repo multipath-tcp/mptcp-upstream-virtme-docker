@@ -452,6 +452,16 @@ build_kernel() { local rc=0
 	return ${rc}
 }
 
+build_compile_commands() { local rc=0
+	log_section_start "Build compile_commands.json"
+
+	_make_o compile_commands.json || rc=${?}
+
+	log_section_end
+
+	return ${rc}
+}
+
 install_kernel_headers() { local rc=0
 	log_section_start "Install kernel headers"
 
@@ -505,6 +515,9 @@ build() {
 	fi
 
 	build_kernel
+	if [ "${EXPECT}" = 0 ] && with_clang; then
+		build_compile_commands || true # nice to have
+	fi
 	install_kernel_headers
 	build_modules
 	build_perf
