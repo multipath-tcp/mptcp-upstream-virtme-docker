@@ -4,9 +4,10 @@
 # Some functions will be called indirectly, see the 'custom' commands below.
 # shellcheck disable=SC2317
 
+VIRTME_CMD="bash -e ./.virtme-clang.sh"
 export VIRTME_NO_INTERACTIVE=1
 export INPUT_CLANG="1"
-export MAKE="bash -e ./.virtme.sh make"
+export MAKE="${VIRTME_CMD} make"
 export SILENT_BUILD_FLAG=" "
 export SPINNER=0
 
@@ -14,7 +15,7 @@ cd "${SCRIPT_DIR}/.." || exit 1
 
 defconfig() {
 	if [ ! -f .virtme/build-clang/.config ]; then
-		./.virtme.sh defconfig
+		${VIRTME_CMD} defconfig
 	fi
 }
 
