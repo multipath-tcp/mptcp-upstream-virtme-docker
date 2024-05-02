@@ -239,7 +239,8 @@ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --rm -it \
 If you use [VSCode for Linux kernel development](https://github.com/FlorentRevest/linux-kernel-vscode)
 add-on, you can configure it to use this docker image: simply copy all files
 from the [`vscode`](/tree/main/vscode) directory in your `.vscode` dir from the
-kernel source (or use symbolic links).
+kernel source (or use symbolic links). `.clangd` needs to be placed at the root
+of the kernel source directory.
 
 Notes:
 - The VSCode add-on needs some modifications, see
@@ -248,10 +249,6 @@ Notes:
   PRs are not merged, you can use
   [this fork](https://github.com/matttbe/linux-kernel-vscode/) (`virtme-support`
   branch) for the moment.
-- If you build the Docker image yourself, you can use a symbolic link instead of
-  the `clangd` script:
-  ```bash
-  ln -s /PATH/TO/mptcp-upstream-virtme-docker/run-tests-dev-cmd.sh .vscode/mptcp-virtme-clangd
-  ```
-- CLang will be used by VSCode, e.g. to generate `compile_commands.json`. You
-  then need to launch docker commands with `-e INPUT_CLANG=1`
+- CLang will be used by VSCode instead of GCC. It is then required to launch all
+  docker commands with `-e INPUT_CLANG=1`, see above.
+- CLangD will be used on the host machine, not in the Docker.

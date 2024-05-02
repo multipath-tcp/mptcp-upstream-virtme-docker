@@ -89,8 +89,10 @@ VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 with_clang && VIRTME_BUILD_DIR+="-clang"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
+VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
+VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
 
 VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
@@ -115,8 +117,11 @@ export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 mkdir -p \
 	"${VIRTME_BUILD_DIR}" \
 	"${VIRTME_SCRIPTS_DIR}" \
+	"${VIRTME_HEADERS_DIR}" \
 	"${VIRTME_PERF_DIR}" \
+	"${VIRTME_CACHE_DIR}" \
 	"${CCACHE_DIR}"
+chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
 
 VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"
@@ -439,13 +444,17 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 build_kernel() { local rc=0
 	log_section_start "Build kernel"
 
-	# undo BPFTrace and cie workaround
-	find "${VIRTME_BUILD_DIR}/include" \
-		-mindepth 1 -maxdepth 1 \
-		! -name 'config' ! -name 'generated' \
-		-type d -exec rm -r {} +
-
 	_make_o || rc=${?}
+
+	log_section_end
+
+	return ${rc}
+}
+
+build_compile_commands() { local rc=0
+	log_section_start "Build compile_commands.json"
+
+	_make_o compile_commands.json || rc=${?}
 
 	log_section_end
 
@@ -458,7 +467,7 @@ install_kernel_headers() { local rc=0
 	# for BPFTrace and cie
 	cp -r include/ "${VIRTME_BUILD_DIR}"
 
-	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_BUILD_DIR}" || rc=${?}
+	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_HEADERS_DIR}" || rc=${?}
 
 	log_section_end
 
@@ -505,6 +514,9 @@ build() {
 	fi
 
 	build_kernel
+	if [ "${EXPECT}" = 0 ] && with_clang; then
+		build_compile_commands || true # nice to have
+	fi
 	install_kernel_headers
 	build_modules
 	build_perf
@@ -518,7 +530,7 @@ build_selftests() { local rc=0
 
 	log_section_start "Build the selftests $(basename "${SELFTESTS_DIR}")"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${SELFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${SELFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
@@ -533,7 +545,7 @@ build_bpftests() { local rc=0
 
 	log_section_start "Build BPFTests"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_BUILD_DIR}/include" -C "${BPFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${BPFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
