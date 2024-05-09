@@ -1,5 +1,10 @@
 {
   "clangd.arguments": [
     "-compile-commands-dir=${workspaceFolder}/.virtme/build-clang"
-  ]
+  ],
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.virtme/**": true
+  }
 }
