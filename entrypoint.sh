@@ -446,6 +446,9 @@ build_kernel() { local rc=0
 
 	_make_o || rc=${?}
 
+	# virtme will mount a tmpfs there + symlink to .virtme_mods
+	mkdir -p /lib/modules
+
 	log_section_end
 
 	return ${rc}
@@ -473,19 +476,6 @@ install_kernel_headers() { local rc=0
 
 	return ${rc}
 
-}
-
-build_modules() { local rc=0
-	log_section_start "Build kernel modules"
-
-	_make_o modules || rc=${?}
-
-	# virtme will mount a tmpfs there + symlink to .virtme_mods
-	mkdir -p /lib/modules
-
-	log_section_end
-
-	return ${rc}
 }
 
 build_perf() { local rc=0
@@ -518,7 +508,6 @@ build() {
 		build_compile_commands || true # nice to have
 	fi
 	install_kernel_headers
-	build_modules
 	build_perf
 }
 
