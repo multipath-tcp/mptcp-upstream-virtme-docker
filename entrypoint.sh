@@ -1537,23 +1537,30 @@ exit_trap() { local rc=${?}
 }
 
 usage() {
-	echo "Usage: ${0} <manual-normal | manual-debug | auto-normal | auto-debug | auto-all> [KConfig]"
+	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf | auto-normal | auto-debug | auto-btf | auto-all> [KConfig]"
 	echo
 	echo " - manual: access to an interactive shell"
 	echo " - auto: the tests suite is ran automatically"
 	echo
 	echo " - normal: without the debug kconfig"
 	echo " - debug: with debug kconfig"
-	echo " - all: both 'normal' and 'debug'"
+	echo " - btf: without the debug kconfig, but with BTF support"
+	echo " - all: both 'normal' and 'debug' modes"
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config'"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | cmd <command> | src <source file>>"
+	echo "Usage: ${0} <make [params] | make.cross [params] | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto >"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
+	echo " - defconfig: only generate the .config file ('normal' mode by default)"
+	echo " - selftests: only build the KSelftests"
+	echo " - bpftests: only build the BPF tests"
 	echo " - cmd: run the given command"
 	echo " - src: source a given script file"
+	echo " - static: run static analysis, with make W=1 C=1"
+	echo " - vm-manual: start the VM with what has already been built"
+	echo " - vm-auto: same, then run the tests as well"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
 	echo
