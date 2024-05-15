@@ -1638,6 +1638,13 @@ case "${INPUT_MODE}" in
 	"static" | "static-analysis")
 		static_analysis
 		;;
+	"vm" | "vm-manual")
+		run
+		;;
+	"vm-expect" | "vm-auto")
+		run_expect
+		analyze "${@:-normal}"
+		;;
 	*)
 		set +x
 		printerr "Unknown mode: ${INPUT_MODE}"
