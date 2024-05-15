@@ -1617,6 +1617,9 @@ case "${INPUT_MODE}" in
 	"defconfig")
 		gen_kconfig "${@:-normal}"
 		;;
+	"selftests")
+		build_selftests
+		;;
 	"cmd" | "command")
 		"${@}"
 		;;
