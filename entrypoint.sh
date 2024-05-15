@@ -1620,6 +1620,9 @@ case "${INPUT_MODE}" in
 	"selftests")
 		build_selftests
 		;;
+	"bpftests")
+		build_bpftests
+		;;
 	"cmd" | "command")
 		"${@}"
 		;;
