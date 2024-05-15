@@ -23,8 +23,14 @@ When launching the docker image, you have to specify the mode you want to use:
   - `auto-btf`: With BTF support (needed for BPF features).
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
+- `defconfig`: Only generate the `.config` file (`normal` mode by default).
+- `selftests`: Only build the KSelftests.
+- `bpftests`: Only build the BPF tests.
 - `cmd`: Run the given command in the docker image (not in the VM), e.g.
-  `cmd bash` to have a prompt
+  `cmd bash` to have a prompt.
+- `static`: Run static analysis, with `make W=1 C=1`.
+- `vm-manual`: Start the VM with what has already been built.
+- `vm-auto`: Start the VM with what has already been built, then run the tests.
 - `src`: `source` a given script file.
 - `help`: display all possible commands.
 
