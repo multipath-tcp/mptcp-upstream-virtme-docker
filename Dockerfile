@@ -85,6 +85,9 @@ RUN cd /opt && \
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.24"
 RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
+# Fix from dev branch, see https://github.com/arighi/virtme-ng/pull/112
+RUN sed -i 's/"\(microvm,accel=kvm,pcie=on\)"/"\1,rtc=on"/g' \
+	/usr/local/lib/python3.12/dist-packages/virtme/architectures.py
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
