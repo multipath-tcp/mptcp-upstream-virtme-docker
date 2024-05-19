@@ -1646,9 +1646,11 @@ case "${INPUT_MODE}" in
 		static_analysis
 		;;
 	"vm" | "vm-manual")
+		setup_env
 		run
 		;;
 	"vm-expect" | "vm-auto")
+		setup_env
 		run_expect
 		analyze "${@:-normal}"
 		;;
