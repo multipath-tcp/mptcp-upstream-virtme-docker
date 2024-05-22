@@ -67,9 +67,6 @@ def parse_tap(tap, name, only_fails):
 
 		success = r[0] is None
 
-		if only_fails and success:
-			continue
-
 		result = {
 			'result': "pass" if success else "fail",
 			'name': r[3]
@@ -77,8 +74,14 @@ def parse_tap(tap, name, only_fails):
 
 		if r[5]:
 			result['comment'] = r[5]
-			if r[5].lower().startswith('skip') and success:
-				result['result'] = "skip"
+			if success:
+				if r[5].lower().startswith('skip'):
+					result['result'] = "skip"
+				elif r[5].lower().startswith('ignore flaky'):
+					result['result'] = "flaky"
+
+		if only_fails and result['result'] == "pass":
+			continue
 
 		results[r[1]] = result
 
