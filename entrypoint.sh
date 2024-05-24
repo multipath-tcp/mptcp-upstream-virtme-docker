@@ -1343,7 +1343,11 @@ _print_tests_result() { local flaky
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
 
-	flaky="$(grep --no-filename " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap 2>/dev/null || true)"
+	if is_ci; then
+		flaky="$(grep --no-filename -F " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap || true)"
+	else
+		flaky="$(grep --no-filename -F "[IGNO] (flaky)" "${RESULTS_DIR}"/*.tap || true)"
+	fi
 	if [ -n "${flaky}" ]; then
 		echo
 		echo "Flaky tests:"
