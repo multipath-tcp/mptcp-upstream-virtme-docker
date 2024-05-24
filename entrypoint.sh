@@ -1336,12 +1336,19 @@ _print_tests_results_subtests() { local tap ok
 	done
 }
 
-_print_tests_result() {
+_print_tests_result() { local flaky
 	echo "All tests:"
 	# only from the main tests
 	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
+
+	flaky="$(grep --no-filename " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap || true)"
+	if [ -n "${flaky}" ]; then
+		echo
+		echo "Flaky tests:"
+		echo "${flaky}"
+	fi
 }
 
 _print_failed_tests() { local t
