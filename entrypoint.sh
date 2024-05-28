@@ -206,7 +206,11 @@ setup_env() { local net=()
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
 	# this docker image
-	git config --global --add safe.directory "${KERNEL_SRC}" || true
+	git config --global --replace-all safe.directory "${KERNEL_SRC}" || true
+
+	# Set a name, just in case for automations
+	git config --global user.name "MPTCP Virtme Docker"
+	git config --global user.email "DO-NOT@SEND.THIS"
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
