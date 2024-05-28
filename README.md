@@ -143,11 +143,7 @@ docker run \
   manual
 
 cd /opt/packetdrill/gtests/net/
-./packetdrill/run_all.py -lv mptcp/dss ## or any other subdirs
-
-# or
-cd /opt/packetdrill/gtests/net/mptcp/dss/ ## or any other subdirs
-../../packetdrill/packetdrill -v dss_fin_server.pkt ## or any other tests
+./packetdrill/run_all.py -lvv -P 2 mptcp/dss ## or any other subdirs
 ```
 
 If you use the `run*.sh` scripts, you can set `VIRTME_PACKETDRILL_PATH` to do
