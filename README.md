@@ -45,8 +45,8 @@ Without cloning this repo, you can quickly get a ready to use environment:
 
 ```bash
 cd <kernel source code>
-docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
-  --pull always mptcp/mptcp-upstream-virtme-docker:latest \
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" --rm \
+  -it --privileged --pull always mptcp/mptcp-upstream-virtme-docker:latest \
   <entrypoint options, see above>
 ```
 
@@ -137,7 +137,7 @@ docker run \
   -e INPUT_PACKETDRILL_NO_SYNC=1 \
   -e INPUT_PACKETDRILL_NO_MORE_TOLERANCE=1 \
   -v /PATH/TO/packetdrill:/opt/packetdrill:rw \
-  -v "${PWD}:${PWD}:rw" -w "${PWD}" \
+  -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" \
   --privileged --rm -it \
   mptcp/mptcp-upstream-virtme-docker:latest \
   manual
@@ -224,7 +224,8 @@ run_selftest_all
 EOF
 
 # skip Packetdrill build (not needed), run TC selftests and add CONFIG_DUMMY
-docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" --privileged --rm -it \
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" --rm \
+  -it --privileged \
   -e INPUT_BUILD_SKIP_PACKETDRILL=1 \
   -e INPUT_SELFTESTS_DIR=tools/testing/selftests/tc-testing \
   --pull always mptcp/mptcp-upstream-virtme-docker:latest \
