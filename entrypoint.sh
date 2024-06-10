@@ -72,7 +72,7 @@ if [[ "${INPUT_EXTRA_ENV}" =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9_]+$ ]]; then
 fi
 
 : "${PACKETDRILL_GIT_BRANCH:=mptcp-net-next}"
-: "${VIRTME_ARCH:=x86_64}"
+: "${VIRTME_ARCH:="$(uname -m)"}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
 # CI only: estimated time before (clone + boot) and after (artifacts) running this script
