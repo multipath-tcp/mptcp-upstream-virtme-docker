@@ -23,6 +23,7 @@ When launching the docker image, you have to specify the mode you want to use:
   - `auto-btf`: With BTF support (needed for BPF features).
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
+- `build`: Build everything, but don't start the VM (`normal` mode by default).
 - `defconfig`: Only generate the `.config` file (`normal` mode by default).
 - `selftests`: Only build the KSelftests.
 - `bpftests`: Only build the BPF tests.
@@ -265,3 +266,31 @@ Notes:
 - CLang will be used by VSCode instead of GCC. It is then required to launch all
   docker commands with `-e INPUT_CLANG=1`, see above.
 - CLangD will be used on the host machine, not in the Docker.
+
+## CLang Analyzer
+
+In the kernel, it is possible to run `make clang-analyzer`, but it will scan all
+compiled files, that's too long, and maybe not needed here. Here is a workaround
+to scan only MPTCP files:
+
+```bash
+cd <kernel source code>
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" --rm \
+  -e INPUT_CLANG=1 \
+  -it --privileged --pull always mptcp/mptcp-upstream-virtme-docker:latest \
+  build
+jq 'map(select(.file | contains ("/mptcp/")))' \
+  .virtme/build-clang/compile_commands.json > compile_commands-mptcp.json
+docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" --rm \
+  -e INPUT_CLANG=1 \
+  -it --privileged --pull always mptcp/mptcp-upstream-virtme-docker:latest \
+  cmd ./scripts/clang-tools/run-clang-tools.py clang-analyzer compile_commands-mptcp.json
+```
+
+Or when using the scripts from this repo:
+
+```bash
+./.virtme-clang.sh build
+jq 'map(select(.file | contains ("/mptcp/")))' .virtme/build-clang/compile_commands.json > compile_commands-mptcp.json
+./.virtme-clang.sh cmd ./scripts/clang-tools/run-clang-tools.py clang-analyzer compile_commands-mptcp.json
+```
