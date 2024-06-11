@@ -1469,35 +1469,36 @@ analyze() {
 }
 
 # $@: args for kconfig
-go_manual() { local mode
+prepare_all() { local t mode
+	t=${1}; shift
 	mode="${1}"
 
-	printinfo "Start: manual (${mode})"
+	printinfo "Start: ${t} (${mode})"
 
 	setup_env
 	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
+}
+
+# $1: mode ; [ $2+: kconfig ]
+go_manual() {
+	prepare_all manual "${@}"
 	run
 }
 
-# $1: mode ; $2+: args for kconfig
-go_expect() { local mode
-	mode="${1}"
-
-	printinfo "Start: auto (${mode})"
-
+# $1: mode ; [ $2+: kconfig ]
+go_expect() {
 	EXPECT=1
 
-	setup_env
 	ccache_stat
 	check_last_iproute
 	check_source_exec_all
-	gen_kconfig "${@}"
-	build
-	prepare "${mode}"
-	run_expect
+
+	prepare_all auto "${@}"
 	ccache_stat
+
+	run_expect
 	analyze "${@}"
 }
 
@@ -1566,10 +1567,11 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config'"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto >"
+	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto >"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
+	echo " - build: build everything, but don't start the VM ('normal' mode by default)"
 	echo " - defconfig: only generate the .config file ('normal' mode by default)"
 	echo " - selftests: only build the KSelftests"
 	echo " - bpftests: only build the BPF tests"
@@ -1637,6 +1639,9 @@ case "${INPUT_MODE}" in
 		COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
 			COMPILER="${COMPILER}" \
 				"${MAKE_CROSS}" "${@}"
+		;;
+	"build")
+		prepare_all manual "${@:-normal}"
 		;;
 	"defconfig")
 		gen_kconfig "${@:-normal}"
