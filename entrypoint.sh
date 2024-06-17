@@ -606,13 +606,13 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
 			# shellcheck disable=SC2013 # to filter duplicated ones
 			for val in $(grep "^--tolerance_usecs=" "${pf}" | cut -d= -f2 | sort -u); do
 				if [ "${mode}" = "debug" ]; then
-					# Add higher tolerance in debug mode:
+					# Increase tolerance in debug mode:
 					# the environment can be very slow
-					new_val=$((val * 10))
+					new_val=$((val * 8))
 				else
-					# double the time in normal mode:
+					# Triple the time in normal mode:
 					# public CI can be quite loaded...
-					new_val=$((val * 4))
+					new_val=$((val * 3))
 				fi
 
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
