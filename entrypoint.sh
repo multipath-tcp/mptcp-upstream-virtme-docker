@@ -1677,10 +1677,12 @@ case "${INPUT_MODE}" in
 		;;
 	"vm" | "vm-manual")
 		setup_env "${@:-normal}"
+		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		run
 		;;
 	"vm-expect" | "vm-auto")
 		setup_env "${@:-normal}"
+		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		run_expect
 		analyze "${@:-normal}"
 		;;
