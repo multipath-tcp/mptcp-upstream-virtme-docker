@@ -1345,7 +1345,7 @@ _print_tests_results_subtests() { local tap ok
 _print_tests_result() { local flaky
 	echo "All tests:"
 	# only from the main tests
-	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap
+	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap || true
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
 
