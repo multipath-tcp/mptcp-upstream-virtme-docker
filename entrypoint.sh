@@ -272,6 +272,12 @@ setup_env() { local mode net=()
 		fi
 	fi
 
+	if [ "${KVER_MAJ}" -lt 5 ] ||
+	   { [ "${KVER_MAJ}" -eq 5 ] && [ "${KVER_MIN}" -le 10 ]; }; then
+		# virtiofs doesn't seem to be supported on old kernels
+		VIRTME_RUN_OPTS+=(--force-9p)
+	fi
+
 	log_section_end
 }
 
