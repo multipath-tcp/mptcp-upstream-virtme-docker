@@ -201,7 +201,9 @@ else
 	}
 fi
 
-setup_env() { local net=()
+setup_env() { local mode net=()
+	mode="${1}"
+
 	log_section_start "Setup environment"
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
@@ -1475,7 +1477,7 @@ prepare_all() { local t mode
 
 	printinfo "Start: ${t} (${mode})"
 
-	setup_env
+	setup_env "${mode}"
 	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
@@ -1578,8 +1580,8 @@ usage() {
 	echo " - cmd: run the given command"
 	echo " - src: source a given script file"
 	echo " - static: run static analysis, with make W=1 C=1"
-	echo " - vm-manual: start the VM with what has already been built"
-	echo " - vm-auto: same, then run the tests as well"
+	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
+	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
 	echo
@@ -1668,11 +1670,11 @@ case "${INPUT_MODE}" in
 		static_analysis
 		;;
 	"vm" | "vm-manual")
-		setup_env
+		setup_env "${@:-normal}"
 		run
 		;;
 	"vm-expect" | "vm-auto")
-		setup_env
+		setup_env "${@:-normal}"
 		run_expect
 		analyze "${@:-normal}"
 		;;
