@@ -30,8 +30,10 @@ When launching the docker image, you have to specify the mode you want to use:
 - `cmd`: Run the given command in the docker image (not in the VM), e.g.
   `cmd bash` to have a prompt.
 - `static`: Run static analysis, with `make W=1 C=1`.
-- `vm-manual`: Start the VM with what has already been built.
-- `vm-auto`: Start the VM with what has already been built, then run the tests.
+- `vm-manual`: Start the VM with what has already been built (`normal` mode by
+  default).
+- `vm-auto`: Start the VM with what has already been built, then run the tests
+  (`normal` mode by default).
 - `src`: `source` a given script file.
 - `help`: display all possible commands.
 

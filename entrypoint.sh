@@ -201,7 +201,9 @@ else
 	}
 fi
 
-setup_env() { local net=()
+setup_env() { local mode net=()
+	mode="${1}"
+
 	log_section_start "Setup environment"
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
@@ -252,6 +254,29 @@ setup_env() { local net=()
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
+
+	KVERSION=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
+	KVER_MAJ=${KVERSION%%.*} ## 5
+	KVER_MIN=${KVERSION#*.} ## 17.0*
+	KVER_MIC=${KVER_MIN#*.} ## 0
+	KVER_MIN=${KVER_MIN%%.*} ## 17
+
+	# without rc, it means we probably already merged with net-next
+	if [[ ! "${KVERSION}" =~ rc ]] && [ "${KVER_MIC}" = 0 ]; then
+		KVER_MIN=$((KVER_MIN + 1))
+
+		# max .19 because Linus has 20 fingers
+		if [ ${KVER_MIN} -gt 19 ]; then
+			KVER_MAJ=$((KVER_MAJ + 1))
+			KVER_MIN=0
+		fi
+	fi
+
+	if [ "${KVER_MAJ}" -lt 5 ] ||
+	   { [ "${KVER_MAJ}" -eq 5 ] && [ "${KVER_MIN}" -le 10 ]; }; then
+		# virtiofs doesn't seem to be supported on old kernels
+		VIRTME_RUN_OPTS+=(--force-9p)
+	fi
 
 	log_section_end
 }
@@ -546,7 +571,7 @@ build_bpftests() { local rc=0
 	return ${rc}
 }
 
-build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
+build_packetdrill() { local old_pwd kversion branch rc=0
 	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1 ]; then
 		printinfo "Skip Packetdrill build"
 		return 0
@@ -565,24 +590,7 @@ build_packetdrill() { local old_pwd kversion kver_maj kver_min branch rc=0
 
 		branch="${PACKETDRILL_GIT_BRANCH}"
 		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
-			kversion=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
-			kver_maj=${kversion%%.*} ## 5
-			kver_min=${kversion#*.} ## 17.0*
-			kver_mic=${kver_min#*.} ## 0
-			kver_min=${kver_min%%.*} ## 17
-
-			# without rc, it means we probably already merged with net-next
-			if [[ ! "${kversion}" =~ rc ]] && [ "${kver_mic}" = 0 ]; then
-				kver_min=$((kver_min + 1))
-
-				# max .19 because Linus has 20 fingers
-				if [ ${kver_min} -gt 19 ]; then
-					kver_maj=$((kver_maj + 1))
-					kver_min=0
-				fi
-			fi
-
-			kversion="mptcp-${kver_maj}.${kver_min}"
+			kversion="mptcp-${KVER_MAJ}.${KVER_MIN}"
 			# set the new branch only if it exists. If not, take the dev one
 			if git show-ref --quiet "refs/remotes/origin/${kversion}"; then
 				branch="${kversion}"
@@ -1343,7 +1351,7 @@ _print_tests_results_subtests() { local tap ok
 _print_tests_result() { local flaky
 	echo "All tests:"
 	# only from the main tests
-	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap
+	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap || true
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
 
@@ -1475,7 +1483,7 @@ prepare_all() { local t mode
 
 	printinfo "Start: ${t} (${mode})"
 
-	setup_env
+	setup_env "${mode}"
 	gen_kconfig "${@}"
 	build
 	prepare "${mode}"
@@ -1578,8 +1586,8 @@ usage() {
 	echo " - cmd: run the given command"
 	echo " - src: source a given script file"
 	echo " - static: run static analysis, with make W=1 C=1"
-	echo " - vm-manual: start the VM with what has already been built"
-	echo " - vm-auto: same, then run the tests as well"
+	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
+	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
 	echo
@@ -1668,11 +1676,11 @@ case "${INPUT_MODE}" in
 		static_analysis
 		;;
 	"vm" | "vm-manual")
-		setup_env
+		setup_env "${@:-normal}"
 		run
 		;;
 	"vm-expect" | "vm-auto")
-		setup_env
+		setup_env "${@:-normal}"
 		run_expect
 		analyze "${@:-normal}"
 		;;
