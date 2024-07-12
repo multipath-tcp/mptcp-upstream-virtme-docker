@@ -1211,10 +1211,6 @@ EOF
 	"${VIRTME_RUN_EXPECT}" | tee "${OUTPUT_VIRTME}"
 }
 
-_get_selftests_gen_files() {
-	grep TEST_GEN_FILES "${SELFTESTS_DIR}/Makefile" | cut -d= -f2
-}
-
 ccache_stat() {
 	if is_ci; then
 		log_section_start "CCache Stats"
