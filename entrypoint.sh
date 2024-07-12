@@ -1347,14 +1347,14 @@ _print_tests_results_subtests() { local tap ok
 _print_tests_result() { local flaky
 	echo "All tests:"
 	# only from the main tests
-	grep --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap || true
+	grep --text --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap || true
 	_print_tests_results_subtests "kunit_"
 	_print_tests_results_subtests "packetdrill_"
 
 	if is_ci; then
-		flaky="$(grep --no-filename -F " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap || true)"
+		flaky="$(grep --text --no-filename -F " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap || true)"
 	else
-		flaky="$(grep --no-filename -F "[IGNO] (flaky)" "${RESULTS_DIR}"/*.tap || true)"
+		flaky="$(grep --text --no-filename -F "[IGNO] (flaky)" "${RESULTS_DIR}"/*.tap || true)"
 	fi
 	if [ -n "${flaky}" ]; then
 		echo
@@ -1372,7 +1372,7 @@ _print_failed_tests() { local t
 			_print_line
 			echo "- $(basename "${t}"):"
 			echo
-			grep -v "^ok [0-9]\+ " "${t}"
+			grep -av "^ok [0-9]\+ " "${t}"
 		fi
 	done
 	_print_line
@@ -1381,7 +1381,7 @@ _print_failed_tests() { local t
 _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
 	# we just want the main results, not the detailed ones for the moment
-	grep "^not ok 1 test: " "${TESTS_SUMMARY}" | \
+	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" | \
 		awk '{ print $5 }' | \
 		sort -u | \
 		sed "s/\.tap$//g"
