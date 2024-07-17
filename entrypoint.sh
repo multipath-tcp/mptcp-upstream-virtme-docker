@@ -628,8 +628,8 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 		done
 
 		set_trace_on
-		cd "${old_pwd}"
 	fi
+	cd "${old_pwd}"
 
 	log_section_end
 
