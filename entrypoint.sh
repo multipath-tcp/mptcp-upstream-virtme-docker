@@ -602,10 +602,10 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 	./configure
 	_make || rc=${?}
 
-	cd ../mptcp
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
 		printinfo "Packetdrill: not modifying the tolerance"
 	else
+		cd ../mptcp
 		# reduce debug logs: too much
 		set_trace_off
 
@@ -628,8 +628,8 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 		done
 
 		set_trace_on
+		cd "${old_pwd}"
 	fi
-	cd "${old_pwd}"
 
 	log_section_end
 
