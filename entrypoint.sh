@@ -1411,7 +1411,7 @@ _gen_results_files() {
 # $1: mode, rest: args for kconfig
 analyze() {
 	# reduce log that could be wrongly interpreted
-	set +x
+	set_trace_off
 
 	local mode="${1}"
 	shift
@@ -1470,6 +1470,8 @@ analyze() {
 		printerr "Critical issue(s) detected, exiting"
 		exit 1
 	fi
+
+	set_trace_on
 }
 
 # $@: args for kconfig
@@ -1692,6 +1694,7 @@ case "${INPUT_MODE}" in
 esac
 
 if is_ci && [ "${INPUT_CI_PRINT_EXIT_CODE}" = 1 ]; then
+	set_trace_off
 	echo "==EXIT_STATUS=${EXIT_STATUS}=="
 else
 	exit "${EXIT_STATUS}"
