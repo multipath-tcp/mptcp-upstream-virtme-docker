@@ -8,6 +8,7 @@ on:
 
 jobs:
   docker:
+    if: github.repository_owner == 'multipath-tcp'
     runs-on: ubuntu-latest
     steps:
       -
