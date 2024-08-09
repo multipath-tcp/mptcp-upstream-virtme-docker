@@ -392,7 +392,15 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		)
 
-		vck+=(--custom kernel/configs/debug.config)
+		local debug_config="kernel/configs/debug.config"
+
+		# Introduced in v5.17
+		if [ ! -s "${debug_config}" ]; then
+			debug_config="${VIRTME_CACHE_DIR}/debug.config"
+			curl "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/configs/debug.config" > "${debug_config}"
+		fi
+
+		vck+=(--custom "${debug_config}")
 	else
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
