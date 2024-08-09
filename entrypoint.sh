@@ -39,6 +39,10 @@ with_clang() {
 	[ "${INPUT_CLANG}" = "1" ]
 }
 
+with_btf() {
+	[[ "${INPUT_MODE}" == *"btf" ]]
+}
+
 set_trace_on
 
 # The behaviour can be changed with 'input' env var
@@ -89,6 +93,7 @@ BASH_PROFILE="/root/.bash_profile"
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 with_clang && VIRTME_BUILD_DIR+="-clang"
+with_btf && VIRTME_BUILD_DIR+="-btf"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
@@ -111,6 +116,7 @@ BPFTESTS_CONFIG="${BPFTESTS_DIR}/config"
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
 export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
 with_clang && CCACHE_DIR+="-clang"
+with_btf && CCACHE_DIR+="-btf"
 
 export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
 export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
@@ -386,7 +392,15 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		)
 
-		vck+=(--custom kernel/configs/debug.config)
+		local debug_config="kernel/configs/debug.config"
+
+		# Introduced in v5.17
+		if [ ! -s "${debug_config}" ]; then
+			debug_config="${VIRTME_CACHE_DIR}/debug.config"
+			curl "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/configs/debug.config" > "${debug_config}"
+		fi
+
+		vck+=(--custom "${debug_config}")
 	else
 		# low-overhead sampling-based memory safety error detector.
 		# Only in non-debug: KASAN is more precise
