@@ -84,6 +84,9 @@ def parse_tap(tap, name, only_fails):
 			t = TIME_RE.findall(r[5].lower())
 			if t:
 				result['time_ms'] = t[-1] # take the last one
+				result['comment'] = result['comment'].replace("time=" + result['time_ms'] + "ms", "").replace("  ", " ").strip()
+				if not result['comment']:
+					del result['comment']
 
 		if only_fails and result['result'] == "pass":
 			continue
