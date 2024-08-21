@@ -81,7 +81,7 @@ def parse_tap(tap, name, only_fails):
 				elif r[5].lower().startswith('ignore flaky'):
 					result['result'] = "flaky"
 
-			t = TIME_RE.findall(r[5].lower()).groups()
+			t = TIME_RE.findall(r[5].lower())
 			if t:
 				result['time_ms'] = t[-1] # take the last one
 
