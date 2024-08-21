@@ -72,7 +72,7 @@ def parse_tap(tap, name, only_fails):
 			'name': r[3]
 		}
 
-		if r[5]:
+		if r[4] and r[5]:
 			result['comment'] = r[5]
 			if success:
 				if r[5].lower().startswith('skip'):
