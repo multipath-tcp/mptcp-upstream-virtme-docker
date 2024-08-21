@@ -52,6 +52,7 @@ def get_args_parser():
 
 # Same as in NIPA
 TAP_RE = re.compile(r"(not )?ok (\d+)( -)? ([^#]*[^ ])( # )?([^ ].*)?$")
+TIME_RE = re.compile(r"time=([0-9.]+)ms")
 
 def parse_tap(tap, name, only_fails):
 	results = {}
@@ -72,13 +73,17 @@ def parse_tap(tap, name, only_fails):
 			'name': r[3]
 		}
 
-		if r[5]:
+		if r[4] and r[5]:
 			result['comment'] = r[5]
 			if success:
 				if r[5].lower().startswith('skip'):
 					result['result'] = "skip"
 				elif r[5].lower().startswith('ignore flaky'):
 					result['result'] = "flaky"
+
+			t = TIME_RE.findall(r[5].lower()).groups()
+			if t:
+				result['time_ms'] = t[-1] # take the last one
 
 		if only_fails and result['result'] == "pass":
 			continue
