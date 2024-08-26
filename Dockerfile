@@ -28,6 +28,7 @@ RUN apt-get update && \
 		wget xz-utils lftp cpio u-boot-tools \
 		cscope \
 		bpftrace \
+		golang \
 		&& \
 	apt-get clean
 
