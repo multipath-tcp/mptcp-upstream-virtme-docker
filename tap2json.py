@@ -51,7 +51,7 @@ def get_args_parser():
 	return parser
 
 # Same as in NIPA
-TAP_RE = re.compile(r"(not )?ok (\d+)( -)? ([^#]*[^ ])( # )?([^ ].*)?$")
+TAP_RE = re.compile(r"(not )?ok (\d+)( -)? ([^#]*[^ ])( +# +)?([^ ].*)?$")
 TIME_RE = re.compile(r"time=([0-9.]+)ms")
 
 def parse_tap(tap, name, only_fails):
