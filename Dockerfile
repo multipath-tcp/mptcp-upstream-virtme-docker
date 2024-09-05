@@ -29,6 +29,7 @@ RUN apt-get update && \
 		cscope \
 		bpftrace \
 		golang \
+		mptcpize \
 		&& \
 	apt-get clean
 
