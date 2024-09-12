@@ -3,10 +3,6 @@
 #
 # The goal is to launch (MPTCP) kernel selftests and more.
 # But also to provide a dev env for kernel developers or testers.
-#
-# Arguments:
-#   - "manual": to have a console in the VM. Additional args are for the kconfig
-#   - args we pass to kernel's "scripts/config" script.
 
 # We should manage all errors in this script
 set -e
