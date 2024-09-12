@@ -466,7 +466,14 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	)
 
 	# extra config
-	kconfig+=("${@}")
+	if [ -s "${1:-}" ]; then
+		local i
+		for i in "${@}"; do
+			vck+=(--custom "${i}")
+		done
+	else
+		kconfig+=("${@}")
+	fi
 
 	# KBUILD_OUTPUT is used by virtme
 	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" "${MAKE_ARGS_O[@]}" || rc=${?}
@@ -1585,7 +1592,7 @@ usage() {
 	echo " - btf: without the debug kconfig, but with BTF support"
 	echo " - all: both 'normal' and 'debug' modes"
 	echo
-	echo " - KConfig: optional kernel config: arguments for './scripts/config'"
+	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
 	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto >"
 	echo
