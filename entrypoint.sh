@@ -1027,7 +1027,7 @@ has_call_trace() {
 }
 
 kmemleak_scan() {
-	if [ "${mode}" = "debug" ]; then
+	if [ -e /sys/kernel/debug/kmemleak ]; then
 		echo scan > /sys/kernel/debug/kmemleak
 		cat /sys/kernel/debug/kmemleak > "${KMEMLEAK}"
 	fi
