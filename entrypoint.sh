@@ -1278,6 +1278,10 @@ _print_line() {
 	echo "=========================================="
 }
 
+_get_ref() {
+	echo "${GITHUB_REF_NAME:-$(git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "Unknown")}"
+}
+
 decode_stacktrace() {
 	./scripts/decode_stacktrace.sh "${VIRTME_BUILD_DIR}/vmlinux" "${KERNEL_SRC}" "${VIRTME_BUILD_DIR}/.virtme_mods"
 }
@@ -1341,7 +1345,7 @@ _print_summary_header() {
 
 	echo "== Summary =="
 	echo
-	echo "Ref: ${GITHUB_REF_NAME:-$(git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "Unknown")}${GITHUB_SHA:+ (${GITHUB_SHA})}"
+	echo "Ref: $(_get_ref)${GITHUB_SHA:+ (${GITHUB_SHA})}"
 	echo "Mode: ${mode}"
 	echo "Extra kconfig: ${*:-/}"
 	echo
