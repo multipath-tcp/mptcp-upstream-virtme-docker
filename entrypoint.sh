@@ -55,6 +55,7 @@ set_trace_on
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
 : "${INPUT_CPUS:=""}"
+: "${INPUT_GCOV:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=7200}"
@@ -150,6 +151,8 @@ OUTPUT_VIRTME=
 TESTS_SUMMARY=
 CONCLUSION=
 KMEMLEAK=
+LCOV_FILE=
+LCOV_HTML=
 
 EXIT_STATUS=0
 EXIT_REASONS=()
@@ -222,6 +225,7 @@ setup_env() { local mode net=()
 		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
+		: "${INPUT_GCOV:=1}"
 
 		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
 
@@ -241,6 +245,7 @@ setup_env() { local mode net=()
 		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
+		: "${INPUT_GCOV:=0}"
 
 		# add net support, can be useful, but delay the start of the tests (~1 sec?)
 		net=("--net")
@@ -256,6 +261,8 @@ setup_env() { local mode net=()
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
+	LCOV_FILE="${RESULTS_DIR}/kernel.lcov"
+	LCOV_HTML="${RESULTS_DIR}/lcov"
 
 	KVERSION=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
 	KVER_MAJ=${KVERSION%%.*} ## 5
@@ -429,6 +436,11 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
 	fi
 
+	# GCov for the CI
+	if [ "${INPUT_GCOV}" = 1 ]; then
+		kconfig+=(-e GCOV_KERNEL -e GCOV_PROFILE_MPTCP)
+	fi
+
 	# Debug tools for developers
 	kconfig+=(
 		-e DYNAMIC_DEBUG --set-val CONSOLE_LOGLEVEL_DEFAULT 8
@@ -491,7 +503,11 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 build_kernel() { local rc=0
 	log_section_start "Build kernel"
 
-	_make_o || rc=${?}
+	if [ "${INPUT_GCOV}" = 1 ]; then
+		KCFLAGS="-fprofile-update=atomic" _make_o || rc=${?}
+	else
+		_make_o || rc=${?}
+	fi
 
 	# virtme will mount a tmpfs there + symlink to .virtme_mods
 	mkdir -p /lib/modules
@@ -1033,6 +1049,14 @@ kmemleak_scan() {
 	fi
 }
 
+gcov_extract() {
+	if [ -d /sys/kernel/debug/gcov ]; then
+		lcov --capture --keep-going --rc geninfo_unexecuted_blocks=1 \
+		     --function-coverage --branch-coverage \
+		     -b "${VIRTME_BUILD_DIR}" -j "${INPUT_CPUS}" -o "${LCOV_FILE}"
+	fi
+}
+
 # \$1: max iterations (<1 means no limit) ; args: what needs to be executed
 run_loop_n() { local i tdir rc=0
 	n=\${1}
@@ -1106,6 +1130,7 @@ fi
 cd "${KERNEL_SRC}"
 
 kmemleak_scan
+gcov_extract
 
 # To run commands before executing the tests
 if [ -f "${VIRTME_EXEC_POST}" ]; then
@@ -1338,6 +1363,13 @@ _print_kmemleak() {
 	echo "KMemLeak detected"
 }
 
+_lcov_to_html() {
+	mkdir -p "${LCOV_HTML}"
+	genhtml -j "$(nproc)" -t "$(_get_ref)" --dark-mode \
+		--include '/net/mptcp/' \
+		-o "${LCOV_HTML}" "${LCOV_FILE}" &> "${LCOV_HTML}/gen.log"
+}
+
 # $1: mode, rest: args for kconfig
 _print_summary_header() {
 	local mode="${1}"
@@ -1482,6 +1514,15 @@ analyze() {
 		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${mode}" "KMemLeak"
 		EXIT_STATUS=1
+	fi
+
+	if [ "${INPUT_GCOV}" = 1 ]; then
+		if ! _lcov_to_html; then
+			echo "Unable to generate HTML from LCOV data" | tee -a "${TESTS_SUMMARY}"
+			tee -a "${TESTS_SUMMARY}" < "${LCOV_HTML}/gen.log"
+			_register_issue "Critical" "${mode}" "LCOV"
+			EXIT_STATUS=1
+		fi
 	fi
 
 	echo -ne "${COLOR_RESET}"

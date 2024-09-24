@@ -38,6 +38,7 @@ docker run \
 	-e "INPUT_EXPECT_TIMEOUT" \
 	-e "INPUT_EXTRA_ENV" \
 	-e "INPUT_CPUS" \
+	-e "INPUT_GCOV" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
 	--privileged \
