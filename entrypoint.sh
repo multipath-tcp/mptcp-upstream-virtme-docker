@@ -1599,7 +1599,8 @@ _lcov2html() { local rc=0
 	rm -rf "${LCOV_HTML}"
 	mkdir -p "${LCOV_HTML}"
 	genhtml -j "$(nproc)" -t "$(_get_ref)" --dark-mode \
-		--include '/net/mptcp/' --flat \
+		--include '/net/mptcp/' --flat --legend \
+		--function-coverage --branch-coverage --keep-going \
 		-o "${LCOV_HTML}" "${@:-${LCOV_FILE}}" || rc=${?}
 
 	set +x
