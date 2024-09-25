@@ -34,6 +34,8 @@ When launching the docker image, you have to specify the mode you want to use:
   default).
 - `vm-auto`: Start the VM with what has already been built, then run the tests
   (`normal` mode by default).
+- `lcov2html`: Generate HTML from LCOV file(s) (available when tests have been
+  executed with `INPUT_GCOV=1`).
 - `src`: `source` a given script file.
 - `help`: display all possible commands.
 

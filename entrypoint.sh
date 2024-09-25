@@ -1363,13 +1363,6 @@ _print_kmemleak() {
 	echo "KMemLeak detected"
 }
 
-_lcov_to_html() {
-	mkdir -p "${LCOV_HTML}"
-	genhtml -j "$(nproc)" -t "$(_get_ref)" --dark-mode \
-		--include '/net/mptcp/' \
-		-o "${LCOV_HTML}" "${LCOV_FILE}" &> "${LCOV_HTML}/gen.log"
-}
-
 # $1: mode, rest: args for kconfig
 _print_summary_header() {
 	local mode="${1}"
@@ -1516,15 +1509,6 @@ analyze() {
 		EXIT_STATUS=1
 	fi
 
-	if [ "${INPUT_GCOV}" = 1 ]; then
-		if ! _lcov_to_html; then
-			echo "Unable to generate HTML from LCOV data" | tee -a "${TESTS_SUMMARY}"
-			tee -a "${TESTS_SUMMARY}" < "${LCOV_HTML}/gen.log"
-			_register_issue "Critical" "${mode}" "LCOV"
-			EXIT_STATUS=1
-		fi
-	fi
-
 	echo -ne "${COLOR_RESET}"
 
 	if [ "${EXIT_STATUS}" = "1" ]; then
@@ -1598,6 +1582,24 @@ static_analysis() { local src obj ftmp
 	rm -f "${ftmp}"
 }
 
+_lcov2html() { local rc=0
+	if [ -z "${1}" ] && [ ! -s "${LCOV_FILE}" ]; then
+		echo "No LCOV data generated in ${LCOV_FILE}"
+		exit 1
+	fi
+
+	rm -rf "${LCOV_HTML}"
+	mkdir -p "${LCOV_HTML}"
+	genhtml -j "$(nproc)" -t "$(_get_ref)" --dark-mode \
+		--include '/net/mptcp/' --flat \
+		-o "${LCOV_HTML}" "${@:-${LCOV_FILE}}" || rc=${?}
+
+	set +x
+	printinfo "Code coverage: ${LCOV_HTML}/index.html"
+
+	return ${rc}
+}
+
 print_conclusion() { local rc=${1}
 	echo -n "${EXIT_TITLE}: "
 
@@ -1635,7 +1637,7 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto >"
+	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | lcov2html >"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
@@ -1648,6 +1650,7 @@ usage() {
 	echo " - static: run static analysis, with make W=1 C=1"
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
+	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
 	echo
@@ -1745,6 +1748,13 @@ case "${INPUT_MODE}" in
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		run_expect
 		analyze "${@:-normal}"
+		;;
+	"lcov2html")
+		setup_env "${@:-normal}"
+		while [ -n "${1}" ] && [ ! -s "${1}" ]; do
+			shift
+		done
+		_lcov2html "${@}"
 		;;
 	*)
 		set +x
