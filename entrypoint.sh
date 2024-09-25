@@ -152,6 +152,7 @@ TESTS_SUMMARY=
 CONCLUSION=
 KMEMLEAK=
 LCOV_FILE=
+LCOV_TXT=
 LCOV_HTML=
 
 EXIT_STATUS=0
@@ -262,6 +263,7 @@ setup_env() { local mode net=()
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
 	KMEMLEAK="${RESULTS_DIR}/kmemleak.txt"
 	LCOV_FILE="${RESULTS_DIR}/kernel.lcov"
+	LCOV_TXT="${RESULTS_DIR}/coverage.txt"
 	LCOV_HTML="${RESULTS_DIR}/lcov"
 
 	KVERSION=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
@@ -1051,9 +1053,11 @@ kmemleak_scan() {
 
 gcov_extract() {
 	if [ -d /sys/kernel/debug/gcov ]; then
+		log_section_start "GCOV capture"
 		lcov --capture --keep-going --rc geninfo_unexecuted_blocks=1 \
 		     --function-coverage --branch-coverage \
 		     -b "${VIRTME_BUILD_DIR}" -j "${INPUT_CPUS}" -o "${LCOV_FILE}"
+		log_section_end
 	fi
 }
 
@@ -1507,6 +1511,10 @@ analyze() {
 		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${mode}" "KMemLeak"
 		EXIT_STATUS=1
+	fi
+
+	if [ -s "${LCOV_FILE}" ]; then
+		lcov --branch-coverage --summary "${LCOV_FILE}" > "${LCOV_TXT}" || true
 	fi
 
 	echo -ne "${COLOR_RESET}"
