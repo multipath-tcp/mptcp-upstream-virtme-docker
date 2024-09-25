@@ -1514,7 +1514,7 @@ analyze() {
 	fi
 
 	if [ -s "${LCOV_FILE}" ]; then
-		lcov --branch-coverage --summary "${LCOV_FILE}" > "${LCOV_TXT}" || true
+		lcov --branch-coverage --summary "${LCOV_FILE}" | tee "${LCOV_TXT}" || true
 	fi
 
 	echo -ne "${COLOR_RESET}"
