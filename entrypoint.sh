@@ -1366,7 +1366,7 @@ _print_kmemleak() {
 _lcov_to_html() {
 	mkdir -p "${LCOV_HTML}"
 	genhtml -j "$(nproc)" -t "$(_get_ref)" --dark-mode \
-		--include '/net/mptcp/' \
+		--include '/net/mptcp/' --flat \
 		-o "${LCOV_HTML}" "${LCOV_FILE}" &> "${LCOV_HTML}/gen.log"
 }
 
