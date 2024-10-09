@@ -1054,9 +1054,11 @@ kmemleak_scan() {
 gcov_extract() {
 	if [ -d /sys/kernel/debug/gcov ]; then
 		log_section_start "GCOV capture"
-		lcov --capture --keep-going --rc geninfo_unexecuted_blocks=1 \
-		     --include '/net/mptcp/' --function-coverage --branch-coverage \
-		     -b "${VIRTME_BUILD_DIR}" -j "${INPUT_CPUS}" -o "${LCOV_FILE}"
+		timeout 2m lcov --capture --keep-going -j "${INPUT_CPUS}" \
+				--rc geninfo_unexecuted_blocks=1 \
+				--include '/net/mptcp/' \
+				--function-coverage --branch-coverage \
+				-b "${VIRTME_BUILD_DIR}" -o "${LCOV_FILE}"
 		log_section_end
 	fi
 }
