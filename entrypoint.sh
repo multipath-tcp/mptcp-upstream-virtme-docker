@@ -58,7 +58,7 @@ set_trace_on
 : "${INPUT_GCOV:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
-: "${INPUT_CI_TIMEOUT_SEC:=7200}"
+: "${INPUT_CI_TIMEOUT_SEC:=5400}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
 
@@ -1054,9 +1054,11 @@ kmemleak_scan() {
 gcov_extract() {
 	if [ -d /sys/kernel/debug/gcov ]; then
 		log_section_start "GCOV capture"
-		lcov --capture --keep-going --rc geninfo_unexecuted_blocks=1 \
-		     --include '/net/mptcp/' --function-coverage --branch-coverage \
-		     -b "${VIRTME_BUILD_DIR}" -j "${INPUT_CPUS}" -o "${LCOV_FILE}"
+		timeout 2m lcov --capture --keep-going -j "${INPUT_CPUS}" \
+				--rc geninfo_unexecuted_blocks=1 \
+				--include '/net/mptcp/' \
+				--function-coverage --branch-coverage \
+				-b "${VIRTME_BUILD_DIR}" -o "${LCOV_FILE}"
 		log_section_end
 	fi
 }
