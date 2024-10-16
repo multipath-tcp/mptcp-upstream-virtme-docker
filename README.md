@@ -58,6 +58,14 @@ docker run -v "${PWD}:${PWD}:rw" -w "${PWD}" -v "${PWD}/.home:/root:rw" --rm \
 This docker image needs to be executed with `--privileged` option to be able to
 execute QEmu with KVM acceleration.
 
+Note: if the access to the Docker Hub Registry is blocked, you can also download
+the image from the GitHub registry, using `ghcr.io/multipath-tcp/` as prefix,
+instead of `mptcp`, e.g.
+
+```
+ghcr.io/multipath-tcp/mptcp-upstream-virtme-docker:latest
+```
+
 ### Developer mode
 
 Clone this repo, then:

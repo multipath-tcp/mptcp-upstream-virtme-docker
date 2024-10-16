@@ -82,6 +82,9 @@ VIRTME_CI_ESTIMATED_EXTRA_TIME="540"
 # max time to boot: it should take less than one minute with a debug kernel, *5 to be safe
 VIRTME_EXPECT_BOOT_TIMEOUT="300"
 
+# max time to shutdown: it should take one second
+VIRTME_EXPECT_SHUTDOWN_TIMEOUT="60"
+
 KERNEL_SRC="${PWD}"
 
 # used to pass environment variables to the VM
@@ -219,6 +222,9 @@ setup_env() { local mode net=()
 	# Set a name, just in case for automations
 	git config --global user.name "MPTCP Virtme Docker"
 	git config --global user.email "DO-NOT@SEND.THIS"
+
+	# Avoid a long advice
+	git config --global advice.detachedHead false
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
@@ -1249,9 +1255,18 @@ expect {
 		exit 1
 	}
 }
+set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 send -- "/usr/lib/klibc/bin/poweroff\r"
 
-expect eof
+expect {
+	"KVM: entry failed, hardware error" {
+		exit 1
+	} timeout {
+		exit 1
+	} eof {
+		exit 0
+	}
+}
 EOF
 	chmod +x "${VIRTME_RUN_EXPECT}"
 
