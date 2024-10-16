@@ -220,6 +220,9 @@ setup_env() { local mode net=()
 	git config --global user.name "MPTCP Virtme Docker"
 	git config --global user.email "DO-NOT@SEND.THIS"
 
+	# Avoid a long advice
+	git config --global advice.detachedHead false
+
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
