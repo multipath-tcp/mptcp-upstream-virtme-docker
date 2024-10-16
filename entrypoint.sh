@@ -401,7 +401,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 			-d SLUB_DEBUG_ON # perf impact is too important
 			-e BOOTPARAM_SOFTLOCKUP_PANIC # instead of blocking
 			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
-			-e CONFIG_RCU_EXPERT # required for PROVE_RCU_LIST
+			-e RCU_EXPERT -e PROVE_RCU_LIST # fixed in v6.12
 		)
 
 		local debug_config="kernel/configs/debug.config"
