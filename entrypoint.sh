@@ -1667,16 +1667,17 @@ exit_trap() { local rc=${?}
 }
 
 usage() {
-	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all> [KConfig]"
+	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all | auto-btf-all> [KConfig]"
 	echo
 	echo " - manual: access to an interactive shell"
 	echo " - auto: the tests suite is ran automatically"
 	echo
 	echo " - normal: without the debug kconfig"
 	echo " - debug: with debug kconfig"
+	echo " - all: both 'normal' and 'debug' modes, without BTF support"
 	echo " - btf-normal: without the debug kconfig, but with BTF support"
 	echo " - btf-debug: with the debug kconfig, and with BTF support"
-	echo " - all: both 'normal' and 'debug' modes, without BTF"
+	echo " - btf-all: both 'normal' and 'debug' modes, with BTF support"
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
@@ -1748,6 +1749,14 @@ case "${INPUT_MODE}" in
 		go_expect "normal" "${@}"
 		_make_o clean
 		go_expect "debug" "${@}"
+		;;
+	"expect-btf-all" | "auto-btf-all" )
+		_make_o -C "${SELFTESTS_DIR}" clean
+		_make_o -C "${BPFTESTS_DIR}" clean
+		go_expect "btf-normal" "${@}"
+		_make_o clean
+		_make_o -C "${BPFTESTS_DIR}" clean
+		go_expect "btf-debug" "${@}"
 		;;
 	"make")
 		_make_o "${@}"
