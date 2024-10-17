@@ -95,6 +95,7 @@ VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 with_clang && VIRTME_BUILD_DIR+="-clang"
 with_btf && VIRTME_BUILD_DIR+="-btf"
+[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
@@ -121,6 +122,7 @@ else
 	export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
 	with_clang && CCACHE_DIR+="-clang"
 	with_btf && CCACHE_DIR+="-btf"
+	[ -n "${INPUT_BUILD_SUFFIX}" ] && CCACHE_DIR+="-${INPUT_BUILD_SUFFIX}"
 fi
 
 export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
