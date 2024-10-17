@@ -3,9 +3,13 @@ name: 'MPTCP Upstream Tests Action'
 description: 'Tests Linux kernel MPTCP Upstream changes'
 inputs:
   ccache_maxsize:
-    description: 'Set the maximum size for CCache in {{ github.workspace }}/.ccache dir'
+    description: 'Set the maximum size for CCache'
     required: false
     default: '5G'
+  ccache_dir:
+    description: 'Set the directory name in {{ github.workspace }}/.virtme/ dir'
+    required: false
+    default: 'ccache'
   mode:
     description: 'Kernel mode to use (normal / debug)'
     required: false

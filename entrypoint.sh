@@ -43,6 +43,7 @@ set_trace_on
 
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
+: "${INPUT_CCACHE_DIR:=""}"
 : "${INPUT_NO_BLOCK:=0}"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
@@ -94,6 +95,7 @@ VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 with_clang && VIRTME_BUILD_DIR+="-clang"
 with_btf && VIRTME_BUILD_DIR+="-btf"
+[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
 VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
@@ -114,9 +116,14 @@ BPFTESTS_DIR="${INPUT_BPFTESTS_DIR:-tools/testing/selftests/bpf}"
 BPFTESTS_CONFIG="${BPFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
-export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
-with_clang && CCACHE_DIR+="-clang"
-with_btf && CCACHE_DIR+="-btf"
+if [ -n "${INPUT_CCACHE_DIR}" ]; then
+	export CCACHE_DIR="${VIRTME_WORKDIR}/${INPUT_CCACHE_DIR}"
+else
+	export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
+	with_clang && CCACHE_DIR+="-clang"
+	with_btf && CCACHE_DIR+="-btf"
+	[ -n "${INPUT_BUILD_SUFFIX}" ] && CCACHE_DIR+="-${INPUT_BUILD_SUFFIX}"
+fi
 
 export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
 export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
