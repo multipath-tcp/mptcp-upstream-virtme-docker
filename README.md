@@ -14,13 +14,16 @@ When launching the docker image, you have to specify the mode you want to use:
   a shell prompt inside the VM:
   - `manual-normal`: With a non-debug kernel config.
   - `manual-debug`: With a debug kernel config.
-  - `manual-btf`: With BTF support (needed for BPF features).
+  - `manual-btf-normal`: With BTF support (needed for BPF features), no debug.
+  - `manual-btf-debug`: With BTF support (needed for BPF features), with debug.
 - `auto-*`: Build the kernel and dependences, start a VM, then run all the
   automatic tests from the VM:
   - `auto-normal`: With a non-debug kernel config.
   - `auto-debug`: With a debug kernel config.
   - `auto-all`: First with a non-debug, then a debug kernel config.
-  - `auto-btf`: With BTF support (needed for BPF features).
+  - `auto-btf-normal`: With BTF support (needed for BPF features), no debug.
+  - `auto-btf-debug`: With BTF support (needed for BPF features), with debug.
+  - `auto-btf-all`: With BTF support, first without debug, then with debug.
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
 - `build`: Build everything, but don't start the VM (`normal` mode by default).
