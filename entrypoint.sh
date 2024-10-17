@@ -36,7 +36,7 @@ with_clang() {
 }
 
 with_btf() {
-	[[ "${INPUT_MODE}" == *"btf" ]]
+	[[ "${INPUT_MODE}" == *"btf"* ]]
 }
 
 set_trace_on
@@ -209,6 +209,21 @@ else
 		true
 	}
 fi
+
+# $1: mode
+is_mode_normal() {
+	[[ "${1}" == *"normal" ]]
+}
+
+# $1: mode
+is_mode_debug() {
+	[[ "${1}" == *"debug" ]]
+}
+
+# $1: mode
+is_mode_btf() {
+	[[ "${mode}" == "btf-"* ]]
+}
 
 setup_env() { local mode net=()
 	mode="${1}"
@@ -395,7 +410,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 
 	vck=(--arch "${VIRTME_ARCH}" --defconfig --custom "${SELFTESTS_CONFIG}")
 
-	if [ "${mode}" = "debug" ]; then
+	if is_mode_debug "${mode}"; then
 		kconfig+=(
 			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
 			-d SLUB_DEBUG_ON # perf impact is too important
@@ -435,7 +450,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZLIB)
 
 	# We need more debug info but it is slow to generate
-	if [ "${mode}" = "btf" ]; then
+	if is_mode_btf "${mode}"; then
 		vck+=(--custom "${BPFTESTS_CONFIG}")
 		kconfig+=(-e DEBUG_INFO_BTF_MODULES -e MODULE_ALLOW_BTF_MISMATCH)
 		# Fix ./include/linux/if.h:28:10: fatal error:
@@ -655,7 +670,7 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 		for pf in $(git grep -l "^--tolerance_usecs="); do
 			# shellcheck disable=SC2013 # to filter duplicated ones
 			for val in $(grep "^--tolerance_usecs=" "${pf}" | cut -d= -f2 | sort -u); do
-				if [ "${mode}" = "debug" ]; then
+				if is_mode_debug "${mode}"; then
 					# Increase tolerance in debug mode:
 					# the environment can be very slow
 					new_val=$((val * 8))
@@ -684,7 +699,7 @@ prepare() { local mode no_tap=1
 	printinfo "Prepare the environment"
 
 	build_selftests
-	if [ "${mode}" = "btf" ]; then
+	if is_mode_btf "${mode}"; then
 		build_bpftests
 	fi
 	build_packetdrill
@@ -719,7 +734,7 @@ export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 set_max_threads() {
 	# if QEmu without KVM support
-	if [ "${mode}" == "debug" ] ||
+	if [[ "${mode}" == *"debug" ]] ||
 	   { [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
 	     [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; }; then
 		MAX_THREADS=$((MAX_THREADS / 2)) # avoid too many concurrent work
@@ -1024,7 +1039,7 @@ run_bpftest_one() { local bf bt tap rc=0
 run_bpftest_all() {
 	can_run || return 0
 
-	if [ "${mode}" = "btf" ]; then
+	if [[ "${mode}" == "btf-"* ]]; then
 		local sf rc=0
 
 		for sf in "${VIRTME_BUILD_DIR}/"test_progs*; do
@@ -1652,15 +1667,16 @@ exit_trap() { local rc=${?}
 }
 
 usage() {
-	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf | auto-normal | auto-debug | auto-btf | auto-all> [KConfig]"
+	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all> [KConfig]"
 	echo
 	echo " - manual: access to an interactive shell"
 	echo " - auto: the tests suite is ran automatically"
 	echo
 	echo " - normal: without the debug kconfig"
 	echo " - debug: with debug kconfig"
-	echo " - btf: without the debug kconfig, but with BTF support"
-	echo " - all: both 'normal' and 'debug' modes"
+	echo " - btf-normal: without the debug kconfig, but with BTF support"
+	echo " - btf-debug: with the debug kconfig, and with BTF support"
+	echo " - all: both 'normal' and 'debug' modes, without BTF"
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
@@ -1707,8 +1723,11 @@ case "${INPUT_MODE}" in
 	"debug" | "manual-debug")
 		go_manual "debug" "${@}"
 		;;
-	"btf" | "manual-btf")
-		go_manual "btf" "${@}"
+	"btf" | "btf-normal" | "manual-btf" | "manual-btf-normal")
+		go_manual "btf-normal" "${@}"
+		;;
+	"btf-debug" | "manual-btf-debug")
+		go_manual "btf-debug" "${@}"
 		;;
 	"expect-normal" | "auto-normal")
 		go_expect "normal" "${@}"
@@ -1716,8 +1735,11 @@ case "${INPUT_MODE}" in
 	"expect-debug" | "auto-debug")
 		go_expect "debug" "${@}"
 		;;
-	"expect-btf" | "auto-btf")
-		go_expect "btf" "${@}"
+	"expect-btf" | "expect-btf-normal" | "auto-btf" | "auto-btf-normal")
+		go_expect "btf-normal" "${@}"
+		;;
+	"expect-btf-debug" | "auto-btf-debug")
+		go_expect "btf-debug" "${@}"
 		;;
 	"expect" | "all" | "expect-all" | "auto-all")
 		# first with the minimum because configs like KASAN slow down the
