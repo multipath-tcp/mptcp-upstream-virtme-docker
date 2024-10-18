@@ -85,7 +85,7 @@ RUN cd /opt && \
 		make install
 
 # Virtme NG
-ARG VIRTME_NG_VERSION="1.29"
+ARG VIRTME_NG_VERSION="1.31"
 RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 
 # to quickly shutdown the VM and more
