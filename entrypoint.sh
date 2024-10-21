@@ -35,10 +35,6 @@ with_clang() {
 	[ "${INPUT_CLANG}" = "1" ]
 }
 
-with_btf() {
-	[[ "${INPUT_MODE}" == *"btf"* ]]
-}
-
 set_trace_on
 
 # The behaviour can be changed with 'input' env var
@@ -92,17 +88,8 @@ KERNEL_SRC="${PWD}"
 BASH_PROFILE="/root/.bash_profile"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
-VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
-with_clang && VIRTME_BUILD_DIR+="-clang"
-with_btf && VIRTME_BUILD_DIR+="-btf"
-[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
-VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
-VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
-VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
-
-VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
@@ -116,34 +103,13 @@ BPFTESTS_DIR="${INPUT_BPFTESTS_DIR:-tools/testing/selftests/bpf}"
 BPFTESTS_CONFIG="${BPFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
-if [ -n "${INPUT_CCACHE_DIR}" ]; then
-	export CCACHE_DIR="${VIRTME_WORKDIR}/${INPUT_CCACHE_DIR}"
-else
-	export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
-	with_clang && CCACHE_DIR+="-clang"
-	with_btf && CCACHE_DIR+="-btf"
-	[ -n "${INPUT_BUILD_SUFFIX}" ] && CCACHE_DIR+="-${INPUT_BUILD_SUFFIX}"
-fi
-
-export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
-export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
-
-mkdir -p \
-	"${VIRTME_BUILD_DIR}" \
-	"${VIRTME_SCRIPTS_DIR}" \
-	"${VIRTME_HEADERS_DIR}" \
-	"${VIRTME_PERF_DIR}" \
-	"${VIRTME_CACHE_DIR}" \
-	"${CCACHE_DIR}"
-chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
 
 VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"
-VIRTME_RUN_OPTS_DEFAULT=(
+VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
 	--name "mptcpdev"  # hostname
 	--memory 2048M
-	--kdir "${VIRTME_BUILD_DIR}"
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
@@ -232,10 +198,24 @@ is_mode_btf() {
 	[[ "${mode}" == "btf-"* ]]
 }
 
-setup_env() { local mode net=()
+_get_results_dir_common() {
+	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")"
+}
+
+setup_env() { local mode
 	mode="${1}"
 
 	log_section_start "Setup environment"
+
+	EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
+
+	if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
+		EXIT_TITLE="${EXIT_TITLE} (only ${INPUT_RUN_TESTS_ONLY})"
+	fi
+
+	if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
+		EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
+	fi
 
 	# Avoid 'unsafe repository' error: we need to get the rev/tag later from
 	# this docker image
@@ -248,6 +228,41 @@ setup_env() { local mode net=()
 	# Avoid a long advice
 	git config --global advice.detachedHead false
 
+	VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
+	with_clang && VIRTME_BUILD_DIR+="-clang"
+	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
+	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
+	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
+	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
+	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
+	VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
+	VIRTME_KCONFIG="${VIRTME_BUILD_DIR}/.config"
+	if [ -n "${INPUT_CCACHE_DIR}" ]; then
+		export CCACHE_DIR="${VIRTME_WORKDIR}/${INPUT_CCACHE_DIR}"
+	else
+		export CCACHE_DIR="${VIRTME_WORKDIR}/ccache"
+		with_clang && CCACHE_DIR+="-clang"
+		is_mode_debug "${mode}" && CCACHE_DIR+="-debug"
+		is_mode_btf "${mode}" && CCACHE_DIR+="-btf"
+		[ -n "${INPUT_BUILD_SUFFIX}" ] && CCACHE_DIR+="-${INPUT_BUILD_SUFFIX}"
+	fi
+
+	read -ra MAKE_ARGS <<< "${INPUT_MAKE_ARGS}"
+	with_clang && MAKE_ARGS+=(LLVM=1 LLVM_IAS=1 CC=clang ARCH="${VIRTME_ARCH}")
+	MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
+
+	export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
+	export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
+
+	mkdir -p \
+		"${VIRTME_BUILD_DIR}" \
+		"${VIRTME_SCRIPTS_DIR}" \
+		"${VIRTME_HEADERS_DIR}" \
+		"${VIRTME_PERF_DIR}" \
+		"${VIRTME_CACHE_DIR}" \
+		"${CCACHE_DIR}"
+	chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
+
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
@@ -256,20 +271,10 @@ setup_env() { local mode net=()
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
 
-		EXIT_TITLE="${EXIT_TITLE}: ${mode}" # only one mode
-
-		if [ -n "${INPUT_RUN_TESTS_ONLY}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (only ${INPUT_RUN_TESTS_ONLY})"
-		fi
-
-		if [ -n "${INPUT_RUN_TESTS_EXCEPT}" ]; then
-			EXIT_TITLE="${EXIT_TITLE} (except ${INPUT_RUN_TESTS_EXCEPT})"
-		fi
-
 		# The CI doesn't need to access to the outside world, so no '--net'
 	else
 		# avoid override
-		RESULTS_DIR="${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${mode}"
+		RESULTS_DIR="$(_get_results_dir_common)/${mode}"
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
@@ -277,13 +282,12 @@ setup_env() { local mode net=()
 		: "${INPUT_GCOV:=0}"
 
 		# add net support, can be useful, but delay the start of the tests (~1 sec?)
-		net=("--net")
+		VIRTME_RUN_OPTS+=("--net")
 	fi
 
-	VIRTME_RUN_OPTS=(
-		"${VIRTME_RUN_OPTS_DEFAULT[@]}"
+	VIRTME_RUN_OPTS+=(
+		--kdir "${VIRTME_BUILD_DIR}"
 		--cpus "${INPUT_CPUS}"
-		"${net[@]}"
 	)
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
@@ -378,10 +382,6 @@ check_source_exec_all() {
 
 	log_section_end
 }
-
-read -ra MAKE_ARGS <<< "${INPUT_MAKE_ARGS}"
-with_clang && MAKE_ARGS+=(LLVM=1 LLVM_IAS=1 CC=clang ARCH="${VIRTME_ARCH}")
-MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
 
 _make_j() {
 	make -j"$(nproc)" -l"$(nproc)" "${@}"
@@ -1305,14 +1305,9 @@ ccache_stat() {
 	fi
 }
 
-# $1: category ; $2: mode ; $3: reason
+# $1: category ; $2: reason
 _register_issue() { local msg
-	# only one mode in CI mode
-	if is_ci; then
-		msg="${1}: ${3}"
-	else
-		msg="${1} ('${2}' mode): ${3}"
-	fi
+	msg="${1}: ${2}"
 
 	if [ "${#EXIT_REASONS[@]}" -eq 0 ]; then
 		EXIT_REASONS=("${msg}")
@@ -1521,14 +1516,14 @@ analyze() {
 	if _has_failed_tests; then
 		# no tee, it can be long and less important than critical err
 		_print_failed_tests >> "${TESTS_SUMMARY}"
-		_register_issue "Unstable" "${mode}" "$(_get_failed_tests_status)"
+		_register_issue "Unstable" "$(_get_failed_tests_status)"
 		EXIT_STATUS=42
 	fi
 
 	# look for crashes/warnings
 	if _has_call_trace; then
 		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "${mode}" "$(_get_call_trace_status)"
+		_register_issue "Critical" "$(_get_call_trace_status)"
 		EXIT_STATUS=1
 
 		if is_ci; then
@@ -1539,17 +1534,17 @@ analyze() {
 
 	if _has_unexpected_stop; then
 		_print_unexpected_stop | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "${mode}" "${VIRTME_SCRIPT_UNEXPECTED_STOP}"
+		_register_issue "Critical" "${VIRTME_SCRIPT_UNEXPECTED_STOP}"
 		EXIT_STATUS=1
 	elif _has_timed_out; then
 		_print_timed_out | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "${mode}" "Global Timeout"
+		_register_issue "Critical" "Global Timeout"
 		EXIT_STATUS=1
 	fi
 
 	if _has_kmemleak; then
 		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "${mode}" "KMemLeak"
+		_register_issue "Critical" "KMemLeak"
 		EXIT_STATUS=1
 	fi
 
@@ -1591,7 +1586,6 @@ go_manual() {
 go_expect() {
 	EXPECT=1
 
-	ccache_stat
 	check_last_iproute
 	check_source_exec_all
 
@@ -1599,6 +1593,7 @@ go_expect() {
 	ccache_stat
 
 	run_expect
+	ccache_stat
 	analyze "${@}"
 }
 
@@ -1659,6 +1654,40 @@ print_conclusion() { local rc=${1}
 	else
 		echo "Success! ✅"
 	fi
+}
+
+# $@: mode
+print_summaries() { local mode results
+	set +x
+	results="$(_get_results_dir_common)"
+
+	_print_line
+	echo
+
+	for mode in "${@}"; do
+		case "$(cat "${results}/${mode}/conclusion.txt")" in
+			*": Success"*)
+				echo -ne "\n${COLOR_GREEN}"
+				;;
+			*": Unstable: "*)
+				echo -ne "\n${COLOR_YELLOW}"
+				;;
+			*)
+				echo -ne "\n${COLOR_RED}"
+				;;
+		esac
+		cat "${results}/${mode}/summary.txt" || echo "Error: no summary"
+
+		echo -ne "${COLOR_RESET}\n"
+		_print_line
+		echo
+	done
+
+	echo -ne "\n${COLOR_BLUE}"
+	for mode in "${@}"; do
+		cat "${results}/${mode}/conclusion.txt" || echo "Error: No conclusion"
+	done
+	echo -ne "${COLOR_RESET}"
 }
 
 exit_trap() { local rc=${?}
@@ -1750,25 +1779,25 @@ case "${INPUT_MODE}" in
 		go_expect "btf-debug" "${@}"
 		;;
 	"expect" | "all" | "expect-all" | "auto-all")
-		# first with the minimum because configs like KASAN slow down the
-		# tests execution, it might hide bugs
-		_make_o -C "${SELFTESTS_DIR}" clean
-		go_expect "normal" "${@}"
-		_make_o clean
-		go_expect "debug" "${@}"
+		rc=0
+		INPUT_MODE="auto-normal" "${0}" "${@}" || rc=${?}
+		INPUT_MODE="auto-debug"  "${0}" "${@}" || rc=${?}
+		print_summaries "normal" "debug"
+		exit ${rc}
 		;;
 	"expect-btf-all" | "auto-btf-all" )
-		_make_o -C "${SELFTESTS_DIR}" clean
-		_make_o -C "${BPFTESTS_DIR}" clean
-		go_expect "btf-normal" "${@}"
-		_make_o clean
-		_make_o -C "${BPFTESTS_DIR}" clean
-		go_expect "btf-debug" "${@}"
+		rc=0
+		INPUT_MODE="auto-btf-normal" "${0}" "${@}" || rc=${?}
+		INPUT_MODE="auto-btf-debug"  "${0}" "${@}" || rc=${?}
+		print_summaries "btf-normal" "btf-debug"
+		exit ${rc}
 		;;
 	"make")
+		setup_env "${INPUT_ENV:-normal}"
 		_make_o "${@}"
 		;;
 	"make.cross")
+		setup_env "${INPUT_ENV:-normal}"
 		MAKE_CROSS="/usr/sbin/make.cross"
 		wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O "${MAKE_CROSS}"
 		chmod +x "${MAKE_CROSS}"
@@ -1780,12 +1809,15 @@ case "${INPUT_MODE}" in
 		prepare_all manual "${@:-normal}"
 		;;
 	"defconfig")
+		setup_env "${@:-normal}"
 		gen_kconfig "${@:-normal}"
 		;;
 	"selftests")
+		setup_env "${@:-normal}"
 		build_selftests
 		;;
 	"bpftests")
+		setup_env "${@:-btf-normal}"
 		build_bpftests
 		;;
 	"cmd" | "command")
@@ -1801,6 +1833,7 @@ case "${INPUT_MODE}" in
 		source "${1}"
 		;;
 	"static" | "static-analysis")
+		setup_env "${@:-normal}"
 		static_analysis
 		;;
 	"vm" | "vm-manual")
