@@ -1138,6 +1138,11 @@ run_loop() {
 	run_loop_n 0 "\${@}"
 }
 
+# args: what needs to be executed
+run_cmd() {
+	_tap "${RESULTS_DIR}/cmd_\${1}" "\${@}"
+}
+
 set_max_threads
 
 # To run commands before executing the tests
