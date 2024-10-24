@@ -1140,7 +1140,7 @@ run_loop() {
 
 # args: what needs to be executed
 run_cmd() {
-	_tap "${RESULTS_DIR}/cmd_\${1}" "\${@}"
+	_tap "${RESULTS_DIR}/cmd_\$(basename "\${1}")_\$(mktemp -u XXXXXX)" "\${@}"
 }
 
 set_max_threads
