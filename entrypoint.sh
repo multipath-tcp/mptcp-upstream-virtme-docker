@@ -52,6 +52,7 @@ set_trace_on
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
 : "${INPUT_CPUS:=""}"
+: "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
@@ -109,7 +110,6 @@ VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
 	--name "mptcpdev"  # hostname
-	--memory 2048M
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
@@ -285,9 +285,12 @@ setup_env() { local mode
 		VIRTME_RUN_OPTS+=("--net")
 	fi
 
+	: "${INPUT_RAM:="$((2048 * (1 + INPUT_GCOV)))M"}" # More needed for GCOV, not to swap
+
 	VIRTME_RUN_OPTS+=(
 		--kdir "${VIRTME_BUILD_DIR}"
 		--cpus "${INPUT_CPUS}"
+		--memory "${INPUT_RAM}"
 	)
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
