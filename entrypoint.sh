@@ -195,11 +195,12 @@ is_mode_debug() {
 
 # $1: mode
 is_mode_btf() {
-	[[ "${mode}" == "btf-"* ]]
+	[[ "${1}" == "btf-"* ]]
 }
 
-_get_results_dir_common() {
-	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")"
+# $1: mode
+_get_results_dir() {
+	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
 }
 
 setup_env() { local mode
@@ -274,7 +275,7 @@ setup_env() { local mode
 		# The CI doesn't need to access to the outside world, so no '--net'
 	else
 		# avoid override
-		RESULTS_DIR="$(_get_results_dir_common)/${mode}"
+		RESULTS_DIR="$(_get_results_dir "${mode}")"
 		rm -rf "${RESULTS_DIR}"
 		mkdir -p "${RESULTS_DIR}"
 
@@ -1664,16 +1665,15 @@ print_conclusion() { local rc=${1}
 	fi
 }
 
-# $@: mode
-print_summaries() { local mode results
+# $@: result paths
+print_summaries() { local result
 	set +x
-	results="$(_get_results_dir_common)"
 
 	_print_line
 	echo
 
-	for mode in "${@}"; do
-		case "$(cat "${results}/${mode}/conclusion.txt")" in
+	for result in "${@}"; do
+		case "$(cat "${result}/conclusion.txt")" in
 			*": Success"*)
 				echo -ne "\n${COLOR_GREEN}"
 				;;
@@ -1684,7 +1684,7 @@ print_summaries() { local mode results
 				echo -ne "\n${COLOR_RED}"
 				;;
 		esac
-		cat "${results}/${mode}/summary.txt" || echo "Error: no summary"
+		cat "${result}/summary.txt" || echo "Error: no summary"
 
 		echo -ne "${COLOR_RESET}\n"
 		_print_line
@@ -1692,8 +1692,8 @@ print_summaries() { local mode results
 	done
 
 	echo -ne "\n${COLOR_BLUE}"
-	for mode in "${@}"; do
-		cat "${results}/${mode}/conclusion.txt" || echo "Error: No conclusion"
+	for result in "${@}"; do
+		cat "${result}/conclusion.txt" || echo "Error: No conclusion"
 	done
 	echo -ne "${COLOR_RESET}"
 }
@@ -1788,16 +1788,20 @@ case "${INPUT_MODE}" in
 		;;
 	"expect" | "all" | "expect-all" | "auto-all")
 		rc=0
+		results=("$(_get_results_dir "normal")")
 		INPUT_MODE="auto-normal" "${0}" "${@}" || rc=${?}
+		results+=("$(_get_results_dir "debug")")
 		INPUT_MODE="auto-debug"  "${0}" "${@}" || rc=${?}
-		print_summaries "normal" "debug"
+		print_summaries "${results[@]}"
 		exit ${rc}
 		;;
 	"expect-btf-all" | "auto-btf-all" )
 		rc=0
+		results=("$(_get_results_dir "btf-normal")")
 		INPUT_MODE="auto-btf-normal" "${0}" "${@}" || rc=${?}
+		results+=("$(_get_results_dir "btf-debug")")
 		INPUT_MODE="auto-btf-debug"  "${0}" "${@}" || rc=${?}
-		print_summaries "btf-normal" "btf-debug"
+		print_summaries "${results[@]}"
 		exit ${rc}
 		;;
 	"make")
