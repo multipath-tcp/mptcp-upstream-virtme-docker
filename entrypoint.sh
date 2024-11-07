@@ -195,7 +195,7 @@ is_mode_debug() {
 
 # $1: mode
 is_mode_btf() {
-	[[ "${mode}" == "btf-"* ]]
+	[[ "${1}" == "btf-"* ]]
 }
 
 _get_results_dir_common() {
