@@ -43,6 +43,7 @@ docker run \
 	-e "INPUT_CPUS" \
 	-e "INPUT_RAM" \
 	-e "INPUT_GCOV" \
+	-e "INPUT_NET_BRIDGES" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
 	--privileged \

@@ -54,6 +54,7 @@ set_trace_on
 : "${INPUT_CPUS:=""}"
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
+: "${INPUT_NET_BRIDGES:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
@@ -204,6 +205,45 @@ _get_results_dir() {
 	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
 }
 
+# $1: bridge name
+_add_bridge() {
+	local br="${1}"
+	local i="${br//[^0-9]/}" # only the numbers
+
+	VIRTME_RUN_OPTS+=("--net=bridge=${br}")
+	echo "allow ${br}" >> /etc/qemu/bridge.conf
+	brctl addbr "${br}"
+	ip addr add "10.0.${i}.1/24" dev "${br}"
+	ip link set "${br}" up
+
+	cat <<-EOF > "/tmp/udhcpd-${br}.conf"
+		start		10.0.${i}.2
+		end		10.0.${i}.2
+		interface	${br}
+		pidfile		/var/run/udhcpd-${br}.pid
+		lease_file	/var/lib/misc/udhcpd-${br}.leases
+		opt	subnet	255.255.255.0
+	EOF
+
+	touch "/var/lib/misc/udhcpd-${br}.leases"
+	busybox udhcpd "/tmp/udhcpd-${br}.conf"
+}
+
+_setup_bridges() {
+	chmod u+s /usr/lib/qemu/qemu-bridge-helper
+	mkdir -p /etc/qemu
+	touch /etc/qemu/bridge.conf
+	chmod 755 /etc/qemu/bridge.conf
+	sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+	sysctl -w net.bridge.bridge-nf-call-iptables=0
+	sysctl -w net.bridge.bridge-nf-call-arptables=0
+
+	local br
+	for br in "${@}"; do
+		_add_bridge "${br}"
+	done
+}
+
 setup_env() { local mode
 	mode="${1}"
 
@@ -284,7 +324,15 @@ setup_env() { local mode
 		: "${INPUT_GCOV:=0}"
 
 		# add net support, can be useful, but delay the start of the tests (~1 sec?)
-		VIRTME_RUN_OPTS+=("--net")
+		if [ -z "${INPUT_NET_BRIDGES}" ]; then
+			VIRTME_RUN_OPTS+=("--net")
+		fi
+	fi
+
+	if [ -n "${INPUT_NET_BRIDGES}" ]; then
+		local bridges
+		IFS=',' read -ra bridges <<< "${INPUT_NET_BRIDGES}"
+		_setup_bridges "${bridges[@]}"
 	fi
 
 	: "${INPUT_RAM:="$((2048 * (1 + INPUT_GCOV)))M"}" # More needed for GCOV, not to swap
