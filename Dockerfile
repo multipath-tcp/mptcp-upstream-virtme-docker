@@ -30,7 +30,8 @@ RUN apt-get update && \
 		cscope \
 		bpftrace \
 		golang \
-		mptcpize \
+		mptcpize iperf3 netperf \
+		bmon ifstat \
 		&& \
 	apt-get clean
 
