@@ -17,6 +17,7 @@ docker run \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-v "${HOME_DIR}:/root" \
 	${VIRTME_SYZKALLER_PATH:+ -v "${VIRTME_SYZKALLER_PATH}:/opt/syzkaller:rw"} \
+	${VIRTME_NG_PATH:+ -v "${VIRTME_NG_PATH}:/opt/virtme-ng:ro"} \
 	-w "${PWD}" \
 	-e "INPUT_CLANG" \
 	-e "INPUT_TRACE" \

@@ -95,7 +95,7 @@ RUN for i in /usr/lib/klibc/bin/*; do \
 
 # CCache for quicker builds with default colours
 # Note: use 'ccache -M xG' to increase max size, default is 5GB
-ENV PATH=/usr/lib/ccache:${PATH}
+ENV PATH=/usr/lib/ccache:/opt/virtme-ng:${PATH}
 ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
