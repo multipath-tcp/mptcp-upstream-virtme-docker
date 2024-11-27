@@ -206,7 +206,7 @@ _get_results_dir() {
 }
 
 # $1: bridge name
-_add_bridge() {
+_add_bridge() { local router
 	local br="${1}"
 	local i="${br//[^0-9]/}" # only the numbers
 
@@ -216,6 +216,11 @@ _add_bridge() {
 	ip addr add "10.0.${i}.1/24" dev "${br}"
 	ip link set "${br}" up
 
+	# one default address
+	if [ "${i}" = "0" ]; then
+		router="opt	router	10.0.${i}.1"
+	fi
+
 	cat <<-EOF > "/tmp/udhcpd-${br}.conf"
 		start		10.0.${i}.2
 		end		10.0.${i}.2
@@ -223,6 +228,7 @@ _add_bridge() {
 		pidfile		/var/run/udhcpd-${br}.pid
 		lease_file	/var/lib/misc/udhcpd-${br}.leases
 		opt	subnet	255.255.255.0
+		${router}
 	EOF
 
 	touch "/var/lib/misc/udhcpd-${br}.leases"
@@ -237,6 +243,8 @@ _setup_bridges() {
 	sysctl -w net.bridge.bridge-nf-call-ip6tables=0
 	sysctl -w net.bridge.bridge-nf-call-iptables=0
 	sysctl -w net.bridge.bridge-nf-call-arptables=0
+	# only v4 for the moment
+	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
 
 	local br
 	for br in "${@}"; do
