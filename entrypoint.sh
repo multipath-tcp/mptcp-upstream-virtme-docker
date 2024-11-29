@@ -102,6 +102,7 @@ VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
+VIRTME_CONSOLE="${VIRTME_SCRIPTS_DIR}/console.sh"
 
 SELFTESTS_DIR="${INPUT_SELFTESTS_DIR:-tools/testing/selftests/net/mptcp}"
 SELFTESTS_CONFIG="${SELFTESTS_DIR}/config"
@@ -352,9 +353,11 @@ setup_env() { local mode
 			VIRTME_RUN_OPTS+=("--net")
 		fi
 
-		# In the VM, run (or "bash -i" instead of "byobu"): socat VSOCK-LISTEN:1024,reuseaddr,fork EXEC:"byobu",pty,stderr,setsid,sigint,sane,echo=1 &
-		# From the docker: socat file:$(tty),raw,echo=0, VSOCK-CONNECT:${INPUT_VSOCK_CID}:1024
-		VIRTME_RUN_QEMU_OPTS+=("-device" "vhost-vsock-pci,guest-cid=${INPUT_VSOCK_CID}")
+		# From the docker: vng --vsock-connect
+		# TODO: remove if condition when virtme-ng supports it
+		if virtme-run --help | grep -q vsock; then
+			VIRTME_RUN_OPTS+=("--vsock" "${VIRTME_CONSOLE}" "--vsock-cid" "${INPUT_VSOCK_CID}")
+		fi
 	fi
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
@@ -575,9 +578,6 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
-
-	# Useful to get access to VMs from host
-	kconfig+=(-e VSOCKETS -e VIRTIO_VSOCKETS)
 
 	# Disable retpoline to accelerate tests
 	kconfig+=(-d RETPOLINE)
@@ -1834,7 +1834,7 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | lcov2html >"
+	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | connect | lcov2html>"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
@@ -1847,6 +1847,7 @@ usage() {
 	echo " - static: run static analysis, with make W=1 C=1"
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
+	echo " - connect: connect to a VM's remote shell via a VSock (set INPUT_VSOCK_CID for multiple VMs)."
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
@@ -1967,6 +1968,18 @@ case "${INPUT_MODE}" in
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		run_expect
 		analyze "${@:-normal}"
+		;;
+	"connect")
+		read -r rows columns <<< "$(stty size)"
+		cat <<-EOF > "${VIRTME_CONSOLE}"
+			#! /bin/bash
+			stty rows ${rows} columns ${columns}
+			cd "\${virtme_chdir}"
+			HOME=/root
+			byobu
+		EOF
+		chmod +x "${VIRTME_CONSOLE}"
+		vng --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
