@@ -834,6 +834,13 @@ export KERNEL_SRC_DIR="${KERNEL_SRC}"
 export PATH="\${PATH}:${VIRTME_TOOLS_SBIN_DIR}"
 EOF
 
+	# add colours to the prompt if OK
+	if [ "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}" = 1 ]; then
+		# shellcheck disable=SC2016 # escaped on purpose
+		local ps1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+		echo "PS1='${ps1}'" >> "${BASH_PROFILE}"
+	fi
+
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
 
