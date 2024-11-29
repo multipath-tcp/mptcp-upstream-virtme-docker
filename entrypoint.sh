@@ -121,6 +121,7 @@ VIRTME_RUN_OPTS=(
 	--verbose --show-boot-console
 	--kopt mitigations=off
 )
+VIRTME_RUN_QEMU_OPTS=()
 
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
@@ -1270,7 +1271,7 @@ EOF
 run() {
 	printinfo "Run the virtme script: manual"
 
-	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}"
+	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
 }
 
 run_expect() {
@@ -1287,7 +1288,8 @@ run_expect() {
 	fi
 
 	# force a stop in case of panic, but avoid a reboot in "expect" mode
-	VIRTME_RUN_OPTS+=(--kopt panic=-1 --qemu-opts -no-reboot)
+	VIRTME_RUN_OPTS+=(--kopt panic=-1)
+	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
@@ -1320,7 +1322,7 @@ EOF
 #! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
 set -x
-"${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
+"${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts ${VIRTME_RUN_QEMU_OPTS[@]}} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
 
