@@ -57,6 +57,7 @@ set_trace_on
 : "${INPUT_GCOV:=""}"
 : "${INPUT_NET_BRIDGES:=""}"
 : "${INPUT_MAC_ADDRESS_PREFIX:=""}"
+: "${INPUT_VSOCK_CID:="3"}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
@@ -350,6 +351,10 @@ setup_env() { local mode
 		if [ -z "${INPUT_NET_BRIDGES}" ]; then
 			VIRTME_RUN_OPTS+=("--net")
 		fi
+
+		# In the VM, run (or "bash -i" instead of "byobu"): socat VSOCK-LISTEN:1024,reuseaddr,fork EXEC:"byobu",pty,stderr,setsid,sigint,sane,echo=1 &
+		# From the docker: socat file:$(tty),raw,echo=0, VSOCK-CONNECT:${INPUT_VSOCK_CID}:1024
+		VIRTME_RUN_QEMU_OPTS+=("-device" "vhost-vsock-pci,guest-cid=${INPUT_VSOCK_CID}")
 	fi
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
@@ -570,6 +575,9 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF)
+
+	# Useful to get access to VMs from host
+	kconfig+=(-e VSOCKETS -e VIRTIO_VSOCKETS)
 
 	# Disable retpoline to accelerate tests
 	kconfig+=(-d RETPOLINE)

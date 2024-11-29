@@ -46,6 +46,7 @@ docker run \
 	-e "INPUT_GCOV" \
 	-e "INPUT_NET_BRIDGES" \
 	-e "INPUT_MAC_ADDRESS_PREFIX" \
+	-e "INPUT_VSOCK_CID" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
 	--privileged \
