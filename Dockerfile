@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-FROM ubuntu:24.04
+FROM ubuntu:24.10
 
 LABEL name=mptcp-upstream-virtme-docker
 
@@ -20,8 +20,9 @@ RUN apt-get update && \
 		pkg-config libmnl-dev \
 		clang clangd clang-tidy lld llvm llvm-dev libcap-dev \
 		gdb gdb-multiarch crash dwarves strace trace-cmd \
-		iptables ebtables nftables vim psmisc bash-completion less jq \
-		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux \
+		iptables ebtables nftables bridge-utils socat \
+		vim psmisc bash-completion less jq \
+		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux gawk \
 		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev python3-docutils \
 		libtap-formatter-junit-perl lcov libjson-xs-perl \
 		zstd \
@@ -29,7 +30,8 @@ RUN apt-get update && \
 		cscope \
 		bpftrace \
 		golang \
-		mptcpize \
+		mptcpize iperf3 netperf \
+		bmon ifstat \
 		&& \
 	apt-get clean
 
@@ -95,7 +97,7 @@ RUN for i in /usr/lib/klibc/bin/*; do \
 
 # CCache for quicker builds with default colours
 # Note: use 'ccache -M xG' to increase max size, default is 5GB
-ENV PATH=/usr/lib/ccache:${PATH}
+ENV PATH=/usr/lib/ccache:/opt/virtme-ng:${PATH}
 ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01

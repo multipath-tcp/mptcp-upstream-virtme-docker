@@ -51,9 +51,13 @@ set_trace_on
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
+: "${INPUT_HOSTNAME:="mptcpdev"}"
 : "${INPUT_CPUS:=""}"
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
+: "${INPUT_NET_BRIDGES:=""}"
+: "${INPUT_MAC_ADDRESS_PREFIX:=""}"
+: "${INPUT_VSOCK_CID:="3"}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
@@ -98,6 +102,7 @@ VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
+VIRTME_CONSOLE="${VIRTME_SCRIPTS_DIR}/console.sh"
 
 SELFTESTS_DIR="${INPUT_SELFTESTS_DIR:-tools/testing/selftests/net/mptcp}"
 SELFTESTS_CONFIG="${SELFTESTS_DIR}/config"
@@ -110,7 +115,7 @@ VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
-	--name "mptcpdev"  # hostname
+	--name "${INPUT_HOSTNAME}"
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
@@ -118,6 +123,7 @@ VIRTME_RUN_OPTS=(
 	--verbose --show-boot-console
 	--kopt mitigations=off
 )
+VIRTME_RUN_QEMU_OPTS=()
 
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
@@ -204,6 +210,94 @@ _get_results_dir() {
 	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
 }
 
+# $1: pid
+kill_wait() {
+	local pid="${1}"
+	if [ -z "${pid}" ]; then
+		return
+	fi
+
+	kill "${pid}"
+	while [ -d "/proc/${pid}" ]; do
+		sleep 0.1
+	done
+}
+
+# $1: bridge name
+_add_bridge() { local router static
+	local br="${1}"
+
+	local i="${br//[^0-9]/}" # only the numbers
+	local prefix="10.0.${i}"
+	local conf="/tmp/udhcpd-${br}.conf"
+	local pidfile="/var/run/udhcpd-${br}.pid"
+	local leases="/var/lib/misc/udhcpd-${br}.leases"
+
+	VIRTME_RUN_OPTS+=("--net=bridge=${br}")
+
+	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
+		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
+	fi
+
+	# already launched?
+	if grep -wq "${br}" /etc/qemu/bridge.conf; then
+		if [ -n "${static}" ]; then
+			echo "${static}" >> "${conf}"
+			kill_wait "$(<"${pidfile}")"
+			busybox udhcpd "${conf}"
+		fi
+
+		return 0
+	fi
+
+	echo "allow ${br}" >> /etc/qemu/bridge.conf
+	brctl addbr "${br}"
+	ip addr add "${prefix}.1/24" dev "${br}"
+	ip link set "${br}" up
+
+	# one default address
+	if [ "${i}" = "0" ]; then
+		router="opt	router	${prefix}.1"
+	fi
+
+	cat <<-EOF > "${conf}"
+		start		${prefix}.2
+		end		${prefix}.254
+		interface	${br}
+		pidfile		${pidfile}
+		lease_file	${leases}
+		opt	subnet	255.255.255.0
+		${router}
+		${static}
+	EOF
+
+	touch "${leases}"  # to avoid a warning
+	busybox udhcpd "${conf}"
+}
+
+_setup_bridges() {
+	chmod u+s /usr/lib/qemu/qemu-bridge-helper
+	mkdir -p /etc/qemu
+	touch /etc/qemu/bridge.conf
+	chmod 755 /etc/qemu/bridge.conf
+	sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+	sysctl -w net.bridge.bridge-nf-call-iptables=0
+	sysctl -w net.bridge.bridge-nf-call-arptables=0
+	# only v4 for the moment
+	if ! iptables -t nat -C POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE 2>/dev/null; then
+		iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
+	fi
+
+	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
+		VIRTME_RUN_OPTS+=("--net-mac-address" "${INPUT_MAC_ADDRESS_PREFIX%=*}:00")
+	fi
+
+	local br
+	for br in "${@}"; do
+		_add_bridge "${br}"
+	done
+}
+
 setup_env() { local mode
 	mode="${1}"
 
@@ -284,7 +378,21 @@ setup_env() { local mode
 		: "${INPUT_GCOV:=0}"
 
 		# add net support, can be useful, but delay the start of the tests (~1 sec?)
-		VIRTME_RUN_OPTS+=("--net")
+		if [ -z "${INPUT_NET_BRIDGES}" ]; then
+			VIRTME_RUN_OPTS+=("--net")
+		fi
+
+		# From the docker: vng --vsock-connect
+		# TODO: remove if condition when virtme-ng supports it
+		if virtme-run --help | grep -q vsock; then
+			VIRTME_RUN_OPTS+=("--vsock" "${VIRTME_CONSOLE}" "--vsock-cid" "${INPUT_VSOCK_CID}")
+		fi
+	fi
+
+	if [ -n "${INPUT_NET_BRIDGES}" ]; then
+		local bridges
+		IFS=',' read -ra bridges <<< "${INPUT_NET_BRIDGES}"
+		_setup_bridges "${bridges[@]}"
 	fi
 
 	: "${INPUT_RAM:="$((2048 * (1 + INPUT_GCOV)))M"}" # More needed for GCOV, not to swap
@@ -725,6 +833,13 @@ export KERNEL_BUILD_DIR="${VIRTME_BUILD_DIR}"
 export KERNEL_SRC_DIR="${KERNEL_SRC}"
 export PATH="\${PATH}:${VIRTME_TOOLS_SBIN_DIR}"
 EOF
+
+	# add colours to the prompt if OK
+	if [ "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}" = 1 ]; then
+		# shellcheck disable=SC2016 # escaped on purpose
+		local ps1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+		echo "PS1='${ps1}'" >> "${BASH_PROFILE}"
+	fi
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
@@ -1200,7 +1315,7 @@ EOF
 run() {
 	printinfo "Run the virtme script: manual"
 
-	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}"
+	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
 }
 
 run_expect() {
@@ -1217,7 +1332,8 @@ run_expect() {
 	fi
 
 	# force a stop in case of panic, but avoid a reboot in "expect" mode
-	VIRTME_RUN_OPTS+=(--kopt panic=-1 --qemu-opts -no-reboot)
+	VIRTME_RUN_OPTS+=(--kopt panic=-1)
+	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
@@ -1250,7 +1366,7 @@ EOF
 #! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
 set -x
-"${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} 2>&1 | tr -d '\r'
+"${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts ${VIRTME_RUN_QEMU_OPTS[@]}} 2>&1 | tr -d '\r'
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
 
@@ -1754,7 +1870,7 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | lcov2html >"
+	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | connect | lcov2html>"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
@@ -1767,6 +1883,7 @@ usage() {
 	echo " - static: run static analysis, with make W=1 C=1"
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
+	echo " - connect: connect to a VM's remote shell via a VSock (set INPUT_VSOCK_CID for multiple VMs)."
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
@@ -1887,6 +2004,18 @@ case "${INPUT_MODE}" in
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		run_expect
 		analyze "${@:-normal}"
+		;;
+	"connect")
+		read -r rows columns <<< "$(stty size)"
+		cat <<-EOF > "${VIRTME_CONSOLE}"
+			#! /bin/bash
+			stty rows ${rows} columns ${columns}
+			cd "\${virtme_chdir}"
+			HOME=/root
+			byobu
+		EOF
+		chmod +x "${VIRTME_CONSOLE}"
+		vng --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"

@@ -17,6 +17,7 @@ docker run \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-v "${HOME_DIR}:/root" \
 	${VIRTME_SYZKALLER_PATH:+ -v "${VIRTME_SYZKALLER_PATH}:/opt/syzkaller:rw"} \
+	${VIRTME_NG_PATH:+ -v "${VIRTME_NG_PATH}:/opt/virtme-ng:ro"} \
 	-w "${PWD}" \
 	-e "INPUT_CLANG" \
 	-e "INPUT_TRACE" \
@@ -39,9 +40,13 @@ docker run \
 	-e "INPUT_PACKETDRILL_STABLE=${VIRTME_PACKETDRILL_STABLE:-0}" \
 	-e "INPUT_EXPECT_TIMEOUT" \
 	-e "INPUT_EXTRA_ENV" \
+	-e "INPUT_HOSTNAME" \
 	-e "INPUT_CPUS" \
 	-e "INPUT_RAM" \
 	-e "INPUT_GCOV" \
+	-e "INPUT_NET_BRIDGES" \
+	-e "INPUT_MAC_ADDRESS_PREFIX" \
+	-e "INPUT_VSOCK_CID" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
 	--privileged \

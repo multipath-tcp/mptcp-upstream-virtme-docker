@@ -37,6 +37,8 @@ When launching the docker image, you have to specify the mode you want to use:
   default).
 - `vm-auto`: Start the VM with what has already been built, then run the tests
   (`normal` mode by default).
+- `connect`: connect to a VM's remote shell via a VSock. For multiple VMs
+  running in parallel, set a different CID, e.g. `INPUT_VSOCK_CID=42`
 - `lcov2html`: Generate HTML from LCOV file(s) (available when tests have been
   executed with `INPUT_GCOV=1`).
 - `src`: `source` a given script file.
@@ -89,6 +91,29 @@ ln -s /PATH/TO/THIS/REPO/run-tests-dev-clang.sh .virtme-clang.sh
 ```
 
 Then simply call `./.virtme.sh` or `.virtme-clang.sh`.
+
+### Remote Shell
+
+To connect to an existing VM with a remote shell, you can use this command:
+
+```bash
+docker exec -it \
+  "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
+  /entrypoint.sh connect
+```
+
+(Or use the `connect.sh` script.)
+
+Note, if you want to run multiple VMs in parallel, you will need to set the
+right container ID or name found with `docker ps`:
+
+```
+$ docker ps
+CONTAINER ID   IMAGE                                       COMMAND
+f055e439a1e7   mptcp/mptcp-upstream-virtme-docker:latest   "/entrypoint.sh manual" (...)
+50cd8ce27116   mptcp/mptcp-upstream-virtme-docker:latest   "/entrypoint.sh manual" (...)
+$ docker exec -it f055e439a1e7 /entrypoint.sh connect
+```
 
 ## Extension
 
