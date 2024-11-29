@@ -44,6 +44,7 @@ docker run \
 	-e "INPUT_RAM" \
 	-e "INPUT_GCOV" \
 	-e "INPUT_NET_BRIDGES" \
+	-e "INPUT_MAC_ADDRESS_PREFIX" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
 	--privileged \

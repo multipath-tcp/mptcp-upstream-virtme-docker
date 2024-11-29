@@ -55,6 +55,7 @@ set_trace_on
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
 : "${INPUT_NET_BRIDGES:=""}"
+: "${INPUT_MAC_ADDRESS_PREFIX:=""}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
@@ -206,7 +207,7 @@ _get_results_dir() {
 }
 
 # $1: bridge name
-_add_bridge() { local router
+_add_bridge() { local router static
 	local br="${1}"
 	local i="${br//[^0-9]/}" # only the numbers
 
@@ -221,14 +222,19 @@ _add_bridge() { local router
 		router="opt	router	10.0.${i}.1"
 	fi
 
+	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
+		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	10.0.${i}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
+	fi
+
 	cat <<-EOF > "/tmp/udhcpd-${br}.conf"
 		start		10.0.${i}.2
-		end		10.0.${i}.2
+		end		10.0.${i}.254
 		interface	${br}
 		pidfile		/var/run/udhcpd-${br}.pid
 		lease_file	/var/lib/misc/udhcpd-${br}.leases
 		opt	subnet	255.255.255.0
 		${router}
+		${static}
 	EOF
 
 	touch "/var/lib/misc/udhcpd-${br}.leases"
@@ -245,6 +251,10 @@ _setup_bridges() {
 	sysctl -w net.bridge.bridge-nf-call-arptables=0
 	# only v4 for the moment
 	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
+
+	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
+		VIRTME_RUN_OPTS+=("--net-mac-address" "${INPUT_MAC_ADDRESS_PREFIX%=*}:00")
+	fi
 
 	local br
 	for br in "${@}"; do
