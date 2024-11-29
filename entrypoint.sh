@@ -210,6 +210,19 @@ _get_results_dir() {
 	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
 }
 
+# $1: pid
+kill_wait() {
+	local pid="${1}"
+	if [ -z "${pid}" ]; then
+		return
+	fi
+
+	kill "${pid}"
+	while [ -d "/proc/${pid}" ]; do
+		sleep 0.1
+	done
+}
+
 # $1: bridge name
 _add_bridge() { local router static
 	local br="${1}"
@@ -221,6 +234,22 @@ _add_bridge() { local router static
 	local leases="/var/lib/misc/udhcpd-${br}.leases"
 
 	VIRTME_RUN_OPTS+=("--net=bridge=${br}")
+
+	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
+		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
+	fi
+
+	# already launched?
+	if grep -wq "${br}" /etc/qemu/bridge.conf; then
+		if [ -n "${static}" ]; then
+			echo "${static}" >> "${conf}"
+			kill_wait "$(<"${pidfile}")"
+			busybox udhcpd "${conf}"
+		fi
+
+		return 0
+	fi
+
 	echo "allow ${br}" >> /etc/qemu/bridge.conf
 	brctl addbr "${br}"
 	ip addr add "${prefix}.1/24" dev "${br}"
@@ -231,8 +260,6 @@ _add_bridge() { local router static
 		router="opt	router	${prefix}.1"
 	fi
 
-	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
-		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
 	cat <<-EOF > "${conf}"
 		start		${prefix}.2
 		end		${prefix}.254
@@ -257,7 +284,9 @@ _setup_bridges() {
 	sysctl -w net.bridge.bridge-nf-call-iptables=0
 	sysctl -w net.bridge.bridge-nf-call-arptables=0
 	# only v4 for the moment
-	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
+	if ! iptables -t nat -C POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE 2>/dev/null; then
+		iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
+	fi
 
 	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
 		VIRTME_RUN_OPTS+=("--net-mac-address" "${INPUT_MAC_ADDRESS_PREFIX%=*}:00")
