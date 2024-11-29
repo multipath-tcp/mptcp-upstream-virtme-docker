@@ -209,36 +209,39 @@ _get_results_dir() {
 # $1: bridge name
 _add_bridge() { local router static
 	local br="${1}"
+
 	local i="${br//[^0-9]/}" # only the numbers
+	local prefix="10.0.${i}"
+	local conf="/tmp/udhcpd-${br}.conf"
+	local pidfile="/var/run/udhcpd-${br}.pid"
+	local leases="/var/lib/misc/udhcpd-${br}.leases"
 
 	VIRTME_RUN_OPTS+=("--net=bridge=${br}")
 	echo "allow ${br}" >> /etc/qemu/bridge.conf
 	brctl addbr "${br}"
-	ip addr add "10.0.${i}.1/24" dev "${br}"
+	ip addr add "${prefix}.1/24" dev "${br}"
 	ip link set "${br}" up
 
 	# one default address
 	if [ "${i}" = "0" ]; then
-		router="opt	router	10.0.${i}.1"
+		router="opt	router	${prefix}.1"
 	fi
 
 	if [ -n "${INPUT_MAC_ADDRESS_PREFIX}" ]; then
-		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	10.0.${i}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
-	fi
-
-	cat <<-EOF > "/tmp/udhcpd-${br}.conf"
-		start		10.0.${i}.2
-		end		10.0.${i}.254
+		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
+	cat <<-EOF > "${conf}"
+		start		${prefix}.2
+		end		${prefix}.254
 		interface	${br}
-		pidfile		/var/run/udhcpd-${br}.pid
-		lease_file	/var/lib/misc/udhcpd-${br}.leases
+		pidfile		${pidfile}
+		lease_file	${leases}
 		opt	subnet	255.255.255.0
 		${router}
 		${static}
 	EOF
 
-	touch "/var/lib/misc/udhcpd-${br}.leases"
-	busybox udhcpd "/tmp/udhcpd-${br}.conf"
+	touch "${leases}"  # to avoid a warning
+	busybox udhcpd "${conf}"
 }
 
 _setup_bridges() {
