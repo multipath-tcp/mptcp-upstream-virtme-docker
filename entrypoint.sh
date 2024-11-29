@@ -51,6 +51,7 @@ set_trace_on
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
+: "${INPUT_HOSTNAME:="mptcpdev"}"
 : "${INPUT_CPUS:=""}"
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
@@ -112,7 +113,7 @@ VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"
 VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
-	--name "mptcpdev"  # hostname
+	--name "${INPUT_HOSTNAME}"
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
