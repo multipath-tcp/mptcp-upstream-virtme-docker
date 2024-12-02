@@ -1,9 +1,8 @@
 #! /bin/bash
+# SPDX-License-Identifier: GPL-2.0
+DIR="$(dirname "$(realpath -P "${0}")")"
 
 if [[ "${-}" =~ "x" ]]; then
 	export INPUT_TRACE=1
 fi
-docker exec -it \
-	-e "INPUT_TRACE=${INPUT_TRACE:-0}" \
-	"$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
-	/entrypoint.sh connect "${@}"
+bash "-${-}" "${DIR}/container.sh" /entrypoint.sh connect "${@}"
