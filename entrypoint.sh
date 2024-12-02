@@ -102,7 +102,6 @@ VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
-VIRTME_CONSOLE="${VIRTME_SCRIPTS_DIR}/console.sh"
 
 SELFTESTS_DIR="${INPUT_SELFTESTS_DIR:-tools/testing/selftests/net/mptcp}"
 SELFTESTS_CONFIG="${SELFTESTS_DIR}/config"
@@ -385,7 +384,7 @@ setup_env() { local mode
 		# From the docker: vng --vsock-connect
 		# TODO: remove if condition when virtme-ng supports it
 		if "${VIRTME_RUN}" -h | grep -q vsock; then
-			VIRTME_RUN_OPTS+=("--vsock" "${VIRTME_CONSOLE}" "--vsock-cid" "${INPUT_VSOCK_CID}")
+			VIRTME_RUN_OPTS+=("--vsock" "--vsock-cid" "${INPUT_VSOCK_CID}")
 		fi
 	fi
 
@@ -2006,15 +2005,6 @@ case "${INPUT_MODE}" in
 		analyze "${@:-normal}"
 		;;
 	"connect")
-		read -r rows columns <<< "$(stty size)"
-		cat <<-EOF > "${VIRTME_CONSOLE}"
-			#! /bin/bash
-			stty rows ${rows} columns ${columns}
-			cd "\${virtme_chdir}"
-			HOME=/root
-			byobu
-		EOF
-		chmod +x "${VIRTME_CONSOLE}"
 		exec "${VIRTME_RUN}" --mods none --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
 		;;
 	"lcov2html")
