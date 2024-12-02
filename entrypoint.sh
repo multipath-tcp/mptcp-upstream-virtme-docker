@@ -384,7 +384,7 @@ setup_env() { local mode
 
 		# From the docker: vng --vsock-connect
 		# TODO: remove if condition when virtme-ng supports it
-		if virtme-run --help | grep -q vsock; then
+		if "${VIRTME_RUN}" -h | grep -q vsock; then
 			VIRTME_RUN_OPTS+=("--vsock" "${VIRTME_CONSOLE}" "--vsock-cid" "${INPUT_VSOCK_CID}")
 		fi
 	fi
@@ -2015,7 +2015,7 @@ case "${INPUT_MODE}" in
 			byobu
 		EOF
 		chmod +x "${VIRTME_CONSOLE}"
-		vng --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
+		exec "${VIRTME_RUN}" --mods none --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
