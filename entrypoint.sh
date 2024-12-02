@@ -2005,7 +2005,7 @@ case "${INPUT_MODE}" in
 		analyze "${@:-normal}"
 		;;
 	"connect")
-		exec "${VIRTME_RUN}" --mods none --vsock-connect --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
+		exec "${VIRTME_RUN}" --mods none --vsock-connect "${*:2}" --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
