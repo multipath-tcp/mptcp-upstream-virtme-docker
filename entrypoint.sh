@@ -710,7 +710,7 @@ build() {
 	fi
 
 	build_kernel
-	if [ "${EXPECT}" = 0 ] && with_clang; then
+	if with_clang; then
 		build_compile_commands || true # nice to have
 	fi
 	install_kernel_headers
