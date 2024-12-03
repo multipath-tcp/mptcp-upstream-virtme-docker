@@ -1322,6 +1322,8 @@ run() {
 run_expect() {
 	local timestamps_sec_stop
 
+	EXPECT=1
+
 	if is_ci; then
 		timestamps_sec_stop=$(date +%s)
 
@@ -1718,12 +1720,16 @@ analyze() {
 	set_trace_on
 }
 
-# $@: args for kconfig
+# $1: type ; $2: mode ; [ $@:3: args for kconfig ]
 prepare_all() { local t mode
 	t=${1}; shift
 	mode="${1}"
 
 	printinfo "Start: ${t} (${mode})"
+
+	if [ "${t}" = "auto" ]; then
+		EXPECT=1
+	fi
 
 	setup_env "${mode}"
 	gen_kconfig "${@}"
@@ -1739,8 +1745,6 @@ go_manual() {
 
 # $1: mode ; [ $2+: kconfig ]
 go_expect() {
-	EXPECT=1
-
 	check_last_iproute
 	check_source_exec_all
 
