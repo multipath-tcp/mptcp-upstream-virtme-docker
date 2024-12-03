@@ -709,12 +709,14 @@ build() {
 		return 0
 	fi
 
+	ccache_stat
 	build_kernel
 	if with_clang; then
 		build_compile_commands || true # nice to have
 	fi
 	install_kernel_headers
 	build_perf
+	ccache_stat
 }
 
 build_selftests() { local rc=0
@@ -1743,10 +1745,7 @@ go_expect() {
 	check_source_exec_all
 
 	prepare_all auto "${@}"
-	ccache_stat
-
 	run_expect
-	ccache_stat
 	analyze "${@}"
 }
 
