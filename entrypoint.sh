@@ -1355,9 +1355,10 @@ sysrq() {
 }
 
 SLEEP_TIME=\$((TEST_TIMEOUT - DUMP_SEC))
+echo "Background timeout script, waiting for \${SLEEP_TIME} seconds, will trigger at \$(date -d+\${SLEEP_TIME}sec)"
 sleep \${SLEEP_TIME}
 echo
-echo "Timeout (\${SLEEP_TIME}sec): getting more info"
+echo "Timeout (after \${SLEEP_TIME}sec): getting more info"
 sysrq 'w'
 sysrq 'd'
 sysrq 'l'
