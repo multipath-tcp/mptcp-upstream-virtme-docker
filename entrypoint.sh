@@ -709,12 +709,14 @@ build() {
 		return 0
 	fi
 
+	ccache_stat
 	build_kernel
-	if [ "${EXPECT}" = 0 ] && with_clang; then
+	if with_clang; then
 		build_compile_commands || true # nice to have
 	fi
 	install_kernel_headers
 	build_perf
+	ccache_stat
 }
 
 build_selftests() { local rc=0
@@ -1320,6 +1322,8 @@ run() {
 run_expect() {
 	local timestamps_sec_stop
 
+	EXPECT=1
+
 	if is_ci; then
 		timestamps_sec_stop=$(date +%s)
 
@@ -1351,9 +1355,10 @@ sysrq() {
 }
 
 SLEEP_TIME=\$((TEST_TIMEOUT - DUMP_SEC))
+echo "Background timeout script, waiting for \${SLEEP_TIME} seconds, will trigger at \$(date -d+\${SLEEP_TIME}sec)"
 sleep \${SLEEP_TIME}
 echo
-echo "Timeout (\${SLEEP_TIME}sec): getting more info"
+echo "Timeout (after \${SLEEP_TIME}sec): getting more info"
 sysrq 'w'
 sysrq 'd'
 sysrq 'l'
@@ -1716,12 +1721,16 @@ analyze() {
 	set_trace_on
 }
 
-# $@: args for kconfig
+# $1: type ; $2: mode ; [ $@:3: args for kconfig ]
 prepare_all() { local t mode
 	t=${1}; shift
 	mode="${1}"
 
 	printinfo "Start: ${t} (${mode})"
+
+	if [ "${t}" = "auto" ]; then
+		EXPECT=1
+	fi
 
 	setup_env "${mode}"
 	gen_kconfig "${@}"
@@ -1737,16 +1746,11 @@ go_manual() {
 
 # $1: mode ; [ $2+: kconfig ]
 go_expect() {
-	EXPECT=1
-
 	check_last_iproute
 	check_source_exec_all
 
 	prepare_all auto "${@}"
-	ccache_stat
-
 	run_expect
-	ccache_stat
 	analyze "${@}"
 }
 
