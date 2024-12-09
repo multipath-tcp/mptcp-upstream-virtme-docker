@@ -381,10 +381,10 @@ setup_env() { local mode
 			VIRTME_RUN_OPTS+=("--net")
 		fi
 
-		# From the docker: vng --vsock-connect
+		# To connect to the VM using VSock
 		# TODO: remove if condition when virtme-ng supports it
-		if "${VIRTME_RUN}" -h | grep -q vsock; then
-			VIRTME_RUN_OPTS+=("--vsock" "--vsock-cid" "${INPUT_VSOCK_CID}")
+		if "${VIRTME_RUN}" -h | grep -q VSOCK; then
+			VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 		fi
 	fi
 
@@ -1886,7 +1886,7 @@ usage() {
 	echo " - static: run static analysis, with make W=1 C=1"
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
-	echo " - connect: connect to a VM's remote shell via a VSock (set INPUT_VSOCK_CID for multiple VMs)."
+	echo " - connect: connect to a VM's remote shell via a VSOCK (set INPUT_VSOCK_CID for multiple VMs)."
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
@@ -2009,7 +2009,7 @@ case "${INPUT_MODE}" in
 		analyze "${@:-normal}"
 		;;
 	"connect")
-		exec "${VIRTME_RUN}" --mods none --vsock-connect "${*:2}" --vsock-cid "${1:-${INPUT_VSOCK_CID}}"
+		exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
