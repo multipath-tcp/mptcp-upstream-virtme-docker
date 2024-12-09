@@ -99,7 +99,7 @@ To connect to an existing VM with a remote shell, you can use this command:
 ```bash
 docker exec -it \
   "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
-  /entrypoint.sh connect
+  /entrypoint.sh connect [CMD]
 ```
 
 (Or use the `connect.sh` script.)

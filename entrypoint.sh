@@ -2009,7 +2009,7 @@ case "${INPUT_MODE}" in
 		analyze "${@:-normal}"
 		;;
 	"connect")
-		exec "${VIRTME_RUN}" --mods none --client --port "${1:-${INPUT_VSOCK_CID}}" ${2:+--remote-cmd "${*:2}"}
+		exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
