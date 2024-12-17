@@ -814,20 +814,20 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 	return ${rc}
 }
 
-prepare() { local mode no_tap=1
+build_tests() { local mode
 	mode="${1}"
-
-	printinfo "Prepare the environment"
 
 	build_selftests
 	if is_mode_btf "${mode}"; then
 		build_bpftests
 	fi
 	build_packetdrill
+}
 
-	if is_ci; then
-		no_tap=0 # we want subtests
-	fi
+prepare() { local mode no_tap=1
+	mode="${1}"
+
+	printinfo "Prepare the environment"
 
 	cat <<EOF > "${BASH_PROFILE}"
 export KERNEL_BUILD_DIR="${VIRTME_BUILD_DIR}"
@@ -1735,6 +1735,7 @@ prepare_all() { local t mode
 	setup_env "${mode}"
 	gen_kconfig "${@}"
 	build
+	build_tests "${mode}"
 	prepare "${mode}"
 }
 
@@ -2000,11 +2001,13 @@ case "${INPUT_MODE}" in
 	"vm" | "vm-manual")
 		setup_env "${@:-normal}"
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+		prepare
 		run
 		;;
 	"vm-expect" | "vm-auto")
 		setup_env "${@:-normal}"
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+		prepare
 		run_expect
 		analyze "${@:-normal}"
 		;;
