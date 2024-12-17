@@ -1379,6 +1379,7 @@ EOF
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
+set serialID \$spawn_id
 expect {
 	"virtme-ng-init: initialization done\r" {
 		send_user "Waiting for the console to be ready\n"
@@ -1399,8 +1400,6 @@ set timeout "1"
 for {set i 0} {\$i < 60} {incr i 1} {
 	expect {
 		"root@${INPUT_HOSTNAME}" {
-			send_user "\n$(log_section_end)"
-			send_user "Starting the validation script (after \$i sec)\n"
 			break
 		} timeout {
 			sleep 1
@@ -1417,6 +1416,25 @@ if {\$i >= 60} {
 	send_user "\n$(log_section_end)"
 	send_user "Timeout console: stopping (\$i)\n"
 	exit 1
+}
+
+set timeout "5"
+spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
+set consoleID \$spawn_id
+
+expect {
+	"root@${INPUT_HOSTNAME}" {
+		send_user "\n$(log_section_end)"
+		send_user "Starting the validation script (after \$i sec)\n"
+	} timeout {
+		send_user "Timeout VSOCK console: stopping\n"
+		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+		exit 1
+	} eof {
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (VSOCK console)\n"
+		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+		exit 1
+	}
 }
 
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
@@ -1436,6 +1454,12 @@ expect {
 		exit 1
 	}
 }
+
+# stop vsock
+send -- "exit\r"
+close
+
+set spawn_id \$serialID
 set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 send -- "/usr/lib/klibc/bin/poweroff\r"
 
