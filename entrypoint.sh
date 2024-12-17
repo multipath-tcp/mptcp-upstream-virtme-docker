@@ -1397,7 +1397,7 @@ set timeout "1"
 
 for {set i 0} {\$i < 60} {incr i 1} {
 	expect {
-		"root@" {
+		"root@${INPUT_HOSTNAME}" {
 			send_user "\n$(log_section_end)"
 			send_user "Starting the validation script (after \$i sec)\n"
 			break
