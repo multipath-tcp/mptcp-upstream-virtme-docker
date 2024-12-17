@@ -2004,6 +2004,7 @@ case "${INPUT_MODE}" in
 		run
 		;;
 	"vm-expect" | "vm-auto")
+		check_source_exec_all
 		setup_env "${@:-normal}"
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		prepare
