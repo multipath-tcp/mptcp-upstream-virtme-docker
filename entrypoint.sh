@@ -824,9 +824,7 @@ build_tests() { local mode
 	build_packetdrill
 }
 
-prepare() { local mode no_tap=1
-	mode="${1}"
-
+prepare() {
 	printinfo "Prepare the environment"
 
 	cat <<EOF > "${BASH_PROFILE}"
@@ -841,6 +839,40 @@ EOF
 		local ps1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 		echo "PS1='${ps1}'" >> "${BASH_PROFILE}"
 	fi
+
+	if [ -f "${VIRTME_PREPARE_POST}" ]; then
+		# shellcheck source=/dev/null
+		source "${VIRTME_PREPARE_POST}"
+	fi
+}
+
+run() {
+	printinfo "Run the virtme script: manual"
+
+	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
+}
+
+run_expect() { local mode timestamps_sec_stop no_tap=1
+	mode="${1}"
+
+	EXPECT=1
+
+	if is_ci; then
+		no_tap=0 # we want subtests
+		timestamps_sec_stop=$(date +%s)
+
+		# max - compilation time - before/after script
+		VIRTME_EXPECT_TEST_TIMEOUT=$((INPUT_CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_CI_ESTIMATED_EXTRA_TIME))
+	else
+		# disable timeout
+		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
+	fi
+
+	# force a stop in case of panic, but avoid a reboot in "expect" mode
+	VIRTME_RUN_OPTS+=(--kopt panic=-1)
+	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
+
+	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
 	cat <<EOF > "${VIRTME_SCRIPT}"
 #! /bin/bash
@@ -1307,39 +1339,6 @@ echo "${VIRTME_SCRIPT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT}"
 
-	if [ -f "${VIRTME_PREPARE_POST}" ]; then
-		# shellcheck source=/dev/null
-		source "${VIRTME_PREPARE_POST}"
-	fi
-}
-
-run() {
-	printinfo "Run the virtme script: manual"
-
-	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
-}
-
-run_expect() {
-	local timestamps_sec_stop
-
-	EXPECT=1
-
-	if is_ci; then
-		timestamps_sec_stop=$(date +%s)
-
-		# max - compilation time - before/after script
-		VIRTME_EXPECT_TEST_TIMEOUT=$((INPUT_CI_TIMEOUT_SEC - (timestamps_sec_stop - TIMESTAMPS_SEC_START) - VIRTME_CI_ESTIMATED_EXTRA_TIME))
-	else
-		# disable timeout
-		VIRTME_EXPECT_TEST_TIMEOUT="${INPUT_EXPECT_TIMEOUT}"
-	fi
-
-	# force a stop in case of panic, but avoid a reboot in "expect" mode
-	VIRTME_RUN_OPTS+=(--kopt panic=-1)
-	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
-
-	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
-
 	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT}"
 #! /bin/bash
 DUMP_SEC=60
@@ -1736,7 +1735,7 @@ prepare_all() { local t mode
 	gen_kconfig "${@}"
 	build
 	build_tests "${mode}"
-	prepare "${mode}"
+	prepare
 }
 
 # $1: mode ; [ $2+: kconfig ]
@@ -1751,7 +1750,7 @@ go_expect() {
 	check_source_exec_all
 
 	prepare_all auto "${@}"
-	run_expect
+	run_expect "${@}"
 	analyze "${@}"
 }
 
@@ -2008,7 +2007,7 @@ case "${INPUT_MODE}" in
 		setup_env "${@:-normal}"
 		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 		prepare
-		run_expect
+		run_expect "${@:-normal}"
 		analyze "${@:-normal}"
 		;;
 	"connect")
