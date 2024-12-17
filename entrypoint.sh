@@ -100,6 +100,7 @@ VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
+VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -882,9 +883,6 @@ if [ "${INPUT_TRACE}" = "1" ]; then
 	set -x
 fi
 
-# To get debug info for stalled tests
-(${VIRTME_SCRIPT_TIMEOUT} &)
-
 # useful for virtme-exec-run
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
@@ -1342,27 +1340,16 @@ EOF
 
 	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT}"
 #! /bin/bash
-DUMP_SEC=60
-TEST_TIMEOUT=${VIRTME_EXPECT_TEST_TIMEOUT}
-if [ \${TEST_TIMEOUT} -le \${DUMP_SEC} ]; then
-	exit 0 # not needed, nothing to do
-fi
-
 sysrq() {
 	echo -e "\nsysrq: \${1}\n"
 	echo "\${1}" > /proc/sysrq-trigger
 	sleep 1
 }
-
-SLEEP_TIME=\$((TEST_TIMEOUT - DUMP_SEC))
-echo "Background timeout script, waiting for \${SLEEP_TIME} seconds, will trigger at \$(date -d+\${SLEEP_TIME}sec)"
-sleep \${SLEEP_TIME}
-echo
-echo "Timeout (after \${SLEEP_TIME}sec): getting more info"
 sysrq 'w'
 sysrq 'd'
 sysrq 'l'
 sysrq 't'
+echo "${VIRTME_SCRIPT_TIMEOUT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT_TIMEOUT}"
 
@@ -1445,6 +1432,16 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "\n$(log_section_end)"
+		send_user "Timeout: Getting more info\n"
+		send -i \$serialID -- "${VIRTME_SCRIPT_TIMEOUT}\r"
+		set timeout "60"
+		expect {
+			-i \$serialID "${VIRTME_SCRIPT_TIMEOUT_END}" {
+				send_user "Timeout: Getting more info: end\n"
+			} timeout {
+				send_user "Timeout: Getting more info: timeout\n"
+			}
+		}
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
