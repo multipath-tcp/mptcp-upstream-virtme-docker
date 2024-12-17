@@ -386,10 +386,7 @@ setup_env() { local mode
 		fi
 
 		# To connect to the VM using VSock
-		# TODO: remove if condition when virtme-ng supports it
-		if "${VIRTME_RUN}" -h | grep -q VSOCK; then
-			VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
-		fi
+		VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 	fi
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
