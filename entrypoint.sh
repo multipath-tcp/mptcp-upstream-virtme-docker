@@ -349,6 +349,10 @@ setup_env() { local mode
 	export KBUILD_OUTPUT="${VIRTME_BUILD_DIR}"
 	export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 
+	if [ "${INPUT_CLEAN}" = 1 ]; then
+		rm -rf "${VIRTME_BUILD_DIR}" "${VIRTME_PERF_DIR}"
+	fi
+
 	mkdir -p \
 		"${VIRTME_BUILD_DIR}" \
 		"${VIRTME_SCRIPTS_DIR}" \
@@ -1873,11 +1877,12 @@ usage() {
 	echo
 	echo " - KConfig: optional kernel config: arguments for './scripts/config' or config file"
 	echo
-	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | connect | lcov2html>"
+	echo "Usage: ${0} <make [params] | make.cross [params] | build <mode> | clean <mode> | defconfig <mode> | selftests | bpftests | cmd <command> | src <source file> | static | vm-manual | vm-auto | connect | lcov2html>"
 	echo
 	echo " - make: run the make command with optional parameters"
 	echo " - make.cross: run Intel's make.cross command with optional parameters"
 	echo " - build: build everything, but don't start the VM ('normal' mode by default)"
+	echo " - clean: clean the build directory"
 	echo " - defconfig: only generate the .config file ('normal' mode by default)"
 	echo " - selftests: only build the KSelftests"
 	echo " - bpftests: only build the BPF tests"
@@ -1968,6 +1973,10 @@ case "${INPUT_MODE}" in
 		;;
 	"build")
 		prepare_all manual "${@:-normal}"
+		;;
+	"clean")
+		setup_env "${@:-normal}"
+		rm -r "${VIRTME_BUILD_DIR}"
 		;;
 	"defconfig")
 		setup_env "${@:-normal}"
