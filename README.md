@@ -27,6 +27,7 @@ When launching the docker image, you have to specify the mode you want to use:
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
 - `build`: Build everything, but don't start the VM (`normal` mode by default).
+- `clean`: Clean the build directory (`normal` mode by default).
 - `defconfig`: Only generate the `.config` file (`normal` mode by default).
 - `selftests`: Only build the KSelftests.
 - `bpftests`: Only build the BPF tests.
