@@ -206,7 +206,7 @@ is_mode_btf() {
 
 # $1: mode
 _get_results_dir() {
-	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
+	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${HOSTNAME}/${1}"
 }
 
 # $1: pid
