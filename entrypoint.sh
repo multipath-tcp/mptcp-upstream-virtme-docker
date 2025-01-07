@@ -1445,6 +1445,7 @@ expect {
 				send_user "Timeout: Getting more info: end\n"
 			} timeout {
 				send_user "Timeout: Getting more info: timeout\n"
+				send -i \$serialID "\x03\r"
 			}
 		}
 		send_user "Timeout: sending Ctrl+C\n"
