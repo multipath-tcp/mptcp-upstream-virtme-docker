@@ -1405,6 +1405,9 @@ if {\$i >= 60} {
 	exit 1
 }
 
+# workaround to continue to get "live" serial output
+expect_background eof
+
 set timeout "5"
 spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
 set consoleID \$spawn_id
@@ -1433,6 +1436,8 @@ expect {
 	} timeout {
 		send_user "\n$(log_section_end)"
 		send_user "Timeout: Getting more info\n"
+		# stop consuming serial's stdout
+		expect_background -i \$serialID
 		send -i \$serialID -- "${VIRTME_SCRIPT_TIMEOUT}\r"
 		set timeout "60"
 		expect {
@@ -1456,7 +1461,10 @@ expect {
 send -- "exit\r"
 close
 
+# back to the serial, stop consuming stdout
 set spawn_id \$serialID
+expect_background
+
 set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 send -- "/usr/lib/klibc/bin/poweroff\r"
 
