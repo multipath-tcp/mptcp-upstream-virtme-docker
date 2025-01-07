@@ -100,6 +100,7 @@ VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
+VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -206,7 +207,7 @@ is_mode_btf() {
 
 # $1: mode
 _get_results_dir() {
-	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${1}"
+	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${HOSTNAME}/${1}"
 }
 
 # $1: pid
@@ -386,10 +387,7 @@ setup_env() { local mode
 		fi
 
 		# To connect to the VM using VSock
-		# TODO: remove if condition when virtme-ng supports it
-		if "${VIRTME_RUN}" -h | grep -q VSOCK; then
-			VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
-		fi
+		VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 	fi
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
@@ -885,9 +883,6 @@ if [ "${INPUT_TRACE}" = "1" ]; then
 	set -x
 fi
 
-# To get debug info for stalled tests
-(${VIRTME_SCRIPT_TIMEOUT} &)
-
 # useful for virtme-exec-run
 TAP_PREFIX="${KERNEL_SRC}/tools/testing/selftests/kselftest/prefix.pl"
 RESULTS_DIR="${RESULTS_DIR}"
@@ -1345,27 +1340,16 @@ EOF
 
 	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT}"
 #! /bin/bash
-DUMP_SEC=60
-TEST_TIMEOUT=${VIRTME_EXPECT_TEST_TIMEOUT}
-if [ \${TEST_TIMEOUT} -le \${DUMP_SEC} ]; then
-	exit 0 # not needed, nothing to do
-fi
-
 sysrq() {
 	echo -e "\nsysrq: \${1}\n"
 	echo "\${1}" > /proc/sysrq-trigger
 	sleep 1
 }
-
-SLEEP_TIME=\$((TEST_TIMEOUT - DUMP_SEC))
-echo "Background timeout script, waiting for \${SLEEP_TIME} seconds, will trigger at \$(date -d+\${SLEEP_TIME}sec)"
-sleep \${SLEEP_TIME}
-echo
-echo "Timeout (after \${SLEEP_TIME}sec): getting more info"
 sysrq 'w'
 sysrq 'd'
 sysrq 'l'
 sysrq 't'
+echo "${VIRTME_SCRIPT_TIMEOUT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT_TIMEOUT}"
 
@@ -1382,6 +1366,7 @@ EOF
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
+set serialID \$spawn_id
 expect {
 	"virtme-ng-init: initialization done\r" {
 		send_user "Waiting for the console to be ready\n"
@@ -1402,8 +1387,6 @@ set timeout "1"
 for {set i 0} {\$i < 60} {incr i 1} {
 	expect {
 		"root@${INPUT_HOSTNAME}" {
-			send_user "\n$(log_section_end)"
-			send_user "Starting the validation script (after \$i sec)\n"
 			break
 		} timeout {
 			sleep 1
@@ -1422,6 +1405,28 @@ if {\$i >= 60} {
 	exit 1
 }
 
+# workaround to continue to get "live" serial output
+expect_background eof
+
+set timeout "5"
+spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
+set consoleID \$spawn_id
+
+expect {
+	"root@${INPUT_HOSTNAME}" {
+		send_user "\n$(log_section_end)"
+		send_user "Starting the validation script (after \$i sec)\n"
+	} timeout {
+		send_user "Timeout VSOCK console: stopping\n"
+		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+		exit 1
+	} eof {
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (VSOCK console)\n"
+		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+		exit 1
+	}
+}
+
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
 send -- "stdbuf -oL ${VIRTME_SCRIPT}\r"
 
@@ -1430,6 +1435,19 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "\n$(log_section_end)"
+		send_user "Timeout: Getting more info\n"
+		# stop consuming serial's stdout
+		expect_background -i \$serialID
+		send -i \$serialID -- "${VIRTME_SCRIPT_TIMEOUT}\r"
+		set timeout "60"
+		expect {
+			-i \$serialID "${VIRTME_SCRIPT_TIMEOUT_END}" {
+				send_user "Timeout: Getting more info: end\n"
+			} timeout {
+				send_user "Timeout: Getting more info: timeout\n"
+				send -i \$serialID "\x03\r"
+			}
+		}
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
@@ -1439,6 +1457,15 @@ expect {
 		exit 1
 	}
 }
+
+# stop vsock
+send -- "exit\r"
+close
+
+# back to the serial, stop consuming stdout
+set spawn_id \$serialID
+expect_background
+
 set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 send -- "/usr/lib/klibc/bin/poweroff\r"
 
