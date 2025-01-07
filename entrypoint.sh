@@ -385,9 +385,6 @@ setup_env() { local mode
 		if [ -z "${INPUT_NET_BRIDGES}" ]; then
 			VIRTME_RUN_OPTS+=("--net")
 		fi
-
-		# To connect to the VM using VSock
-		VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 	fi
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
@@ -403,6 +400,9 @@ setup_env() { local mode
 		--cpus "${INPUT_CPUS}"
 		--memory "${INPUT_RAM}"
 	)
+
+	# To connect to the VM using VSock
+	VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
