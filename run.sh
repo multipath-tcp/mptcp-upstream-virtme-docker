@@ -8,6 +8,7 @@ test -t 1 && VIRTME_INTERACTIVE="-t"
 
 # host is different if worktree are used
 VIRTME_GIT_DIR="$(realpath "$(git rev-parse --git-common-dir)")"
+VIRTME_REAL_DIR="$(realpath .virtme)"
 
 HOME_DIR="$(realpath "$(dirname "${0}")/.home")"
 
@@ -19,6 +20,7 @@ done
 docker run \
 	-v "${PWD}:${PWD}:rw" \
 	-v "${VIRTME_GIT_DIR}:${VIRTME_GIT_DIR}:ro" \
+	-v "${VIRTME_REAL_DIR}:${VIRTME_REAL_DIR}:rw" \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-v "${HOME_DIR}:/root" \
 	${VIRTME_SYZKALLER_PATH:+ -v "${VIRTME_SYZKALLER_PATH}:/opt/syzkaller:rw"} \
