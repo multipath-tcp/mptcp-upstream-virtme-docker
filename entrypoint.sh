@@ -623,6 +623,23 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		for i in "${@}"; do
 			vck+=(--custom "${i}")
 		done
+
+		# Disable components present in syzbot and not needed here
+		kconfig+=(
+			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
+			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING
+			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
+			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
+			-d BCACHEFS_FS -d F2FS_FS -d BTRFS_FS -d OCFS2_FS -d XFS_FS
+			-d JFS_FS -d ISO9660_FS -d MISC_FILESYSTEMS -d NFS_FS -d NFSD
+			-d CEPH_FS -d CIFS -d SMB_SERVER -d AFS_FS -d TTY_PRINTK
+		)
+
+		# Disable all net vendors, except Intel, for their e1000 driver
+		# shellcheck disable=SC2207 # we do want to split
+		kconfig+=($(grep "^config NET_VENDOR_" drivers/net/ethernet/*/Kconfig |
+			awk '{ print "-d " $2 }'))
+		kconfig+=(-e NET_VENDOR_INTEL)
 	else
 		kconfig+=("${@}")
 	fi
