@@ -119,6 +119,7 @@ VIRTME_RUN_OPTS=(
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
+	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
 	--verbose --show-boot-console
 	--kopt mitigations=off
@@ -401,8 +402,6 @@ setup_env() { local mode
 		--memory "${INPUT_RAM}"
 	)
 
-	# To connect to the VM using VSock
-	VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
