@@ -298,14 +298,8 @@ source (or use symbolic links). `.clangd` needs to be placed at the root of the
 kernel source directory.
 
 Notes:
-- The VSCode add-on needs some modifications, see
-  [PR #5](https://github.com/FlorentRevest/linux-kernel-vscode/pull/5) and
-  [PR #6](https://github.com/FlorentRevest/linux-kernel-vscode/pull/6). If these
-  PRs are not merged, you can use
-  [this fork](https://github.com/matttbe/linux-kernel-vscode/) (`virtme-support`
-  branch) for the moment.
-- CLang will be used by VSCode instead of GCC. It is then required to launch all
-  docker commands with `-e INPUT_CLANG=1`, see above.
+- CLang will be used by VSCode instead of GCC. If you still want to use some
+  docker commands for manual actions, add `-e INPUT_CLANG=1`, see above.
 - CLangD will be used on the host machine, not in the Docker.
 
 ## CLang Analyzer

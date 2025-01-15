@@ -119,6 +119,7 @@ VIRTME_RUN_OPTS=(
 	--mods=auto
 	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
+	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
 	--verbose --show-boot-console
 	--kopt mitigations=off
@@ -401,8 +402,6 @@ setup_env() { local mode
 		--memory "${INPUT_RAM}"
 	)
 
-	# To connect to the VM using VSock
-	VIRTME_RUN_OPTS+=("--server" "--port" "${INPUT_VSOCK_CID}")
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
@@ -622,8 +621,28 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	if [ -s "${1:-}" ]; then
 		local i
 		for i in "${@}"; do
+			# These options are already set by virtme, to avoid
+			# duplicated output in the terminal, e.g. syzbot options
+			sed -i 's/console=\S\+ //g;s/earlyprintk=\S\+ //g' "${i}"
 			vck+=(--custom "${i}")
 		done
+
+		# Disable components present in syzbot and not needed here
+		kconfig+=(
+			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
+			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING
+			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
+			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
+			-d BCACHEFS_FS -d F2FS_FS -d BTRFS_FS -d OCFS2_FS -d XFS_FS
+			-d JFS_FS -d ISO9660_FS -d MISC_FILESYSTEMS -d NFS_FS -d NFSD
+			-d CEPH_FS -d CIFS -d SMB_SERVER -d AFS_FS -d TTY_PRINTK
+		)
+
+		# Disable all net vendors, except Intel, for their e1000 driver
+		# shellcheck disable=SC2207 # we do want to split
+		kconfig+=($(grep "^config NET_VENDOR_" drivers/net/ethernet/*/Kconfig |
+			awk '{ print "-d " $2 }'))
+		kconfig+=(-e NET_VENDOR_INTEL)
 	else
 		kconfig+=("${@}")
 	fi
