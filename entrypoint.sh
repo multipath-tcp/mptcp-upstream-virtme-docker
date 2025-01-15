@@ -621,6 +621,9 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	if [ -s "${1:-}" ]; then
 		local i
 		for i in "${@}"; do
+			# These options are already set by virtme, to avoid
+			# duplicated output in the terminal, e.g. syzbot options
+			sed -i 's/console=\S\+ //g;s/earlyprintk=\S\+ //g' "${i}"
 			vck+=(--custom "${i}")
 		done
 
