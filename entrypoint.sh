@@ -105,6 +105,7 @@ VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
+VIRTME_SCRIPT_TIMEOUT_GDB="${VIRTME_SCRIPTS_DIR}/gdb.timeout"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -1410,6 +1411,18 @@ echo "${VIRTME_SCRIPT_TIMEOUT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT_TIMEOUT}"
 
+	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT_GDB}"
+set output-radix 16
+target remote localhost:1234
+l
+bt full
+info frame
+info registers
+thread apply all bt full
+detach
+exit
+EOF
+
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
@@ -1503,8 +1516,27 @@ expect {
 			} timeout {
 				send_user "Timeout: Getting more info: timeout\n"
 				send -i \$serialID "\x03\r"
+			} eof {
+				send_user "Timeout: Getting more info: unexpected end\n"
 			}
 		}
+
+		send_user "Timeout: Getting more info via GDB\n"
+		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
+		set gdbID \$spawn_id
+		expect {
+			"detached" {
+				send_user "Timeout: Getting more info via GDB: end\n"
+			} timeout {
+				send_user "Timeout: Getting more info via GDB: timeout\n"
+				send "\x03\r"
+			} eof {
+				send_user "Timeout: Getting more info via GDB: unexpected end\n"
+			}
+		}
+		close
+
+		set spawn_id \$consoleID
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
