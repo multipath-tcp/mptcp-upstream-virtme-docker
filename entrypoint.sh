@@ -95,6 +95,7 @@ BASH_PROFILE="/root/.bash_profile"
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
+VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
@@ -330,6 +331,9 @@ setup_env() { local mode
 	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
 	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
 	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
+	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
+	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
+
 	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
 	VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
