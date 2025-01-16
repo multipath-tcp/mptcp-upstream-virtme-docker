@@ -37,6 +37,8 @@ with_clang() {
 
 set_trace_on
 
+DEFAULT_VSOCK_CID="3"
+
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
 : "${INPUT_CCACHE_DIR:=""}"
@@ -57,12 +59,13 @@ set_trace_on
 : "${INPUT_GCOV:=""}"
 : "${INPUT_NET_BRIDGES:=""}"
 : "${INPUT_MAC_ADDRESS_PREFIX:=""}"
-: "${INPUT_VSOCK_CID:="3"}"
+: "${INPUT_VSOCK_CID:="${DEFAULT_VSOCK_CID}"}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
+: "${INPUT_FULL_DUMP:=0}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
@@ -123,9 +126,13 @@ VIRTME_RUN_OPTS=(
 	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
 	--verbose --show-boot-console
+	--kopt nokaslr # needed for gdb
 	--kopt mitigations=off
 )
-VIRTME_RUN_QEMU_OPTS=()
+VIRTME_RUN_QEMU_OPTS=(
+	-gdb tcp::$((1234 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID))
+	-qmp "tcp::$((3636 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID)),server,nowait"
+)
 
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
@@ -326,6 +333,10 @@ setup_env() { local mode
 	# Avoid a long advice
 	git config --global advice.detachedHead false
 
+	mkdir -p "/root/.config/gdb"
+	echo "add-auto-load-safe-path ${KERNEL_SRC}/scripts/gdb/vmlinux-gdb.py" \
+		> "/root/.config/gdb/gdbinit"
+
 	VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 	with_clang && VIRTME_BUILD_DIR+="-clang"
 	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
@@ -406,6 +417,10 @@ setup_env() { local mode
 		--memory "${INPUT_RAM}"
 	)
 
+	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
+		VIRTME_RUN_OPTS+=(--disable-microvm)
+		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
+	fi
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
@@ -728,6 +743,24 @@ build_perf() { local rc=0
 	return ${rc}
 }
 
+build_gdb_index() { local rc=0
+	if readelf -S vmlinux 2>/dev/null | grep -q ".gdb_index"; then
+		printinfo "Skip GDB Index build: already there"
+		return 0
+	fi
+
+	log_section_start "Build GDB Index"
+
+	ln -sf "${VIRTME_CURRENT_BUILD_DIR}/vmlinux" .
+	ln -sf "${VIRTME_CURRENT_BUILD_DIR}/scripts/gdb/linux/constants.py" scripts/gdb/linux/
+
+	GDB=gdb-multiarch gdb-add-index vmlinux || rc=${?}
+
+	log_section_end
+
+	return ${rc}
+}
+
 build() {
 	if [ "${INPUT_BUILD_SKIP}" = 1 ]; then
 		printinfo "Skip kernel build"
@@ -739,6 +772,7 @@ build() {
 	if with_clang; then
 		build_compile_commands || true # nice to have
 	fi
+	build_gdb_index
 	install_kernel_headers
 	build_perf
 	ccache_stat
@@ -2072,6 +2106,12 @@ case "${INPUT_MODE}" in
 		;;
 	"connect")
 		exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
+		;;
+	"gdb")
+		exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
+		;;
+	"dump")
+		exec vng --dump "${1?}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"

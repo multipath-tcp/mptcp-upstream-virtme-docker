@@ -28,17 +28,39 @@ defconfig() {
 	fi
 }
 
+wait_for_vm() {
+	local i=0
+
+	echo "Waiting for VM to be ready"
+
+	while ((i < 3600)); do
+		if [ -n "$(docker exec "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
+				pidof qemu-system-x86_64 2>/dev/null)" ]; then
+			echo "VM started"
+			return 0
+		fi
+		i=$((i+1))
+		sleep 1
+	done
+	echo "Timeout waiting for VM"
+	return 1
+}
+
 case "${COMMAND}" in
-	"build" | "clean" | "menuconfig" | "update" | "systemtap-build")
+	"build" | "clean" | "menuconfig" | "update" | "systemtap-build" | "gdb-index")
 		echo "local: allow: ${COMMAND}"
 		;;
-	"gdb-index")
+	"install-autostart")
 		echo "local: skip: ${COMMAND}"
 		exit 0
 		;;
-	"defconfig")
+	"defconfig" | "wait-for-vm")
 		echo "local: custom: ${COMMAND}"
-		${COMMAND}
+		${COMMAND//-/_}
+		exit
+		;;
+	"start" | "start-wait-dbg")
+		echo "local: ${COMMAND}: please start a VM using MPTCP Upstream Virtme Docker from another terminal"
 		exit
 		;;
 	*)

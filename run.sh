@@ -17,6 +17,12 @@ for env in "${!INPUT_@}"; do
 	envs+=(-e "${env}=${!env}")
 done
 
+ports=()
+if [ -z "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" --format '{{.Ports}}')" ]; then
+	ports+=(-p 127.0.0.1:1234-1238:1234-1238
+		-p 127.0.0.1:3636-3640:3636-3640)
+fi
+
 docker run \
 	-v "${PWD}:${PWD}:rw" \
 	-v "${VIRTME_GIT_DIR}:${VIRTME_GIT_DIR}:ro" \
@@ -32,6 +38,7 @@ docker run \
 	"${envs[@]}" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
+	"${ports[@]}" \
 	--privileged \
 	--rm \
 	${VIRTME_INTERACTIVE} \
