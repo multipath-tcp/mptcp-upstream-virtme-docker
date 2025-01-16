@@ -37,6 +37,8 @@ with_clang() {
 
 set_trace_on
 
+DEFAULT_VSOCK_CID="3"
+
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
 : "${INPUT_CCACHE_DIR:=""}"
@@ -57,12 +59,13 @@ set_trace_on
 : "${INPUT_GCOV:=""}"
 : "${INPUT_NET_BRIDGES:=""}"
 : "${INPUT_MAC_ADDRESS_PREFIX:=""}"
-: "${INPUT_VSOCK_CID:="3"}"
+: "${INPUT_VSOCK_CID:="${DEFAULT_VSOCK_CID}"}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
 : "${INPUT_CI_TIMEOUT_SEC:=5400}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
+: "${INPUT_FULL_DUMP:=0}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
@@ -95,12 +98,14 @@ BASH_PROFILE="/root/.bash_profile"
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
+VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
+VIRTME_SCRIPT_TIMEOUT_GDB="${VIRTME_SCRIPTS_DIR}/gdb.timeout"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -122,9 +127,13 @@ VIRTME_RUN_OPTS=(
 	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
 	--verbose --show-boot-console
+	--kopt nokaslr # needed for gdb
 	--kopt mitigations=off
 )
-VIRTME_RUN_QEMU_OPTS=()
+VIRTME_RUN_QEMU_OPTS=(
+	-gdb tcp::$((1234 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID))
+	-qmp "tcp::$((3636 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID)),server,nowait"
+)
 
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
@@ -325,11 +334,18 @@ setup_env() { local mode
 	# Avoid a long advice
 	git config --global advice.detachedHead false
 
+	mkdir -p "/root/.config/gdb"
+	echo "add-auto-load-safe-path ${KERNEL_SRC}/scripts/gdb/vmlinux-gdb.py" \
+		> "/root/.config/gdb/gdbinit"
+
 	VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 	with_clang && VIRTME_BUILD_DIR+="-clang"
 	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
 	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
 	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
+	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
+	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
+
 	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
 	VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
@@ -402,6 +418,10 @@ setup_env() { local mode
 		--memory "${INPUT_RAM}"
 	)
 
+	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
+		VIRTME_RUN_OPTS+=(--disable-microvm)
+		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
+	fi
 
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
@@ -724,6 +744,24 @@ build_perf() { local rc=0
 	return ${rc}
 }
 
+build_gdb_index() { local rc=0
+	if readelf -S vmlinux 2>/dev/null | grep -q ".gdb_index"; then
+		printinfo "Skip GDB Index build: already there"
+		return 0
+	fi
+
+	log_section_start "Build GDB Index"
+
+	ln -sf "${VIRTME_CURRENT_BUILD_DIR}/vmlinux" .
+	ln -sf "${VIRTME_CURRENT_BUILD_DIR}/scripts/gdb/linux/constants.py" scripts/gdb/linux/
+
+	GDB=gdb-multiarch gdb-add-index vmlinux || rc=${?}
+
+	log_section_end
+
+	return ${rc}
+}
+
 build() {
 	if [ "${INPUT_BUILD_SKIP}" = 1 ]; then
 		printinfo "Skip kernel build"
@@ -735,6 +773,7 @@ build() {
 	if with_clang; then
 		build_compile_commands || true # nice to have
 	fi
+	build_gdb_index
 	install_kernel_headers
 	build_perf
 	ccache_stat
@@ -1372,6 +1411,18 @@ echo "${VIRTME_SCRIPT_TIMEOUT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT_TIMEOUT}"
 
+	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT_GDB}"
+set output-radix 16
+target remote localhost:1234
+l
+bt full
+info frame
+info registers
+thread apply all bt full
+detach
+exit
+EOF
+
 	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
 #! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
@@ -1465,8 +1516,27 @@ expect {
 			} timeout {
 				send_user "Timeout: Getting more info: timeout\n"
 				send -i \$serialID "\x03\r"
+			} eof {
+				send_user "Timeout: Getting more info: unexpected end\n"
 			}
 		}
+
+		send_user "Timeout: Getting more info via GDB\n"
+		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
+		set gdbID \$spawn_id
+		expect {
+			"detached" {
+				send_user "Timeout: Getting more info via GDB: end\n"
+			} timeout {
+				send_user "Timeout: Getting more info via GDB: timeout\n"
+				send "\x03\r"
+			} eof {
+				send_user "Timeout: Getting more info via GDB: unexpected end\n"
+			}
+		}
+		close
+
+		set spawn_id \$consoleID
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
@@ -2068,6 +2138,12 @@ case "${INPUT_MODE}" in
 		;;
 	"connect")
 		exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
+		;;
+	"gdb")
+		exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
+		;;
+	"dump")
+		exec vng --dump "${1?}"
 		;;
 	"lcov2html")
 		setup_env "${@:-normal}"
