@@ -343,8 +343,6 @@ setup_env() { local mode
 	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
 	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
 	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
-	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
-	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
 
 	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
@@ -380,10 +378,12 @@ setup_env() { local mode
 		"${CCACHE_DIR}"
 	chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
 
+	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
+	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
+
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
-		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
@@ -393,7 +393,6 @@ setup_env() { local mode
 		# avoid override
 		RESULTS_DIR="$(_get_results_dir "${mode}")"
 		rm -rf "${RESULTS_DIR}"
-		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
 		: "${INPUT_GCOV:=0}"
@@ -423,6 +422,12 @@ setup_env() { local mode
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
 	fi
 
+	# To avoid overriding files
+	if [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+		RESULTS_DIR+="/${INPUT_VSOCK_CID}"
+	fi
+
+	mkdir -p "${RESULTS_DIR}"
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
@@ -650,7 +655,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		# Disable components present in syzbot and not needed here
 		kconfig+=(
 			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
-			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING
+			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING -d HID
 			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
 			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
 			-d BCACHEFS_FS -d F2FS_FS -d BTRFS_FS -d OCFS2_FS -d XFS_FS
