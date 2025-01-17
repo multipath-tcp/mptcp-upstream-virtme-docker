@@ -384,7 +384,6 @@ setup_env() { local mode
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
-		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
@@ -394,7 +393,6 @@ setup_env() { local mode
 		# avoid override
 		RESULTS_DIR="$(_get_results_dir "${mode}")"
 		rm -rf "${RESULTS_DIR}"
-		mkdir -p "${RESULTS_DIR}"
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
 		: "${INPUT_GCOV:=0}"
@@ -424,6 +422,12 @@ setup_env() { local mode
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
 	fi
 
+	# To avoid overriding files
+	if [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+		RESULTS_DIR+="/${INPUT_VSOCK_CID}"
+	fi
+
+	mkdir -p "${RESULTS_DIR}"
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
 	CONCLUSION="${RESULTS_DIR}/conclusion.txt"
