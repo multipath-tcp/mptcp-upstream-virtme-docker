@@ -655,7 +655,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		# Disable components present in syzbot and not needed here
 		kconfig+=(
 			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
-			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING
+			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING -d HID
 			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
 			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
 			-d BCACHEFS_FS -d F2FS_FS -d BTRFS_FS -d OCFS2_FS -d XFS_FS
