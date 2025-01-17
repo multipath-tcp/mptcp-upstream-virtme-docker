@@ -343,8 +343,6 @@ setup_env() { local mode
 	is_mode_debug "${mode}" && VIRTME_BUILD_DIR+="-debug"
 	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
 	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
-	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
-	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
 
 	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
@@ -379,6 +377,9 @@ setup_env() { local mode
 		"${VIRTME_CACHE_DIR}" \
 		"${CCACHE_DIR}"
 	chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
+
+	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
+	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
