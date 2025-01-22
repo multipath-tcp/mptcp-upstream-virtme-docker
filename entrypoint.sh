@@ -1480,26 +1480,33 @@ if {\$i >= 60} {
 	exit 1
 }
 
-# workaround to continue to get "live" serial output
-expect_background eof
+# on "recent" kernels, we can use VSOCK instead of the serial
+# on v5.15, it works, but we get "cat: write error: Broken pipe" errors
+if {${KVER_MAJ} > 5} {
+	# workaround to continue to get "live" serial output
+	expect_background eof
 
-set timeout "5"
-spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
-set consoleID \$spawn_id
+	set timeout "5"
+	spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
+	set consoleID \$spawn_id
 
-expect {
-	"root@${INPUT_HOSTNAME}" {
-		send_user "\n$(log_section_end)"
-		send_user "Starting the validation script (after \$i sec)\n"
-	} timeout {
-		send_user "Timeout VSOCK console: stopping\n"
-		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
-		exit 1
-	} eof {
-		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (VSOCK console)\n"
-		send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
-		exit 1
+	expect {
+		"root@${INPUT_HOSTNAME}" {
+			send_user "\n$(log_section_end)"
+			send_user "Starting the validation script (after \$i sec)\n"
+		} timeout {
+			send_user "Timeout VSOCK console: stopping\n"
+			send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+			exit 1
+		} eof {
+			send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (VSOCK console)\n"
+			send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+			exit 1
+		}
 	}
+} else {
+	# workaround to avoid more 'if' statements below
+	set consoleID \$spawn_id
 }
 
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
@@ -1552,13 +1559,15 @@ expect {
 	}
 }
 
-# stop vsock
-send -- "exit\r"
-close
+if {${KVER_MAJ} > 5} {
+	# stop vsock
+	send -- "exit\r"
+	close
 
-# back to the serial, stop consuming stdout
-set spawn_id \$serialID
-expect_background
+	# back to the serial, stop consuming stdout
+	set spawn_id \$serialID
+	expect_background
+}
 
 set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 send -- "/usr/lib/klibc/bin/poweroff\r"
