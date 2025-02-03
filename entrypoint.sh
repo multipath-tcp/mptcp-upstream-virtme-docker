@@ -559,7 +559,6 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		kconfig+=(
 			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
 			-d SLUB_DEBUG_ON # perf impact is too important
-			# -e RCU_EXPERT -e PROVE_RCU_LIST # fixed in v6.12 # TODO: fix issues first
 		)
 
 		local debug_config="kernel/configs/debug.config"
