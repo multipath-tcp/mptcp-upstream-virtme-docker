@@ -559,8 +559,6 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		kconfig+=(
 			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
 			-d SLUB_DEBUG_ON # perf impact is too important
-			-e BOOTPARAM_SOFTLOCKUP_PANIC # instead of blocking
-			-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 			# -e RCU_EXPERT -e PROVE_RCU_LIST # fixed in v6.12 # TODO: fix issues first
 		)
 
@@ -579,8 +577,16 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		kconfig+=(-e KFENCE)
 	fi
 
-	# stop at the first oops, no need to continue in a bad state
-	kconfig+=(-e PANIC_ON_OOPS)
+	# stop at the first oops or lockup, no need to continue in a bad state
+	kconfig+=(
+		-e PANIC_ON_OOPS
+		-e SOFTLOCKUP_DETECTOR
+		-e BOOTPARAM_SOFTLOCKUP_PANIC # instead of blocking
+		-e HARDLOCKUP_DETECTOR
+		-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
+		-e DETECT_HUNG_TASK
+		-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
+	)
 
 	# Debug info for developers
 	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
