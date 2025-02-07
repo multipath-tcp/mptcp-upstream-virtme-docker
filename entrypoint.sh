@@ -459,6 +459,14 @@ setup_env() { local mode
 		VIRTME_RUN_OPTS+=(--force-9p)
 	fi
 
+	if [ "${KVER_MAJ}" -gt 6 ] ||
+	   { [ "${KVER_MAJ}" -eq 6 ] && [ "${KVER_MIN}" -gt 6 ]; }; then
+		# vsock console seems working fine from >6.6
+		VSOCK_OK=1
+	else
+		VSOCK_OK=0
+	fi
+
 	log_section_end
 }
 
@@ -1486,8 +1494,8 @@ if {\$i >= 60} {
 }
 
 # on "recent" kernels, we can use VSOCK instead of the serial
-# on v5.15, it works, but we get "cat: write error: Broken pipe" errors
-if {${KVER_MAJ} > 5} {
+# on older ones, it works, but we get "cat: write error: Broken pipe" errors
+if {${VSOCK_OK} == 1} {
 	# workaround to continue to get "live" serial output
 	expect_background eof
 
@@ -1564,7 +1572,7 @@ expect {
 	}
 }
 
-if {${KVER_MAJ} > 5} {
+if {${VSOCK_OK} == 1} {
 	# stop vsock
 	send -- "exit\r"
 	close
