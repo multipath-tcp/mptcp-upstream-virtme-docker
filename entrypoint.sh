@@ -459,6 +459,14 @@ setup_env() { local mode
 		VIRTME_RUN_OPTS+=(--force-9p)
 	fi
 
+	if [ "${KVER_MAJ}" -gt 6 ] ||
+	   { [ "${KVER_MAJ}" -eq 6 ] && [ "${KVER_MIN}" -gt 6 ]; }; then
+		# vsock console seems working fine from >6.6
+		VSOCK_OK=1
+	else
+		VSOCK_OK=0
+	fi
+
 	log_section_end
 }
 
@@ -644,7 +652,8 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	# Disable components we don't need
 	kconfig+=(
 		-d PCCARD -d MACINTOSH_DRIVERS -d SOUND -d USB_SUPPORT
-		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB
+		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
+		-d MISC_FILESYSTEMS
 	)
 
 	# extra config
@@ -660,11 +669,11 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		# Disable components present in syzbot and not needed here
 		kconfig+=(
 			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
-			-d ATA -d MEDIA_SUPPORT -d INFINIBAND -d STAGING -d HID
+			-d MEDIA_SUPPORT -d INFINIBAND -d STAGING -d HID
 			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
 			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
 			-d BCACHEFS_FS -d F2FS_FS -d BTRFS_FS -d OCFS2_FS -d XFS_FS
-			-d JFS_FS -d ISO9660_FS -d MISC_FILESYSTEMS -d NFS_FS -d NFSD
+			-d JFS_FS -d ISO9660_FS -d NFS_FS -d NFSD
 			-d CEPH_FS -d CIFS -d SMB_SERVER -d AFS_FS -d TTY_PRINTK
 		)
 
@@ -1486,8 +1495,8 @@ if {\$i >= 60} {
 }
 
 # on "recent" kernels, we can use VSOCK instead of the serial
-# on v5.15, it works, but we get "cat: write error: Broken pipe" errors
-if {${KVER_MAJ} > 5} {
+# on older ones, it works, but we get "cat: write error: Broken pipe" errors
+if {${VSOCK_OK} == 1} {
 	# workaround to continue to get "live" serial output
 	expect_background eof
 
@@ -1564,7 +1573,7 @@ expect {
 	}
 }
 
-if {${KVER_MAJ} > 5} {
+if {${VSOCK_OK} == 1} {
 	# stop vsock
 	send -- "exit\r"
 	close
