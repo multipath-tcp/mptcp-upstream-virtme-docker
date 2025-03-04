@@ -1,10 +1,14 @@
 #! /usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0
-#
-# Very simple TAP to JSON parser
-#
-# JQ can be used to filter tests later, e.g.abs
-#    $ jq '.results.[] | select(.[].result == "fail")' results.json
+
+"""
+Very simple TAP to JSON parser
+
+JQ can be used to filter tests later, e.g.abs
+  $ jq '.results.[] | select(.[].result == "fail")' results.json
+"""
+
+# pylint: disable=missing-function-docstring
 
 import argparse
 import json
@@ -50,9 +54,11 @@ def get_args_parser():
 
     return parser
 
+
 # Same as in NIPA
 TAP_RE = re.compile(r"(not )?ok (\d+)( -)? ([^#]*[^ ])( +# +)?([^ ].*)?$")
 TIME_RE = re.compile(r"time=([0-9.]+)ms")
+
 
 def parse_tap(tap, name, only_fails):
     results = {}
@@ -83,8 +89,10 @@ def parse_tap(tap, name, only_fails):
 
             t = TIME_RE.findall(r[5].lower())
             if t:
-                result['time_ms'] = t[-1] # take the last one
-                result['comment'] = result['comment'].replace("time=" + result['time_ms'] + "ms", "").replace("  ", " ").strip()
+                result['time_ms'] = t[-1]  # take the last one
+                result['comment'] = result['comment'] \
+                    .replace("time=" + result['time_ms'] + "ms", "") \
+                    .replace("  ", " ").strip()
                 if not result['comment']:
                     del result['comment']
 
@@ -112,6 +120,7 @@ def parse_all_tap(tap_files, only_fails):
 
     return results
 
+
 def add_info(results, infos):
     results = {
         "results": results
@@ -127,13 +136,15 @@ def add_info(results, infos):
 
     return results
 
+
 def write_json(out_file, results):
     out = json.dumps(results)
     if out_file:
-        with open(out_file, "w") as fd:
+        with open(out_file, "w", encoding="utf-8") as fd:
             fd.write(out)
     else:
         print(out)
+
 
 if __name__ == "__main__":
     arg_parser = get_args_parser()
@@ -143,9 +154,9 @@ if __name__ == "__main__":
         arg_parser.print_usage()
         sys.exit(1)
 
-    results = parse_all_tap(args.tapfiles, args.only_fails)
+    main_results = parse_all_tap(args.tapfiles, args.only_fails)
 
     if args.info:
-        results = add_info(results, args.info)
+        main_results = add_info(main_results, args.info)
 
-    write_json(args.output, results)
+    write_json(args.output, main_results)
