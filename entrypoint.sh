@@ -687,7 +687,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	fi
 
 	# KBUILD_OUTPUT is used by virtme
-	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" "${MAKE_ARGS_O[@]}" || rc=${?}
+	"${VIRTME_CONFIGKERNEL}" "${vck[@]}" "${MAKE_ARGS_O[@]}" 2>/dev/null || rc=${?}
 
 	./scripts/config --file "${VIRTME_KCONFIG}" "${kconfig[@]}" || rc=${?}
 
