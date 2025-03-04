@@ -113,7 +113,7 @@ def parse_all_tap(tap_files, only_fails):
 
     for tap in tap_files:
         name = os.path.splitext(os.path.basename(tap))[0]
-        with open(tap, "r", encoding="utf-8") as fd:
+        with open(tap, "r", encoding="utf-8", errors='ignore') as fd:
             result = parse_tap(fd.readlines(), name, only_fails)
             if result:
                 results[name] = result
