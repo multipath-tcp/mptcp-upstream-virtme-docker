@@ -1308,7 +1308,7 @@ has_call_trace() {
 kmemleak_scan() {
 	if [ -e /sys/kernel/debug/kmemleak ]; then
 		echo scan > /sys/kernel/debug/kmemleak
-		cat /sys/kernel/debug/kmemleak > "${KMEMLEAK}"
+		cat /sys/kernel/debug/kmemleak >> "${KMEMLEAK}"
 	fi
 }
 
@@ -1401,7 +1401,9 @@ fi
 
 cd "${KERNEL_SRC}"
 
+rm -f "${KMEMLEAK}"
 kmemleak_scan
+kmemleak_scan # Do it twice, kmemleak likes to hide the leak on the first attempt
 gcov_extract
 
 # To run commands before executing the tests
