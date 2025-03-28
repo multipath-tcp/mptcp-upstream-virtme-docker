@@ -644,7 +644,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=(-e TUN -e CRYPTO_USER_API_HASH -e CRYPTO_SHA1)
 
 	# Useful to reproduce issue
-	kconfig+=(-e NET_SCH_TBF)
+	kconfig+=(-e NET_SCH_TBF -e BRIDGE)
 
 	# Disable retpoline to accelerate tests
 	kconfig+=(-d RETPOLINE)
