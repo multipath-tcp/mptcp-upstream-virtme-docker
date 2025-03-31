@@ -36,8 +36,8 @@ RUN apt-get update && \
 	apt-get clean
 
 # byobu (not to have a dep to iproute2)
-ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.12.tar.gz"
-ARG BYOBU_SUM="abb000331858609dfda9214115705506249f69237625633c80487abe2093dd45  byobu.tar.gz"
+ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.13.tar.gz"
+ARG BYOBU_SUM="9690c629588e8f95d16b2461950d39934faaf8005dd2a283886d4e3bd6c86df6  byobu.tar.gz"
 RUN cd /opt && \
 	curl -L "${BYOBU_URL}" -o byobu.tar.gz && \
 	echo "${BYOBU_SUM}" | sha256sum -c && \
