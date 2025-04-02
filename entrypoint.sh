@@ -653,7 +653,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	kconfig+=(
 		-d PCCARD -d MACINTOSH_DRIVERS -d SOUND -d USB_SUPPORT
 		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
-		-d MISC_FILESYSTEMS
+		-d MISC_FILESYSTEMS -d SCSI
 	)
 
 	# extra config
