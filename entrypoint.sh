@@ -1320,6 +1320,9 @@ gcov_extract() {
 				--include '/net/mptcp/' \
 				--function-coverage --branch-coverage \
 				-b "${VIRTME_BUILD_DIR}" -o "${LCOV_FILE}"
+		# Workaround for regression due to
+		# https://lore.kernel.org/20250315-kbuild-prefix-map-v2-1-00e1983b2a23@weissschuh.net
+		sed -i "s#${VIRTME_BUILD_DIR:${#KERNEL_SRC}}##g" "${LCOV_FILE}"
 		log_section_end
 	fi
 }
