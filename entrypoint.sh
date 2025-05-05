@@ -249,7 +249,7 @@ _add_bridge() { local router static
 		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
 	fi
 
-	# already launched?
+	# already setup from another VM?
 	if grep -wq "${br}" /etc/qemu/bridge.conf; then
 		if [ -n "${static}" ]; then
 			echo "${static}" >> "${conf}"
@@ -1411,7 +1411,7 @@ kmemleak_scan
 kmemleak_scan # Do it twice, kmemleak likes to hide the leak on the first attempt
 gcov_extract
 
-# To run commands before executing the tests
+# To run commands after having executed the tests
 if [ -f "${VIRTME_EXEC_POST}" ]; then
 	source "${VIRTME_EXEC_POST}"
 	# e.g.: cat /sys/kernel/tracing/trace
