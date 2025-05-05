@@ -290,9 +290,11 @@ _setup_bridges() {
 	mkdir -p /etc/qemu
 	touch /etc/qemu/bridge.conf
 	chmod 755 /etc/qemu/bridge.conf
-	sysctl -w net.bridge.bridge-nf-call-ip6tables=0
-	sysctl -w net.bridge.bridge-nf-call-iptables=0
-	sysctl -w net.bridge.bridge-nf-call-arptables=0
+	{
+		sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+		sysctl -w net.bridge.bridge-nf-call-iptables=0
+		sysctl -w net.bridge.bridge-nf-call-arptables=0
+	} 2>/dev/null || true
 	# only v4 for the moment
 	if ! iptables -t nat -C POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE 2>/dev/null; then
 		iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
