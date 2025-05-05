@@ -234,6 +234,35 @@ kill_wait() {
 }
 
 # $1: bridge name
+_netem_bridge() { local tc_args=()
+	local br="${1}"
+
+	local rate="INPUT_NET_BRIDGE_${br}_RATE_MBIT"
+	local delay="INPUT_NET_BRIDGE_${br}_DELAY_MS"
+	local loss="INPUT_NET_BRIDGE_${br}_LOSS_PC"
+
+	if [ -n "${!rate}" ]; then
+		tc_args+=(rate "${!rate}mbit")
+	fi
+
+	if [ -n "${!delay}" ]; then
+		tc_args+=(delay "${!delay}ms")
+	fi
+
+	if [ -n "${!loss}" ]; then
+		tc_args+=(loss "${!loss}%")
+	fi
+
+	if [ "${#tc_args[@]}" -gt 0 ]; then
+		# TODO: only do that on the interfaces?
+		tc qdisc add dev "${br}" root netem "${tc_args[@]}"
+	fi
+
+	# TODO: also on the interfaces?
+	# ethtool -K "${br}" gro off gso off tso off tx off rx off sg off > /dev/null
+}
+
+# $1: bridge name
 _add_bridge() { local router static
 	local br="${1}"
 
@@ -262,6 +291,7 @@ _add_bridge() { local router static
 
 	echo "allow ${br}" >> /etc/qemu/bridge.conf
 	brctl addbr "${br}"
+	_netem_bridge "${br}"
 	ip addr add "${prefix}.1/24" dev "${br}"
 	ip link set "${br}" up
 
