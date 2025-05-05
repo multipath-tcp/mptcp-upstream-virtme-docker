@@ -2226,8 +2226,11 @@ case "${INPUT_MODE}" in
 		exit 1
 esac
 
+set_trace_off
+printinfo "Results dir: ${RESULTS_DIR}"
+printinfo "Exit status: ${EXIT_STATUS}"
+
 if is_ci && [ "${INPUT_CI_PRINT_EXIT_CODE}" = 1 ]; then
-	set_trace_off
 	echo "==EXIT_STATUS=${EXIT_STATUS}=="
 else
 	exit "${EXIT_STATUS}"
