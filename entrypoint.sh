@@ -2050,10 +2050,11 @@ exit_trap() { local rc=${?}
 }
 
 usage() {
-	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all | auto-btf-all> [KConfig]"
+	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all | auto-btf-all | perf-normal | perf-debug> [KConfig]"
 	echo
 	echo " - manual: access to an interactive shell"
 	echo " - auto: the tests suite is ran automatically"
+	echo " - perf: the perf regression tests suite"
 	echo
 	echo " - normal: without the debug kconfig"
 	echo " - debug: with debug kconfig"
@@ -2222,6 +2223,15 @@ case "${INPUT_MODE}" in
 			shift
 		done
 		_lcov2html "${@}"
+		;;
+	"perf-normal" | "perf-debug")
+		mode="${INPUT_MODE:5}"
+		setup_env "${mode}"
+		# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
+		# python env var to avoid creating __pycache__ in kernel src dir
+		TERM= PYTHONDONTWRITEBYTECODE=1 \
+			/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
+				"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
 		;;
 	*)
 		set +x

@@ -24,6 +24,7 @@ When launching the docker image, you have to specify the mode you want to use:
   - `auto-btf-normal`: With BTF support (needed for BPF features), no debug.
   - `auto-btf-debug`: With BTF support (needed for BPF features), with debug.
   - `auto-btf-all`: With BTF support, first without debug, then with debug.
+- `perf-normal` and `perf-debug`: Perf regression tests: see [PERF.md](PERF.md).
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
 - `build`: Build everything, but don't start the VM (`normal` mode by default).
