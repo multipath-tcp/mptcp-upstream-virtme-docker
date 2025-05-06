@@ -32,6 +32,7 @@ RUN apt-get update && \
 		golang \
 		mptcpize iperf3 netperf \
 		bmon ifstat \
+		python3-pexpect \
 		&& \
 	apt-get clean
 
@@ -102,6 +103,6 @@ ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
 
-COPY entrypoint.sh tap2json.py /
+COPY entrypoint.sh *.py *.yml /
 
 ENTRYPOINT ["/entrypoint.sh"]

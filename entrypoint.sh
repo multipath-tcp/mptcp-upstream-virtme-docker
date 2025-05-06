@@ -38,6 +38,7 @@ with_clang() {
 set_trace_on
 
 DEFAULT_VSOCK_CID="3"
+DEFAULT_HOSTNAME="mptcpdev"
 
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
@@ -53,7 +54,7 @@ DEFAULT_VSOCK_CID="3"
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
-: "${INPUT_HOSTNAME:="mptcpdev"}"
+: "${INPUT_HOSTNAME:="${DEFAULT_HOSTNAME}"}"
 : "${INPUT_CPUS:=""}"
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
@@ -215,9 +216,19 @@ is_mode_btf() {
 	[[ "${1}" == "btf-"* ]]
 }
 
+_get_results_dir_suffix() {
+	if [ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
+	   [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+		echo "/${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
+	fi
+}
+
 # $1: mode
-_get_results_dir() {
-	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${HOSTNAME}/${1}"
+_get_results_dir() { local sha host
+	sha="$(git rev-parse --short HEAD || echo "UNKNOWN")"
+	host="$(_get_results_dir_suffix)"
+
+	echo "${RESULTS_DIR_BASE}/${sha}/${1}${host}"
 }
 
 # $1: pid
@@ -231,6 +242,35 @@ kill_wait() {
 	while [ -d "/proc/${pid}" ]; do
 		sleep 0.1
 	done
+}
+
+# $1: bridge name
+_netem_bridge() { local tc_args=()
+	local br="${1}"
+
+	local rate="INPUT_NET_BRIDGE_${br}_RATE_MBIT"
+	local delay="INPUT_NET_BRIDGE_${br}_DELAY_MS"
+	local loss="INPUT_NET_BRIDGE_${br}_LOSS_PC"
+
+	if [ -n "${!rate}" ]; then
+		tc_args+=(rate "${!rate}mbit")
+	fi
+
+	if [ -n "${!delay}" ]; then
+		tc_args+=(delay "${!delay}ms")
+	fi
+
+	if [ -n "${!loss}" ]; then
+		tc_args+=(loss "${!loss}%")
+	fi
+
+	if [ "${#tc_args[@]}" -gt 0 ]; then
+		# TODO: only do that on the interfaces?
+		tc qdisc add dev "${br}" root netem "${tc_args[@]}"
+	fi
+
+	# TODO: also on the interfaces?
+	# ethtool -K "${br}" gro off gso off tso off tx off rx off sg off > /dev/null
 }
 
 # $1: bridge name
@@ -249,7 +289,7 @@ _add_bridge() { local router static
 		static="static_lease	${INPUT_MAC_ADDRESS_PREFIX%=*}:0${i}	${prefix}.${INPUT_MAC_ADDRESS_PREFIX#*=}"
 	fi
 
-	# already launched?
+	# already setup from another VM?
 	if grep -wq "${br}" /etc/qemu/bridge.conf; then
 		if [ -n "${static}" ]; then
 			echo "${static}" >> "${conf}"
@@ -262,6 +302,7 @@ _add_bridge() { local router static
 
 	echo "allow ${br}" >> /etc/qemu/bridge.conf
 	brctl addbr "${br}"
+	_netem_bridge "${br}"
 	ip addr add "${prefix}.1/24" dev "${br}"
 	ip link set "${br}" up
 
@@ -290,9 +331,11 @@ _setup_bridges() {
 	mkdir -p /etc/qemu
 	touch /etc/qemu/bridge.conf
 	chmod 755 /etc/qemu/bridge.conf
-	sysctl -w net.bridge.bridge-nf-call-ip6tables=0
-	sysctl -w net.bridge.bridge-nf-call-iptables=0
-	sysctl -w net.bridge.bridge-nf-call-arptables=0
+	{
+		sysctl -w net.bridge.bridge-nf-call-ip6tables=0
+		sysctl -w net.bridge.bridge-nf-call-iptables=0
+		sysctl -w net.bridge.bridge-nf-call-arptables=0
+	} 2>/dev/null || true
 	# only v4 for the moment
 	if ! iptables -t nat -C POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE 2>/dev/null; then
 		iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth0 -j MASQUERADE
@@ -383,7 +426,7 @@ setup_env() { local mode
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
+		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}$(_get_results_dir_suffix)"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
@@ -420,11 +463,6 @@ setup_env() { local mode
 	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
 		VIRTME_RUN_OPTS+=(--disable-microvm)
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
-	fi
-
-	# To avoid overriding files
-	if [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
-		RESULTS_DIR+="/${INPUT_VSOCK_CID}"
 	fi
 
 	mkdir -p "${RESULTS_DIR}"
@@ -1409,7 +1447,7 @@ kmemleak_scan
 kmemleak_scan # Do it twice, kmemleak likes to hide the leak on the first attempt
 gcov_extract
 
-# To run commands before executing the tests
+# To run commands after having executed the tests
 if [ -f "${VIRTME_EXEC_POST}" ]; then
 	source "${VIRTME_EXEC_POST}"
 	# e.g.: cat /sys/kernel/tracing/trace
@@ -2012,10 +2050,11 @@ exit_trap() { local rc=${?}
 }
 
 usage() {
-	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all | auto-btf-all> [KConfig]"
+	echo "Usage: ${0} <manual-normal | manual-debug | manual-btf-normal | manual-btf-debug | auto-normal | auto-debug | auto-btf-normal | auto-btf-debug | auto-all | auto-btf-all | perf-normal | perf-debug> [KConfig]"
 	echo
 	echo " - manual: access to an interactive shell"
 	echo " - auto: the tests suite is ran automatically"
+	echo " - perf: the perf regression tests suite"
 	echo
 	echo " - normal: without the debug kconfig"
 	echo " - debug: with debug kconfig"
@@ -2185,6 +2224,15 @@ case "${INPUT_MODE}" in
 		done
 		_lcov2html "${@}"
 		;;
+	"perf-normal" | "perf-debug")
+		mode="${INPUT_MODE:5}"
+		setup_env "${mode}"
+		# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
+		# python env var to avoid creating __pycache__ in kernel src dir
+		TERM= PYTHONDONTWRITEBYTECODE=1 \
+			/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
+				"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
+		;;
 	*)
 		set +x
 		printerr "Unknown mode: ${INPUT_MODE}"
@@ -2194,8 +2242,11 @@ case "${INPUT_MODE}" in
 		exit 1
 esac
 
+set_trace_off
+printinfo "Results dir: ${RESULTS_DIR}"
+printinfo "Exit status: ${EXIT_STATUS}"
+
 if is_ci && [ "${INPUT_CI_PRINT_EXIT_CODE}" = 1 ]; then
-	set_trace_off
 	echo "==EXIT_STATUS=${EXIT_STATUS}=="
 else
 	exit "${EXIT_STATUS}"
