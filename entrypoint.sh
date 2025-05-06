@@ -38,6 +38,7 @@ with_clang() {
 set_trace_on
 
 DEFAULT_VSOCK_CID="3"
+DEFAULT_HOSTNAME="mptcpdev"
 
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
@@ -53,7 +54,7 @@ DEFAULT_VSOCK_CID="3"
 : "${INPUT_SELFTESTS_MPTCP_LIB_EXPECT_ALL_FEATURES:=1}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_OVERRIDE_FLAKY:=0}"
 : "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE:=1}"
-: "${INPUT_HOSTNAME:="mptcpdev"}"
+: "${INPUT_HOSTNAME:="${DEFAULT_HOSTNAME}"}"
 : "${INPUT_CPUS:=""}"
 : "${INPUT_RAM:=""}"
 : "${INPUT_GCOV:=""}"
@@ -215,9 +216,19 @@ is_mode_btf() {
 	[[ "${1}" == "btf-"* ]]
 }
 
+_get_results_dir_suffix() {
+	if [ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
+	   [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+		echo "/${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
+	fi
+}
+
 # $1: mode
-_get_results_dir() {
-	echo "${RESULTS_DIR_BASE}/$(git rev-parse --short HEAD || echo "UNKNOWN")/${HOSTNAME}/${1}"
+_get_results_dir() { local sha host
+	sha="$(git rev-parse --short HEAD || echo "UNKNOWN")"
+	host="$(_get_results_dir_suffix)"
+
+	echo "${RESULTS_DIR_BASE}/${sha}/${1}${host}"
 }
 
 # $1: pid
@@ -415,7 +426,7 @@ setup_env() { local mode
 
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
-		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}"
+		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}$(_get_results_dir_suffix)"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
@@ -452,11 +463,6 @@ setup_env() { local mode
 	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
 		VIRTME_RUN_OPTS+=(--disable-microvm)
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
-	fi
-
-	# To avoid overriding files
-	if [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
-		RESULTS_DIR+="/${INPUT_VSOCK_CID}"
 	fi
 
 	mkdir -p "${RESULTS_DIR}"
