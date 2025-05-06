@@ -12,3 +12,12 @@ test1:
       rate_mbit: 321
       delay_ms: 21
       loss_pc: 2
+  stats:
+    pre:
+      nstat_reset: "nstat"
+      client:
+        uname: "uname -a"
+    post:
+      nstat: "nstat | grep Tcp"
+    all:
+      proc_net_dev: "cat /proc/net/dev"

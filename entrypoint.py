@@ -57,6 +57,33 @@ class Entrypoint:
             host.stop()
         self.hosts.clear()
 
+    def _get_stat(self, stats, hosts, phase):
+        stat_dir = os.path.join(self.log_dir, "stats")
+        for stat in stats:
+            for host in hosts:
+                d = os.path.join(stat_dir, host, phase)
+                os.makedirs(d, exist_ok=True)
+                with open(os.path.join(d, stat), "a") as f:
+                    print(self.hosts[host].cmd_output(stats[stat]), file=f)
+
+    def _get_stats(self, config, phase):
+        if "stats" not in config:
+            return
+        stats = config["stats"]
+
+        for key in (phase, "all"):
+            if key not in stats:
+                continue
+
+            s = stats[key].copy()
+            for host in self.hosts:
+                if host not in s:
+                    continue
+
+                self._get_stat(s.pop(host), [host], phase)
+
+            self._get_stat(s, self.hosts, phase)
+
     def _get_envs(self, config):
         try:
             ram = "awk '/^MemAvailable:/ {print $2}' /proc/meminfo"
@@ -98,10 +125,11 @@ class Entrypoint:
         self._new_vm("client", env_client, timeout)
         self._new_vm("server", env_server, timeout)
 
-        # TODO: stats
-        # TODO: tests
-        # TODO: stats
+        self._get_stats(config, "pre")
 
+        # TODO: tests
+
+        self._get_stats(config, "post")
         self.stop()
 
         # TODO: validations

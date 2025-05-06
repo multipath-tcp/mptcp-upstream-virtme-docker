@@ -139,6 +139,38 @@ class Host:
     def stop(self):
         raise NotImplementedError
 
+    def cmd_output(self, cmd, timeout=20):
+        # empty buffer
+        while True:
+            try:
+                self.p.read_nonblocking(1024, 0)
+            except pexpect.TIMEOUT:
+                break
+
+        logger.debug(f"{self.hostname}: output: '{cmd}': start")
+
+        self.p.sendline(cmd)
+        lines = []
+        buf = ""
+        while True:
+            try:
+                buf += self.p.read_nonblocking(1024, timeout)
+            except pexpect.TIMEOUT:
+                logger.info(f"{self.hostname}: output: '{cmd}': timeout: {repr(buf)}")
+                break
+            lines += buf.split("\r\n")
+            buf = lines.pop()  # last line: either empty or not ending with \r\n
+            if buf == self.prompt:
+                buf = ""
+                break
+
+        if buf:
+            lines.append(buf)
+
+        logger.debug(f"{self.hostname}: output: '{cmd}': end ({len(lines) - 1})")
+
+        return "\n".join(lines[1:])  # skip command
+
 
 class VM(Host):
     def __init__(self, mode, script, log, user, lvl, dry_run, hostname, env, timeout):
