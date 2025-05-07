@@ -18,7 +18,7 @@ class CMD:
         self.dry_run = dry_run
         self.verbose = verbose
         self.cwd = cwd
-        self.lvl = logging.INFO if self.dry_run or self.verbose else logging.DEBUG
+        self.lvl = logging.INFO if self.dry_run else logging.DEBUG
 
     def _log(self, cmd, env, name):
         logger.log(self.lvl, f"{name}: {cmd}{f' (extra env: {env})' if env else ''}")
