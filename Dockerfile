@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-FROM ubuntu:24.10
+FROM ubuntu:25.04
 
 LABEL name=mptcp-upstream-virtme-docker
 
@@ -88,7 +88,7 @@ RUN cd /opt && \
 		make install
 
 # Virtme NG
-ARG VIRTME_NG_VERSION="1.34"
+ARG VIRTME_NG_VERSION="1.35"
 RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 
 # to quickly shutdown the VM and more
