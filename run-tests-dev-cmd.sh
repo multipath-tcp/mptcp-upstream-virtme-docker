@@ -10,10 +10,10 @@ if [ "${CMD}" = "run-tests-dev-cmd.sh" ]; then
 	else
 		CMD="bash"
 	fi
-elif [[ "${CMD}" = ".virtme-run-"* ]]; then
+elif [[ ${CMD} == ".virtme-run-"* ]]; then
 	export VIRTME_NO_INTERACTIVE=1
 	CMD="${CMD:12}"
-elif [[ "${CMD}" = "mptcp-virtme-"* ]]; then
+elif [[ ${CMD} == "mptcp-virtme-"* ]]; then
 	export VIRTME_NO_INTERACTIVE=1
 	CMD="${CMD:13}"
 fi

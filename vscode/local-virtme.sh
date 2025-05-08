@@ -16,9 +16,9 @@ if [ -f ".virtme-clang.sh" ]; then
 	VIRTME_CMD=(bash -e ./.virtme-clang.sh)
 else
 	VIRTME_CMD=(docker run --rm -t
-			-e INPUT_CLANG=1
-			-v "${PWD}:${PWD}:rw" -w "${PWD}"
-			mptcp/mptcp-upstream-virtme-docker:latest)
+		-e INPUT_CLANG=1
+		-v "${PWD}:${PWD}:rw" -w "${PWD}"
+		mptcp/mptcp-upstream-virtme-docker:latest)
 fi
 MAKE="${VIRTME_CMD[*]} make"
 
@@ -35,11 +35,11 @@ wait_for_vm() {
 
 	while ((i < 3600)); do
 		if [ -n "$(docker exec "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
-				pidof qemu-system-x86_64 2>/dev/null)" ]; then
+			pidof qemu-system-x86_64 2>/dev/null)" ]; then
 			echo "VM started"
 			return 0
 		fi
-		i=$((i+1))
+		i=$((i + 1))
 		sleep 1
 	done
 	echo "Timeout waiting for VM"
@@ -47,24 +47,24 @@ wait_for_vm() {
 }
 
 case "${COMMAND}" in
-	"build" | "clean" | "menuconfig" | "update" | "systemtap-build" | "gdb-index")
-		echo "local: allow: ${COMMAND}"
-		;;
-	"install-autostart")
-		echo "local: skip: ${COMMAND}"
-		exit 0
-		;;
-	"defconfig" | "wait-for-vm")
-		echo "local: custom: ${COMMAND}"
-		${COMMAND//-/_}
-		exit
-		;;
-	"start" | "start-wait-dbg")
-		echo "local: ${COMMAND}: please start a VM using MPTCP Upstream Virtme Docker from another terminal"
-		exit
-		;;
-	*)
-		echo "local: block: ${COMMAND}"
-		exit 1
-		;;
+"build" | "clean" | "menuconfig" | "update" | "systemtap-build" | "gdb-index")
+	echo "local: allow: ${COMMAND}"
+	;;
+"install-autostart")
+	echo "local: skip: ${COMMAND}"
+	exit 0
+	;;
+"defconfig" | "wait-for-vm")
+	echo "local: custom: ${COMMAND}"
+	${COMMAND//-/_}
+	exit
+	;;
+"start" | "start-wait-dbg")
+	echo "local: ${COMMAND}: please start a VM using MPTCP Upstream Virtme Docker from another terminal"
+	exit
+	;;
+*)
+	echo "local: block: ${COMMAND}"
+	exit 1
+	;;
 esac

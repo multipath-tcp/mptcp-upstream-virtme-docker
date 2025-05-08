@@ -14,7 +14,7 @@ ARGS=(
 	-f Dockerfile
 )
 
-if [[ "${-}" =~ "x" ]]; then
+if [[ ${-} =~ "x" ]]; then
 	ARGS+=(--progress plain)
 else
 	echo "Building Docker image" >&2
