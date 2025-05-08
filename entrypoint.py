@@ -140,6 +140,21 @@ class Entrypoint:
 
             self._get_stat(s, self.hosts, phase)
 
+    def _get_bridges(self, config, env):
+        if "bridges" not in config:
+            return
+
+        bridges = []
+        for br in config["bridges"]:
+            vbr = f"vir{br}"
+            bridges.append(vbr)
+            for key in config["bridges"][br]:
+                val = config["bridges"][br][key]
+                env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
+
+        if bridges:
+            env["INPUT_NET_BRIDGES"] = ",".join(bridges)
+
     def _get_envs(self, config):
         try:
             ram = "awk '/^MemAvailable:/ {print $2}' /proc/meminfo"
@@ -152,17 +167,7 @@ class Entrypoint:
             "INPUT_RAM": f"{int(ram / 3)}M",
         }
 
-        if "bridges" in config:
-            bridges = []
-            for br in config["bridges"]:
-                vbr = f"vir{br}"
-                bridges.append(vbr)
-                for key in config["bridges"][br]:
-                    val = config["bridges"][br][key]
-                    env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
-
-            if bridges:
-                env["INPUT_NET_BRIDGES"] = ",".join(bridges)
+        self._get_bridges(config, env)
 
         env_client = env
         env_server = env.copy()
