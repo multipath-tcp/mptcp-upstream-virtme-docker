@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0
 
 """
@@ -59,7 +58,7 @@ class CMD:
         env = self._get_env(env)
         if "cwd" not in kwargs:
             kwargs["cwd"] = self.cwd
-        if not self.verbose and  "stdout" not in kwargs:
+        if not self.verbose and "stdout" not in kwargs:
             kwargs["stdout"] = subprocess.DEVNULL
 
         try:

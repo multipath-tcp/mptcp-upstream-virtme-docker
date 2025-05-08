@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0
 
 """
@@ -149,7 +148,7 @@ class Host:
         raise NotImplementedError
 
     def send_ctrl_c(self):
-        self.p.send('\003')
+        self.p.send("\003")
 
     def cmd_output(self, cmd, expect=None, timeout=20):
         # empty buffer
