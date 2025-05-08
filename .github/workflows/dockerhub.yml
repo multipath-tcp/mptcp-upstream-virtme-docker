@@ -48,4 +48,3 @@ jobs:
           tags: |
             mptcp/mptcp-upstream-virtme-docker:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-

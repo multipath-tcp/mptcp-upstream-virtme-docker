@@ -74,7 +74,7 @@ if [ -z "${INPUT_MODE}" ]; then
 fi
 
 # to be able to set an extra env var
-if [[ "${INPUT_EXTRA_ENV}" =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9_]+$ ]]; then
+if [[ ${INPUT_EXTRA_ENV} =~ ^"INPUT_"[A-Z0-9_]+"="[a-zA-Z0-9_]+$ ]]; then
 	eval "${INPUT_EXTRA_ENV}"
 fi
 
@@ -123,7 +123,7 @@ VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
 	--name "${INPUT_HOSTNAME}"
 	--mods=auto
-	--rw  # Don't use "rwdir", it will use 9p ; in a container, we can use rw
+	--rw # Don't use "rwdir", it will use 9p ; in a container, we can use rw
 	--pwd
 	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
@@ -203,28 +203,29 @@ fi
 
 # $1: mode
 is_mode_normal() {
-	[[ "${1}" == *"normal" ]]
+	[[ ${1} == *"normal" ]]
 }
 
 # $1: mode
 is_mode_debug() {
-	[[ "${1}" == *"debug" ]]
+	[[ ${1} == *"debug" ]]
 }
 
 # $1: mode
 is_mode_btf() {
-	[[ "${1}" == "btf-"* ]]
+	[[ ${1} == "btf-"* ]]
 }
 
 _get_results_dir_suffix() {
 	if [ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
-	   [ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+		[ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
 		echo "/${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
 	fi
 }
 
 # $1: mode
-_get_results_dir() { local sha host
+_get_results_dir() {
+	local sha host
 	sha="$(git rev-parse --short HEAD || echo "UNKNOWN")"
 	host="$(_get_results_dir_suffix)"
 
@@ -245,7 +246,8 @@ kill_wait() {
 }
 
 # $1: bridge name
-_netem_bridge() { local tc_args=()
+_netem_bridge() {
+	local tc_args=()
 	local br="${1}"
 
 	local rate="INPUT_NET_BRIDGE_${br}_RATE_MBIT"
@@ -274,7 +276,8 @@ _netem_bridge() { local tc_args=()
 }
 
 # $1: bridge name
-_add_bridge() { local router static
+_add_bridge() {
+	local router static
 	local br="${1}"
 
 	local i="${br//[^0-9]/}" # only the numbers
@@ -292,7 +295,7 @@ _add_bridge() { local router static
 	# already setup from another VM?
 	if grep -wq "${br}" /etc/qemu/bridge.conf; then
 		if [ -n "${static}" ]; then
-			echo "${static}" >> "${conf}"
+			echo "${static}" >>"${conf}"
 			kill_wait "$(<"${pidfile}")"
 			busybox udhcpd "${conf}"
 		fi
@@ -300,7 +303,7 @@ _add_bridge() { local router static
 		return 0
 	fi
 
-	echo "allow ${br}" >> /etc/qemu/bridge.conf
+	echo "allow ${br}" >>/etc/qemu/bridge.conf
 	brctl addbr "${br}"
 	_netem_bridge "${br}"
 	ip addr add "${prefix}.1/24" dev "${br}"
@@ -311,18 +314,18 @@ _add_bridge() { local router static
 		router="opt	router	${prefix}.1"
 	fi
 
-	cat <<-EOF > "${conf}"
-		start		${prefix}.2
-		end		${prefix}.254
-		interface	${br}
-		pidfile		${pidfile}
-		lease_file	${leases}
-		opt	subnet	255.255.255.0
+	cat <<-EOF >"${conf}"
+		start      ${prefix}.2
+		end        ${prefix}.254
+		interface  ${br}
+		pidfile    ${pidfile}
+		lease_file ${leases}
+		opt        subnet 255.255.255.0
 		${router}
 		${static}
 	EOF
 
-	touch "${leases}"  # to avoid a warning
+	touch "${leases}" # to avoid a warning
 	busybox udhcpd "${conf}"
 }
 
@@ -351,7 +354,8 @@ _setup_bridges() {
 	done
 }
 
-setup_env() { local mode
+setup_env() {
+	local mode
 	mode="${1}"
 
 	log_section_start "Setup environment"
@@ -379,7 +383,7 @@ setup_env() { local mode
 
 	mkdir -p "/root/.config/gdb"
 	echo "add-auto-load-safe-path ${KERNEL_SRC}/scripts/gdb/vmlinux-gdb.py" \
-		> "/root/.config/gdb/gdbinit"
+		>"/root/.config/gdb/gdbinit"
 
 	VIRTME_BUILD_DIR="${VIRTME_WORKDIR}/build"
 	with_clang && VIRTME_BUILD_DIR+="-clang"
@@ -401,7 +405,7 @@ setup_env() { local mode
 		[ -n "${INPUT_BUILD_SUFFIX}" ] && CCACHE_DIR+="-${INPUT_BUILD_SUFFIX}"
 	fi
 
-	read -ra MAKE_ARGS <<< "${INPUT_MAKE_ARGS}"
+	read -ra MAKE_ARGS <<<"${INPUT_MAKE_ARGS}"
 	with_clang && MAKE_ARGS+=(LLVM=1 LLVM_IAS=1 CC=clang ARCH="${VIRTME_ARCH}")
 	MAKE_ARGS_O=("${MAKE_ARGS[@]}" O="${VIRTME_BUILD_DIR}")
 
@@ -448,7 +452,7 @@ setup_env() { local mode
 
 	if [ -n "${INPUT_NET_BRIDGES}" ]; then
 		local bridges
-		IFS=',' read -ra bridges <<< "${INPUT_NET_BRIDGES}"
+		IFS=',' read -ra bridges <<<"${INPUT_NET_BRIDGES}"
 		_setup_bridges "${bridges[@]}"
 	fi
 
@@ -476,13 +480,13 @@ setup_env() { local mode
 	LCOV_HTML="${RESULTS_DIR}/lcov"
 
 	KVERSION=$(make -C "${KERNEL_SRC}" -s kernelversion) ## 5.17.0 or 5.17.0-rc8
-	KVER_MAJ=${KVERSION%%.*} ## 5
-	KVER_MIN=${KVERSION#*.} ## 17.0*
-	KVER_MIC=${KVER_MIN#*.} ## 0
-	KVER_MIN=${KVER_MIN%%.*} ## 17
+	KVER_MAJ=${KVERSION%%.*}                             ## 5
+	KVER_MIN=${KVERSION#*.}                              ## 17.0*
+	KVER_MIC=${KVER_MIN#*.}                              ## 0
+	KVER_MIN=${KVER_MIN%%.*}                             ## 17
 
 	# without rc, it means we probably already merged with net-next
-	if [[ ! "${KVERSION}" =~ rc ]] && [ "${KVER_MIC}" = 0 ]; then
+	if [[ ! ${KVERSION} =~ rc ]] && [ "${KVER_MIC}" = 0 ]; then
 		KVER_MIN=$((KVER_MIN + 1))
 
 		# max .19 because Linus has 20 fingers
@@ -493,13 +497,13 @@ setup_env() { local mode
 	fi
 
 	if [ "${KVER_MAJ}" -lt 5 ] ||
-	   { [ "${KVER_MAJ}" -eq 5 ] && [ "${KVER_MIN}" -le 10 ]; }; then
+		{ [ "${KVER_MAJ}" -eq 5 ] && [ "${KVER_MIN}" -le 10 ]; }; then
 		# virtiofs doesn't seem to be supported on old kernels
 		VIRTME_RUN_OPTS+=(--force-9p)
 	fi
 
 	if [ "${KVER_MAJ}" -gt 6 ] ||
-	   { [ "${KVER_MAJ}" -eq 6 ] && [ "${KVER_MIN}" -gt 6 ]; }; then
+		{ [ "${KVER_MAJ}" -eq 6 ] && [ "${KVER_MIN}" -gt 6 ]; }; then
 		# vsock console seems working fine from >6.6
 		VSOCK_OK=1
 	else
@@ -510,14 +514,15 @@ setup_env() { local mode
 }
 
 _get_last_iproute_version() {
-	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null | \
-		grep "/tag/?h=v[0-9]" | \
-		cut -d\' -f2 | cut -d= -f2 | \
-		sort -Vu | \
+	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null |
+		grep "/tag/?h=v[0-9]" |
+		cut -d\' -f2 | cut -d= -f2 |
+		sort -Vu |
 		tail -n1
 }
 
-check_last_iproute() { local last curr
+check_last_iproute() {
+	local last curr
 	# only check on CI
 	if ! is_ci; then
 		return 0
@@ -594,7 +599,8 @@ _add_symlink() {
 }
 
 # $1: mode ; [rest: extra kconfig]
-gen_kconfig() { local mode kconfig=() vck rc=0
+gen_kconfig() {
+	local mode kconfig=() vck rc=0
 	mode="${1}"
 	shift
 
@@ -605,7 +611,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	if is_mode_debug "${mode}"; then
 		kconfig+=(
 			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
-			-d SLUB_DEBUG_ON # perf impact is too important
+			-d SLUB_DEBUG_ON         # perf impact is too important
 		)
 
 		local debug_config="kernel/configs/debug.config"
@@ -613,7 +619,7 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 		# Introduced in v5.17
 		if [ ! -s "${debug_config}" ]; then
 			debug_config="${VIRTME_CACHE_DIR}/debug.config"
-			curl "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/configs/debug.config" > "${debug_config}"
+			curl "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/configs/debug.config" >"${debug_config}"
 		fi
 
 		vck+=(--custom "${debug_config}")
@@ -742,7 +748,8 @@ gen_kconfig() { local mode kconfig=() vck rc=0
 	return ${rc}
 }
 
-build_kernel() { local rc=0
+build_kernel() {
+	local rc=0
 	log_section_start "Build kernel"
 
 	if [ "${INPUT_GCOV}" = 1 ]; then
@@ -759,7 +766,8 @@ build_kernel() { local rc=0
 	return ${rc}
 }
 
-build_compile_commands() { local rc=0
+build_compile_commands() {
+	local rc=0
 	log_section_start "Build compile_commands.json"
 
 	_make_o compile_commands.json || rc=${?}
@@ -769,7 +777,8 @@ build_compile_commands() { local rc=0
 	return ${rc}
 }
 
-install_kernel_headers() { local rc=0
+install_kernel_headers() {
+	local rc=0
 	log_section_start "Install kernel headers"
 
 	# for BPFTrace and cie
@@ -783,7 +792,8 @@ install_kernel_headers() { local rc=0
 
 }
 
-build_perf() { local rc=0
+build_perf() {
+	local rc=0
 	if [ "${INPUT_BUILD_SKIP_PERF}" = 1 ]; then
 		printinfo "Skip Perf build"
 		return 0
@@ -802,7 +812,8 @@ build_perf() { local rc=0
 	return ${rc}
 }
 
-build_gdb_index() { local rc=0
+build_gdb_index() {
+	local rc=0
 	if readelf -S vmlinux 2>/dev/null | grep -q ".gdb_index"; then
 		printinfo "Skip GDB Index build: already there"
 		return 0
@@ -837,7 +848,8 @@ build() {
 	ccache_stat
 }
 
-build_selftests() { local rc=0
+build_selftests() {
+	local rc=0
 	if [ "${INPUT_BUILD_SKIP_SELFTESTS}" = 1 ]; then
 		printinfo "Skip selftests build"
 		return 0
@@ -852,7 +864,8 @@ build_selftests() { local rc=0
 	return ${rc}
 }
 
-build_bpftests() { local rc=0
+build_bpftests() {
+	local rc=0
 	if [ "${INPUT_BUILD_SKIP_BPFTESTS}" = 1 ]; then
 		printinfo "Skip bpftests build"
 		return 0
@@ -867,7 +880,8 @@ build_bpftests() { local rc=0
 	return ${rc}
 }
 
-build_packetdrill() { local old_pwd kversion branch rc=0
+build_packetdrill() {
+	local old_pwd kversion branch rc=0
 	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1 ]; then
 		printinfo "Skip Packetdrill build"
 		return 0
@@ -932,7 +946,8 @@ build_packetdrill() { local old_pwd kversion branch rc=0
 	return ${rc}
 }
 
-build_tests() { local mode
+build_tests() {
+	local mode
 	mode="${1}"
 
 	build_selftests
@@ -945,7 +960,7 @@ build_tests() { local mode
 prepare() {
 	printinfo "Prepare the environment"
 
-	cat <<EOF > "${BASH_PROFILE}"
+	cat <<EOF >"${BASH_PROFILE}"
 export KERNEL_BUILD_DIR="${VIRTME_BUILD_DIR}"
 export KERNEL_SRC_DIR="${KERNEL_SRC}"
 export PATH="\${PATH}:${VIRTME_TOOLS_SBIN_DIR}"
@@ -955,7 +970,7 @@ EOF
 	if [ "${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}" = 1 ]; then
 		# shellcheck disable=SC2016 # escaped on purpose
 		local ps1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-		echo "PS1='${ps1}'" >> "${BASH_PROFILE}"
+		echo "PS1='${ps1}'" >>"${BASH_PROFILE}"
 	fi
 
 	if [ -f "${VIRTME_PREPARE_POST}" ]; then
@@ -970,7 +985,8 @@ run() {
 	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
 }
 
-run_expect() { local mode timestamps_sec_stop no_tap=1
+run_expect() {
+	local mode timestamps_sec_stop no_tap=1
 	mode="${1}"
 
 	EXPECT=1
@@ -992,7 +1008,7 @@ run_expect() { local mode timestamps_sec_stop no_tap=1
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
-	cat <<EOF > "${VIRTME_SCRIPT}"
+	cat <<EOF >"${VIRTME_SCRIPT}"
 #! /bin/bash
 
 if [ "${INPUT_TRACE}" = "1" ]; then
@@ -1459,7 +1475,7 @@ echo "${VIRTME_SCRIPT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT}"
 
-	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT}"
+	cat <<EOF >"${VIRTME_SCRIPT_TIMEOUT}"
 #! /bin/bash
 sysrq() {
 	echo -e "\nsysrq: \${1}\n"
@@ -1474,7 +1490,7 @@ echo "${VIRTME_SCRIPT_TIMEOUT_END}"
 EOF
 	chmod +x "${VIRTME_SCRIPT_TIMEOUT}"
 
-	cat <<EOF > "${VIRTME_SCRIPT_TIMEOUT_GDB}"
+	cat <<EOF >"${VIRTME_SCRIPT_TIMEOUT_GDB}"
 set output-radix 16
 target remote localhost:1234
 l
@@ -1486,7 +1502,7 @@ detach
 exit
 EOF
 
-	cat <<EOF > "${VIRTME_RUN_SCRIPT}"
+	cat <<EOF >"${VIRTME_RUN_SCRIPT}"
 #! /bin/bash
 echo -e "$(log_section_start "Boot VM")"
 set -x
@@ -1494,7 +1510,7 @@ set -x
 EOF
 	chmod +x "${VIRTME_RUN_SCRIPT}"
 
-	cat <<EOF > "${VIRTME_RUN_EXPECT}"
+	cat <<EOF >"${VIRTME_RUN_EXPECT}"
 #!/usr/bin/expect -f
 
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
@@ -1655,7 +1671,8 @@ ccache_stat() {
 }
 
 # $1: category ; $2: reason
-_register_issue() { local msg
+_register_issue() {
+	local msg
 	msg="${1}: ${2}"
 
 	if [ "${#EXIT_REASONS[@]}" -eq 0 ]; then
@@ -1746,7 +1763,7 @@ _print_kmemleak() {
 	_print_line
 	echo "KMemLeak:"
 	_print_line
-	decode_stacktrace < "${KMEMLEAK}"
+	decode_stacktrace <"${KMEMLEAK}"
 	_print_line
 	echo "KMemLeak detected"
 }
@@ -1770,15 +1787,17 @@ _has_failed_tests() {
 }
 
 # $1: prefix
-_print_tests_results_subtests() { local tap ok
+_print_tests_results_subtests() {
+	local tap ok
 	for tap in "${RESULTS_DIR}/${1}"*.tap; do
-		[[ "${tap}" = *"_*.tap" ]] && continue
+		[[ ${tap} == *"_*.tap" ]] && continue
 		grep -q "^not ok " "${tap}" && ok="not ok" || ok="ok"
 		echo "${ok} 1 test: $(basename "${tap}" ".tap")"
 	done
 }
 
-_print_tests_result() { local flaky
+_print_tests_result() {
+	local flaky
 	echo "All tests:"
 	# only from the main tests
 	grep --text --no-filename -E "^(not )?ok 1 test: " "${RESULTS_DIR}"/*.tap || true
@@ -1797,7 +1816,8 @@ _print_tests_result() { local flaky
 	fi
 }
 
-_print_failed_tests() { local t
+_print_failed_tests() {
+	local t
 	echo
 	_print_line
 	echo "Failed tests:"
@@ -1815,13 +1835,14 @@ _print_failed_tests() { local t
 _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
 	# we just want the main results, not the detailed ones for the moment
-	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" | \
-		awk '{ print $5 }' | \
-		sort -u | \
+	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" |
+		awk '{ print $5 }' |
+		sort -u |
 		sed "s/\.tap$//g"
 }
 
-_get_failed_tests_status() { local t fails=()
+_get_failed_tests_status() {
+	local t fails=()
 	for t in $(_get_failed_tests); do
 		fails+=("${t}")
 	done
@@ -1864,7 +1885,7 @@ analyze() {
 
 	if _has_failed_tests; then
 		# no tee, it can be long and less important than critical err
-		_print_failed_tests >> "${TESTS_SUMMARY}"
+		_print_failed_tests >>"${TESTS_SUMMARY}"
 		_register_issue "Unstable" "$(_get_failed_tests_status)"
 		EXIT_STATUS=42
 	fi
@@ -1877,7 +1898,7 @@ analyze() {
 
 		if is_ci; then
 			zstd -19 -T0 "${VIRTME_BUILD_DIR}/vmlinux" \
-			     -o "${RESULTS_DIR}/vmlinux.zstd"
+				-o "${RESULTS_DIR}/vmlinux.zstd"
 		fi
 	fi
 
@@ -1913,8 +1934,10 @@ analyze() {
 }
 
 # $1: type ; $2: mode ; [ $@:3: args for kconfig ]
-prepare_all() { local t mode
-	t=${1}; shift
+prepare_all() {
+	local t mode
+	t=${1}
+	shift
 	mode="${1}"
 
 	printinfo "Start: ${t} (${mode})"
@@ -1946,12 +1969,13 @@ go_expect() {
 	analyze "${@}"
 }
 
-static_analysis() { local src obj ftmp
+static_analysis() {
+	local src obj ftmp
 	ftmp=$(mktemp)
 
 	for src in net/mptcp/*.c; do
 		obj="${src/%.c/.o}"
-		if [[ "${src}" = *"_test.mod.c" ]]; then
+		if [[ ${src} == *"_test.mod.c" ]]; then
 			continue
 		fi
 
@@ -1974,7 +1998,8 @@ static_analysis() { local src obj ftmp
 	rm -f "${ftmp}"
 }
 
-_lcov2html() { local rc=0
+_lcov2html() {
+	local rc=0
 	if [ -z "${1}" ] && [ ! -s "${LCOV_FILE}" ]; then
 		echo "No LCOV data generated in ${LCOV_FILE}"
 		exit 1
@@ -1993,7 +2018,8 @@ _lcov2html() { local rc=0
 	return ${rc}
 }
 
-print_conclusion() { local rc=${1}
+print_conclusion() {
+	local rc=${1}
 	echo -n "${EXIT_TITLE}: "
 
 	if _had_issues; then
@@ -2006,7 +2032,8 @@ print_conclusion() { local rc=${1}
 }
 
 # $@: result paths
-print_summaries() { local result
+print_summaries() {
+	local result
 	set +x
 
 	_print_line
@@ -2014,15 +2041,15 @@ print_summaries() { local result
 
 	for result in "${@}"; do
 		case "$(cat "${result}/conclusion.txt")" in
-			*": Success"*)
-				echo -ne "\n${COLOR_GREEN}"
-				;;
-			*": Unstable: "*)
-				echo -ne "\n${COLOR_YELLOW}"
-				;;
-			*)
-				echo -ne "\n${COLOR_RED}"
-				;;
+		*": Success"*)
+			echo -ne "\n${COLOR_GREEN}"
+			;;
+		*": Unstable: "*)
+			echo -ne "\n${COLOR_YELLOW}"
+			;;
+		*)
+			echo -ne "\n${COLOR_RED}"
+			;;
 		esac
 		cat "${result}/summary.txt" || echo "Error: no summary"
 
@@ -2038,7 +2065,8 @@ print_summaries() { local result
 	echo -ne "${COLOR_RESET}"
 }
 
-exit_trap() { local rc=${?}
+exit_trap() {
+	local rc=${?}
 	set +x
 
 	echo -ne "\n${COLOR_BLUE}"
@@ -2089,7 +2117,6 @@ usage() {
 	echo "See the README file for more details."
 }
 
-
 if [ -z "${INPUT_MODE}" ]; then
 	set +x
 	usage
@@ -2101,146 +2128,146 @@ if [ ! -s "${SELFTESTS_CONFIG}" ]; then
 	exit 1
 fi
 
-
 trap 'exit_trap' EXIT
 
 case "${INPUT_MODE}" in
-	"manual" | "normal" | "manual-normal")
-		go_manual "normal" "${@}"
-		;;
-	"debug" | "manual-debug")
-		go_manual "debug" "${@}"
-		;;
-	"btf" | "btf-normal" | "manual-btf" | "manual-btf-normal")
-		go_manual "btf-normal" "${@}"
-		;;
-	"btf-debug" | "manual-btf-debug")
-		go_manual "btf-debug" "${@}"
-		;;
-	"expect-normal" | "auto-normal")
-		go_expect "normal" "${@}"
-		;;
-	"expect-debug" | "auto-debug")
-		go_expect "debug" "${@}"
-		;;
-	"expect-btf" | "expect-btf-normal" | "auto-btf" | "auto-btf-normal")
-		go_expect "btf-normal" "${@}"
-		;;
-	"expect-btf-debug" | "auto-btf-debug")
-		go_expect "btf-debug" "${@}"
-		;;
-	"expect" | "all" | "expect-all" | "auto-all")
-		rc=0
-		results=("$(_get_results_dir "normal")")
-		INPUT_MODE="auto-normal" "${0}" "${@}" || rc=${?}
-		results+=("$(_get_results_dir "debug")")
-		INPUT_MODE="auto-debug"  "${0}" "${@}" || rc=${?}
-		print_summaries "${results[@]}"
-		exit ${rc}
-		;;
-	"expect-btf-all" | "auto-btf-all" )
-		rc=0
-		results=("$(_get_results_dir "btf-normal")")
-		INPUT_MODE="auto-btf-normal" "${0}" "${@}" || rc=${?}
-		results+=("$(_get_results_dir "btf-debug")")
-		INPUT_MODE="auto-btf-debug"  "${0}" "${@}" || rc=${?}
-		print_summaries "${results[@]}"
-		exit ${rc}
-		;;
-	"make")
-		setup_env "${INPUT_ENV:-normal}"
-		_make_o "${@}"
-		;;
-	"make.cross")
-		setup_env "${INPUT_ENV:-normal}"
-		MAKE_CROSS="/usr/sbin/make.cross"
-		wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O "${MAKE_CROSS}"
-		chmod +x "${MAKE_CROSS}"
-		COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
-			COMPILER="${COMPILER}" \
-				"${MAKE_CROSS}" "${@}"
-		;;
-	"build")
-		prepare_all manual "${@:-normal}"
-		;;
-	"clean")
-		setup_env "${@:-normal}"
-		rm -r "${VIRTME_BUILD_DIR}"
-		;;
-	"defconfig")
-		setup_env "${@:-normal}"
-		gen_kconfig "${@:-normal}"
-		;;
-	"selftests")
-		setup_env "${@:-normal}"
-		build_selftests
-		;;
-	"bpftests")
-		setup_env "${@:-btf-normal}"
-		build_bpftests
-		;;
-	"cmd" | "command")
-		"${@}"
-		;;
-	"src" | "source" | "script")
-		if [ ! -f "${1}" ]; then
-			printerr "No such file: ${1}"
-			exit 1
-		fi
-
-		# shellcheck disable=SC1090
-		source "${1}"
-		;;
-	"static" | "static-analysis")
-		setup_env "${@:-normal}"
-		static_analysis
-		;;
-	"vm" | "vm-manual")
-		setup_env "${@:-normal}"
-		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
-		prepare
-		run
-		;;
-	"vm-expect" | "vm-auto")
-		check_source_exec_all
-		setup_env "${@:-normal}"
-		[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
-		prepare
-		run_expect "${@:-normal}"
-		analyze "${@:-normal}"
-		;;
-	"connect")
-		exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
-		;;
-	"gdb")
-		exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
-		;;
-	"dump")
-		exec vng --dump "${1?}"
-		;;
-	"lcov2html")
-		setup_env "${@:-normal}"
-		while [ -n "${1}" ] && [ ! -s "${1}" ]; do
-			shift
-		done
-		_lcov2html "${@}"
-		;;
-	"perf-normal" | "perf-debug")
-		mode="${INPUT_MODE:5}"
-		setup_env "${mode}"
-		# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
-		# python env var to avoid creating __pycache__ in kernel src dir
-		TERM= PYTHONDONTWRITEBYTECODE=1 \
-			/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
-				"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
-		;;
-	*)
-		set +x
-		printerr "Unknown mode: ${INPUT_MODE}"
-		echo -e "${COLOR_RED}"
-		usage
-		echo -e "${COLOR_RESET}"
+"manual" | "normal" | "manual-normal")
+	go_manual "normal" "${@}"
+	;;
+"debug" | "manual-debug")
+	go_manual "debug" "${@}"
+	;;
+"btf" | "btf-normal" | "manual-btf" | "manual-btf-normal")
+	go_manual "btf-normal" "${@}"
+	;;
+"btf-debug" | "manual-btf-debug")
+	go_manual "btf-debug" "${@}"
+	;;
+"expect-normal" | "auto-normal")
+	go_expect "normal" "${@}"
+	;;
+"expect-debug" | "auto-debug")
+	go_expect "debug" "${@}"
+	;;
+"expect-btf" | "expect-btf-normal" | "auto-btf" | "auto-btf-normal")
+	go_expect "btf-normal" "${@}"
+	;;
+"expect-btf-debug" | "auto-btf-debug")
+	go_expect "btf-debug" "${@}"
+	;;
+"expect" | "all" | "expect-all" | "auto-all")
+	rc=0
+	results=("$(_get_results_dir "normal")")
+	INPUT_MODE="auto-normal" "${0}" "${@}" || rc=${?}
+	results+=("$(_get_results_dir "debug")")
+	INPUT_MODE="auto-debug" "${0}" "${@}" || rc=${?}
+	print_summaries "${results[@]}"
+	exit ${rc}
+	;;
+"expect-btf-all" | "auto-btf-all")
+	rc=0
+	results=("$(_get_results_dir "btf-normal")")
+	INPUT_MODE="auto-btf-normal" "${0}" "${@}" || rc=${?}
+	results+=("$(_get_results_dir "btf-debug")")
+	INPUT_MODE="auto-btf-debug" "${0}" "${@}" || rc=${?}
+	print_summaries "${results[@]}"
+	exit ${rc}
+	;;
+"make")
+	setup_env "${INPUT_ENV:-normal}"
+	_make_o "${@}"
+	;;
+"make.cross")
+	setup_env "${INPUT_ENV:-normal}"
+	MAKE_CROSS="/usr/sbin/make.cross"
+	wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O "${MAKE_CROSS}"
+	chmod +x "${MAKE_CROSS}"
+	COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
+		COMPILER="${COMPILER}" \
+		"${MAKE_CROSS}" "${@}"
+	;;
+"build")
+	prepare_all manual "${@:-normal}"
+	;;
+"clean")
+	setup_env "${@:-normal}"
+	rm -r "${VIRTME_BUILD_DIR}"
+	;;
+"defconfig")
+	setup_env "${@:-normal}"
+	gen_kconfig "${@:-normal}"
+	;;
+"selftests")
+	setup_env "${@:-normal}"
+	build_selftests
+	;;
+"bpftests")
+	setup_env "${@:-btf-normal}"
+	build_bpftests
+	;;
+"cmd" | "command")
+	"${@}"
+	;;
+"src" | "source" | "script")
+	if [ ! -f "${1}" ]; then
+		printerr "No such file: ${1}"
 		exit 1
+	fi
+
+	# shellcheck disable=SC1090
+	source "${1}"
+	;;
+"static" | "static-analysis")
+	setup_env "${@:-normal}"
+	static_analysis
+	;;
+"vm" | "vm-manual")
+	setup_env "${@:-normal}"
+	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	prepare
+	run
+	;;
+"vm-expect" | "vm-auto")
+	check_source_exec_all
+	setup_env "${@:-normal}"
+	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	prepare
+	run_expect "${@:-normal}"
+	analyze "${@:-normal}"
+	;;
+"connect")
+	exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
+	;;
+"gdb")
+	exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
+	;;
+"dump")
+	exec vng --dump "${1?}"
+	;;
+"lcov2html")
+	setup_env "${@:-normal}"
+	while [ -n "${1}" ] && [ ! -s "${1}" ]; do
+		shift
+	done
+	_lcov2html "${@}"
+	;;
+"perf-normal" | "perf-debug")
+	mode="${INPUT_MODE:5}"
+	setup_env "${mode}"
+	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
+	# python env var to avoid creating __pycache__ in kernel src dir
+	TERM="" PYTHONDONTWRITEBYTECODE=1 \
+		/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
+		"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
+	;;
+*)
+	set +x
+	printerr "Unknown mode: ${INPUT_MODE}"
+	echo -e "${COLOR_RED}"
+	usage
+	echo -e "${COLOR_RESET}"
+	exit 1
+	;;
 esac
 
 set_trace_off

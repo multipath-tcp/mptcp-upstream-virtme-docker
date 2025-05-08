@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0
 
 """
@@ -47,9 +46,9 @@ class CMD:
             )
         except subprocess.CalledProcessError as e:
             if fatal:
-                logger.fatal(f"Unable to execute '{cmd}', error: {e.returncode}")
+                logger.fatal(f"'{cmd}', error: {e.returncode}, {repr(e.output)}")
                 sys.exit(1)
-            return ""
+            raise e
 
     def call(self, cmd, fatal=True, env=None, **kwargs):
         self._log(cmd, env, "call")
@@ -59,7 +58,7 @@ class CMD:
         env = self._get_env(env)
         if "cwd" not in kwargs:
             kwargs["cwd"] = self.cwd
-        if not self.verbose and  "stdout" not in kwargs:
+        if not self.verbose and "stdout" not in kwargs:
             kwargs["stdout"] = subprocess.DEVNULL
 
         try:
@@ -67,7 +66,7 @@ class CMD:
             return 0
         except subprocess.CalledProcessError as e:
             if fatal:
-                logger.fatal(f"Unable to execute '{cmd}', error: {e.returncode}")
+                logger.fatal(f"'{cmd}': error: {e.returncode}")
                 sys.exit(1)
             return e.returncode
 

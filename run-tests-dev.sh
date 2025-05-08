@@ -3,7 +3,7 @@
 DIR="$(dirname "$(realpath -P "${0}")")"
 docker -v >/dev/null
 
-if [[ "${-}" =~ "x" ]]; then
+if [[ ${-} =~ "x" ]]; then
 	export INPUT_TRACE=1
 fi
 export INPUT_NO_BLOCK="${INPUT_NO_BLOCK:-1}"

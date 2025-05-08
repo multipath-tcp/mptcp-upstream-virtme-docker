@@ -18,38 +18,24 @@ import sys
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser(
-        description="(Simple) TAP to JSON converter"
-    )
+    parser = argparse.ArgumentParser(description="(Simple) TAP to JSON converter")
 
-    parser.add_argument(
-        "--output",
-        "-o",
-        action="store",
-        help="Output JSON file"
-    )
+    parser.add_argument("--output", "-o", action="store", help="Output JSON file")
 
     parser.add_argument(
         "--info",
         "-I",
         action="append",
         metavar="key:value",
-        help="Add extra info in the JSON, can be used multiple times"
+        help="Add extra info in the JSON, can be used multiple times",
     )
 
     parser.add_argument(
-        "--only-fails",
-        "-f",
-        action="store_true",
-        help="Only keep failed tests"
+        "--only-fails", "-f", action="store_true", help="Only keep failed tests"
     )
 
     parser.add_argument(
-        "tapfiles",
-        metavar="tapfiles",
-        type=str,
-        nargs="*",
-        help="Input TAP file(s)"
+        "tapfiles", metavar="tapfiles", type=str, nargs="*", help="Input TAP file(s)"
     )
 
     return parser
@@ -74,36 +60,36 @@ def parse_tap(tap, name, only_fails):
 
         success = r[0] is None
 
-        result = {
-            'result': "pass" if success else "fail",
-            'name': r[3]
-        }
+        result = {"result": "pass" if success else "fail", "name": r[3]}
 
         if r[4] and r[5]:
-            result['comment'] = r[5]
+            result["comment"] = r[5]
             if success:
-                if r[5].lower().startswith('skip'):
-                    result['result'] = "skip"
-                elif r[5].lower().startswith('ignore flaky'):
-                    result['result'] = "flaky"
+                if r[5].lower().startswith("skip"):
+                    result["result"] = "skip"
+                elif r[5].lower().startswith("ignore flaky"):
+                    result["result"] = "flaky"
 
             t = TIME_RE.findall(r[5].lower())
             if t:
-                result['time_ms'] = t[-1]  # take the last one
-                result['comment'] = result['comment'] \
-                    .replace("time=" + result['time_ms'] + "ms", "") \
-                    .replace("  ", " ").strip()
-                if not result['comment']:
-                    del result['comment']
+                result["time_ms"] = t[-1]  # take the last one
+                result["comment"] = (
+                    result["comment"]
+                    .replace("time=" + result["time_ms"] + "ms", "")
+                    .replace("  ", " ")
+                    .strip()
+                )
+                if not result["comment"]:
+                    del result["comment"]
 
-        if only_fails and result['result'] == "pass":
+        if only_fails and result["result"] == "pass":
             continue
 
         results[r[1]] = result
 
     # just in case, to catch errors
     if not has_results:
-        results[0] = {'result': "fail", 'name': name}
+        results[0] = {"result": "fail", "name": name}
 
     return results
 
@@ -113,7 +99,7 @@ def parse_all_tap(tap_files, only_fails):
 
     for tap in tap_files:
         name = os.path.splitext(os.path.basename(tap))[0]
-        with open(tap, "r", encoding="utf-8", errors='ignore') as fd:
+        with open(tap, "r", encoding="utf-8", errors="ignore") as fd:
             result = parse_tap(fd.readlines(), name, only_fails)
             if result:
                 results[name] = result
@@ -122,12 +108,10 @@ def parse_all_tap(tap_files, only_fails):
 
 
 def add_info(results, infos):
-    results = {
-        "results": results
-    }
+    results = {"results": results}
 
     for info in infos:
-        info = info.split(':', 1)
+        info = info.split(":", 1)
         if len(info) != 2:
             print("Skip info: " + info[0], file=sys.stderr)
             continue
