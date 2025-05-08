@@ -57,6 +57,24 @@ class Entrypoint:
             host.stop()
         self.hosts.clear()
 
+    def _validation(self, config):
+        if "validation" not in config:
+            return True
+        validation = config["validation"]
+
+        err = False
+        for name in validation:
+            if "run" in validation[name]:
+                for line in validation[name]["run"].split("\n"):
+                    if not line:
+                        continue
+                    rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
+                    if rc > 0:
+                        logger.error(f"Validation {name} has failed ({rc})")
+                        err = True
+
+        return err
+
     def _run_test(self, config):
         if "test" not in config:
             return True
@@ -171,7 +189,10 @@ class Entrypoint:
         self._get_stats(config, "post")
         self.stop()
 
-        # TODO: validations
+        if err:
+            logger.info("error(s) found during the tests, no validation")
+        else:
+            err = self._validation(config)
 
         return err
 
