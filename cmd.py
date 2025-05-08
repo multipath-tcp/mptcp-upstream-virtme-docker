@@ -32,7 +32,7 @@ class CMD:
         return self.verbose
 
     def output(self, cmd, fatal=True, env=None, **kwargs):
-        self._log(cmd, env, "cmd: output")
+        self._log(cmd, env, "output")
         if self.dry_run:
             return "<output>"
 
@@ -52,7 +52,7 @@ class CMD:
             return ""
 
     def call(self, cmd, fatal=True, env=None, **kwargs):
-        self._log(cmd, env, "cmd: call")
+        self._log(cmd, env, "call")
         if self.dry_run:
             return 0
 
@@ -72,7 +72,7 @@ class CMD:
             return e.returncode
 
     def open(self, cmd, env=None, **kwargs):
-        self._log(cmd, env, "cmd: open")
+        self._log(cmd, env, "open")
         if self.dry_run:
             return None
 
