@@ -37,11 +37,11 @@ class CMD:
             return "<output>"
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
         try:
             return (
-                subprocess.check_output(
-                    cmd, cwd=self.cwd, shell=True, env=env, **kwargs
-                )
+                subprocess.check_output(cmd, shell=True, env=env, **kwargs)
                 .decode(sys.stdout.encoding)
                 .rstrip()
             )
@@ -57,8 +57,13 @@ class CMD:
             return 0
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
+        if not self.verbose and  "stdout" not in kwargs:
+            kwargs["stdout"] = subprocess.DEVNULL
+
         try:
-            subprocess.check_call(cmd, cwd=self.cwd, shell=True, env=env, **kwargs)
+            subprocess.check_call(cmd, shell=True, env=env, **kwargs)
             return 0
         except subprocess.CalledProcessError as e:
             if fatal:
@@ -72,9 +77,10 @@ class CMD:
             return None
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
         return subprocess.Popen(
             cmd,
-            cwd=self.cwd,
             env=env,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
