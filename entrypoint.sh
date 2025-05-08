@@ -452,7 +452,8 @@ setup_env() { local mode
 		_setup_bridges "${bridges[@]}"
 	fi
 
-	: "${INPUT_RAM:="$((2048 * (1 + INPUT_GCOV)))M"}" # More needed for GCOV, not to swap
+	# More needed for GCOV, not to swap
+	: "${INPUT_RAM:="$((1024 * INPUT_CPUS + 1024 * INPUT_GCOV))M"}"
 
 	VIRTME_RUN_OPTS+=(
 		--kdir "${VIRTME_BUILD_DIR}"
