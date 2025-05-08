@@ -2230,7 +2230,7 @@ case "${INPUT_MODE}" in
 		setup_env "${mode}"
 		# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
 		# python env var to avoid creating __pycache__ in kernel src dir
-		TERM= PYTHONDONTWRITEBYTECODE=1 \
+		TERM="" PYTHONDONTWRITEBYTECODE=1 \
 			/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
 				"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
 		;;
