@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import signal
+import sys
 import yaml
 
 import cmd
@@ -141,7 +142,10 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    ep.run_tests(get_tests(args.config))
+    err = ep.run_tests(get_tests(args.config))
+    if err:
+        logger.error(f"Error with tests: {err}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -57,6 +57,63 @@ class Entrypoint:
             host.stop()
         self.hosts.clear()
 
+    def _validation(self, config):
+        if "validation" not in config:
+            return True
+        validation = config["validation"]
+
+        err = False
+        for name in validation:
+            if "run" in validation[name]:
+                for line in validation[name]["run"].split("\n"):
+                    if not line:
+                        continue
+                    rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
+                    if rc > 0:
+                        logger.error(f"Validation {name} has failed ({rc})")
+                        err = True
+
+        return err
+
+    def _run_test(self, config):
+        if "test" not in config:
+            return True
+        test = config["test"]
+        err = False
+
+        for test_name in test:
+            for who in test[test_name]:
+                kwargs = {}
+                info = test[test_name][who]
+                ignore_err = False
+                match = False
+                if type(info) is str:
+                    cmd = info
+                else:
+                    cmd = info["run"]
+                    if "timeout_s" in info:
+                        kwargs["timeout"] = info["timeout_s"]
+                    ignore_err = info.get("ignore_err", False)
+                    match = info.get("match", False)
+
+                hosts = self.hosts.keys() if who == "all" else [who]
+                for host in hosts:
+                    if match:
+                        out, rc = self.hosts[host].cmd_output_status(cmd, **kwargs)
+                        if out != match:
+                            logger.warn(f"{host}: '{cmd}': match: '{out}' vs '{match}")
+                            err = True
+                    else:
+                        rc = self.hosts[host].cmd_status(cmd, **kwargs)
+                    if not ignore_err and rc != 0:
+                        logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
+                        err = True
+
+            if err:
+                break
+
+        return err
+
     def _get_stat(self, stats, hosts, phase):
         stat_dir = os.path.join(self.log_dir, "stats")
         for stat in stats:
@@ -127,15 +184,25 @@ class Entrypoint:
 
         self._get_stats(config, "pre")
 
-        # TODO: tests
+        err = self._run_test(config)
 
         self._get_stats(config, "post")
         self.stop()
 
-        # TODO: validations
+        if err:
+            logger.info("error(s) found during the tests, no validation")
+        else:
+            err = self._validation(config)
+
+        return err
 
     def run_tests(self, tests):
+        err = []
         id = 1
         total = len(tests)
         for name in tests:
-            self.run_test(name, tests[name], id, total)
+            if self.run_test(name, tests[name], id, total):
+                err.append(name)
+            id += 1
+
+        return err

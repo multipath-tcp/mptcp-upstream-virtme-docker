@@ -18,7 +18,7 @@ class CMD:
         self.dry_run = dry_run
         self.verbose = verbose
         self.cwd = cwd
-        self.lvl = logging.INFO if self.dry_run or self.verbose else logging.DEBUG
+        self.lvl = logging.INFO if self.dry_run else logging.DEBUG
 
     def _log(self, cmd, env, name):
         logger.log(self.lvl, f"{name}: {cmd}{f' (extra env: {env})' if env else ''}")
@@ -32,16 +32,16 @@ class CMD:
         return self.verbose
 
     def output(self, cmd, fatal=True, env=None, **kwargs):
-        self._log(cmd, env, "cmd: output")
+        self._log(cmd, env, "output")
         if self.dry_run:
             return "<output>"
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
         try:
             return (
-                subprocess.check_output(
-                    cmd, cwd=self.cwd, shell=True, env=env, **kwargs
-                )
+                subprocess.check_output(cmd, shell=True, env=env, **kwargs)
                 .decode(sys.stdout.encoding)
                 .rstrip()
             )
@@ -52,13 +52,18 @@ class CMD:
             return ""
 
     def call(self, cmd, fatal=True, env=None, **kwargs):
-        self._log(cmd, env, "cmd: call")
+        self._log(cmd, env, "call")
         if self.dry_run:
             return 0
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
+        if not self.verbose and  "stdout" not in kwargs:
+            kwargs["stdout"] = subprocess.DEVNULL
+
         try:
-            subprocess.check_call(cmd, cwd=self.cwd, shell=True, env=env, **kwargs)
+            subprocess.check_call(cmd, shell=True, env=env, **kwargs)
             return 0
         except subprocess.CalledProcessError as e:
             if fatal:
@@ -67,14 +72,15 @@ class CMD:
             return e.returncode
 
     def open(self, cmd, env=None, **kwargs):
-        self._log(cmd, env, "cmd: open")
+        self._log(cmd, env, "open")
         if self.dry_run:
             return None
 
         env = self._get_env(env)
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
         return subprocess.Popen(
             cmd,
-            cwd=self.cwd,
             env=env,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,

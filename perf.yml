@@ -21,3 +21,20 @@ test1:
       nstat: "nstat | grep Tcp"
     all:
       proc_net_dev: "cat /proc/net/dev"
+  test:
+    greeting:
+      client: 'echo "Hello from client: $HOSTNAME"'
+      server: |-
+        echo "Hello from server: $HOSTNAME"
+    welcoming:
+      all:
+        run: 'sleep 10'
+        timeout_s: 1
+        ignore_err: True
+  validation:
+    proc_net_dev:
+      run: |-
+        test -s stats/client/pre/proc_net_dev
+        test -s stats/client/post/proc_net_dev
+        test -s stats/server/pre/proc_net_dev
+        test -s stats/server/post/proc_net_dev
