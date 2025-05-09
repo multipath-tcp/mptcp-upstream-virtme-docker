@@ -62,15 +62,15 @@ class Entrypoint:
         validation = config["validation"]
 
         err = False
-        for name in validation:
-            if "run" in validation[name]:
-                for line in validation[name]["run"].split("\n"):
-                    if not line:
-                        continue
-                    rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
-                    if rc > 0:
-                        logger.error(f"Validation {name} has failed ({rc})")
-                        err = True
+        for step in validation:
+            name = step["name"]
+            for line in step["run"].split("\n"):
+                if not line:
+                    continue
+                rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
+                if rc > 0:
+                    logger.error(f"Validation {name} has failed ({rc})")
+                    err = True
 
         return err
 
@@ -80,10 +80,14 @@ class Entrypoint:
         test = config["test"]
         err = False
 
-        for test_name in test:
-            for who in test[test_name]:
+        for step in test:
+            name = step["name"]
+            logger.info(f"test: step: {name}")
+            for who in step:
+                if who == "name":
+                    continue
                 kwargs = {}
-                info = test[test_name][who]
+                info = step[who]
                 ignore_err = False
                 match = False
                 if type(info) is str:
@@ -113,32 +117,25 @@ class Entrypoint:
 
         return err
 
-    def _get_stat(self, stats, hosts, phase):
-        stat_dir = os.path.join(self.log_dir, "stats")
-        for stat in stats:
-            for host in hosts:
-                d = os.path.join(stat_dir, host, phase)
-                os.makedirs(d, exist_ok=True)
-                with open(os.path.join(d, stat), "a") as f:
-                    print(self.hosts[host].cmd_output(stats[stat]), file=f)
-
     def _get_stats(self, config, phase):
         if "stats" not in config:
             return
         stats = config["stats"]
+        stat_dir = os.path.join(self.log_dir, "stats")
 
         for key in (phase, "all"):
             if key not in stats:
                 continue
 
-            s = stats[key].copy()
-            for host in self.hosts:
-                if host not in s:
-                    continue
-
-                self._get_stat(s.pop(host), [host], phase)
-
-            self._get_stat(s, self.hosts, phase)
+            for stat in stats[key]:
+                name = stat["name"]
+                cmd = stat["run"]
+                hosts = [stat["target"]] if "target" in stat else self.hosts.keys()
+                for host in hosts:
+                    d = os.path.join(stat_dir, host, phase)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, name), "a") as f:
+                        print(self.hosts[host].cmd_output(cmd), file=f)
 
     def _get_bridges(self, config, env):
         if "bridges" not in config:
@@ -146,10 +143,12 @@ class Entrypoint:
 
         bridges = []
         for br in config["bridges"]:
-            vbr = f"vir{br}"
+            vbr = f"vir{br['name']}"
             bridges.append(vbr)
-            for key in config["bridges"][br]:
-                val = config["bridges"][br][key]
+            for key in br:
+                if key == "name":
+                    continue
+                val = br[key]
                 env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
 
         if bridges:

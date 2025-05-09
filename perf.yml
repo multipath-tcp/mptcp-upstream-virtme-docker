@@ -4,35 +4,39 @@ test1:
   name: "Test 1"
   timeout_s: 3600
   bridges:
-    br0:
+    - name: "br0"
       rate_mbit: 123
       delay_ms: 12
       loss_pc: 1
-    br1:
+    - name: "br1"
       rate_mbit: 321
       delay_ms: 21
       loss_pc: 2
   stats:
     pre:
-      nstat_reset: "nstat"
-      client:
-        uname: "uname -a"
+      - name: "nstat_reset"
+        run: "nstat"
+      - name: "uname"
+        target: "client"
+        run: "uname -a"
     post:
-      nstat: "nstat | grep Tcp"
+      - name: "nstat"
+        run: "nstat | grep Tcp"
     all:
-      proc_net_dev: "cat /proc/net/dev"
+      - name: "proc_net_dev"
+        run: "cat /proc/net/dev"
   test:
-    greeting:
+    - name: "greeting"
       client: 'echo "Hello from client: $HOSTNAME"'
       server: |-
         echo "Hello from server: $HOSTNAME"
-    welcoming:
+    - name: "welcoming"
       all:
         run: 'sleep 10'
         timeout_s: 1
         ignore_err: True
   validation:
-    proc_net_dev:
+    - name: "proc_net_dev"
       run: |-
         test -s stats/client/pre/proc_net_dev
         test -s stats/client/post/proc_net_dev
