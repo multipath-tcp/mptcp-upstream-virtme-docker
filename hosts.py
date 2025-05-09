@@ -60,7 +60,7 @@ class PExpectStub:
 
     def read_nonblocking(self, *args, **kwargs):
         if self.dry_run:
-            raise pexpect.TIMEOUT
+            raise pexpect.TIMEOUT("dry-run")
         return self.p.read_nonblocking(*args, **kwargs)
 
     def isalive(self):
