@@ -55,6 +55,12 @@ class PExpectStub:
             return 0
         return self.p.sendline(*args, **kwargs)
 
+    def sendeof(self, *args, **kwargs):
+        self._log("sendeof", args, kwargs)
+        if self.dry_run:
+            return 0
+        return self.p.sendeof(*args, **kwargs)
+
     def terminate(self, *args, **kwargs):
         self._log("terminate", args, kwargs)
         if self.dry_run:
@@ -138,6 +144,7 @@ class Host:
 
     def _terminate(self, p):
         p.sendline("exit")
+        p.sendeof()
         try:
             p.expect(pexpect.EOF, timeout=60)
         except pexpect.TIMEOUT:
