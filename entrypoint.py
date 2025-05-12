@@ -6,6 +6,10 @@ Class for the entrypoint.sh script
 
 import logging
 import os
+import shlex
+import time
+
+from pexpect import TIMEOUT
 
 import hosts
 
@@ -62,15 +66,17 @@ class Entrypoint:
         validation = config["validation"]
 
         err = False
-        for name in validation:
-            if "run" in validation[name]:
-                for line in validation[name]["run"].split("\n"):
-                    if not line:
-                        continue
-                    rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
-                    if rc > 0:
-                        logger.error(f"Validation {name} has failed ({rc})")
-                        err = True
+        for step in validation:
+            name = step["name"]
+            cmd = step["run"]
+            if "\n" in cmd:
+                # in one block to allow more advanced bash
+                cmd = shlex.quote(cmd).replace("\n", " ; ")
+                cmd = f"bash -ce{'x' if self.cmd.verbosity() else ''} {cmd}"
+            rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
+            if rc > 0:
+                logger.error(f"Validation {name} has failed ({rc})")
+                err = True
 
         return err
 
@@ -80,65 +86,84 @@ class Entrypoint:
         test = config["test"]
         err = False
 
-        for test_name in test:
-            for who in test[test_name]:
-                kwargs = {}
-                info = test[test_name][who]
-                ignore_err = False
-                match = False
-                if type(info) is str:
-                    cmd = info
-                else:
-                    cmd = info["run"]
-                    if "timeout_s" in info:
-                        kwargs["timeout"] = info["timeout_s"]
-                    ignore_err = info.get("ignore_err", False)
-                    match = info.get("match", False)
+        for step in test:
+            name = step["name"]
+            logger.info(f"test: step: {name}")
+            for host in self.hosts:
+                self.hosts[host].cmd_send(f"## step: {time.asctime()}: {name}")
+
+            for who in (*self.hosts.keys(), "all"):
+                if who not in step:
+                    continue
+
+                cmd = step[who]
+                if "\n" in cmd:
+                    cmd = f"{{\n{cmd}\n}}"
 
                 hosts = self.hosts.keys() if who == "all" else [who]
+                # run commands of the same step in parallel
                 for host in hosts:
-                    if match:
-                        out, rc = self.hosts[host].cmd_output_status(cmd, **kwargs)
-                        if out != match:
-                            logger.warn(f"{host}: '{cmd}': match: '{out}' vs '{match}")
-                            err = True
-                    else:
-                        rc = self.hosts[host].cmd_status(cmd, **kwargs)
-                    if not ignore_err and rc != 0:
-                        logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
-                        err = True
+                    self.hosts[host].cmd_send(cmd)
 
+            # then check status
+            for host in self.hosts:
+                kwargs = {}
+                if "timeout_s" in step:
+                    kwargs["timeout"] = int(step["timeout_s"])
+                ignore_err = step.get("ignore_err", False)
+                try:
+                    self.hosts[host].wait_for_prompt(**kwargs)
+                except TIMEOUT:
+                    if not ignore_err:
+                        logger.warn(f"{host}: '{cmd}': timeout: '{kwargs}'")
+                        err = True
+                    continue
+
+                rc = self.hosts[host].cmd_last_status()
+                if not ignore_err and rc != 0:
+                    logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
+                    err = True
             if err:
                 break
 
         return err
 
-    def _get_stat(self, stats, hosts, phase):
-        stat_dir = os.path.join(self.log_dir, "stats")
-        for stat in stats:
-            for host in hosts:
-                d = os.path.join(stat_dir, host, phase)
-                os.makedirs(d, exist_ok=True)
-                with open(os.path.join(d, stat), "a") as f:
-                    print(self.hosts[host].cmd_output(stats[stat]), file=f)
-
     def _get_stats(self, config, phase):
         if "stats" not in config:
             return
         stats = config["stats"]
+        stat_dir = os.path.join(self.log_dir, "stats")
 
         for key in (phase, "all"):
             if key not in stats:
                 continue
 
-            s = stats[key].copy()
-            for host in self.hosts:
-                if host not in s:
+            for stat in stats[key]:
+                name = stat["name"]
+                cmd = stat["run"]
+                hosts = [stat["target"]] if "target" in stat else self.hosts.keys()
+                for host in hosts:
+                    d = os.path.join(stat_dir, host, phase)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, name), "a") as f:
+                        print(self.hosts[host].cmd_output(cmd), file=f)
+
+    def _get_bridges(self, config, env):
+        if "bridges" not in config:
+            return
+
+        bridges = []
+        for br in config["bridges"]:
+            vbr = f"vir{br['name']}"
+            bridges.append(vbr)
+            for key in br:
+                if key == "name":
                     continue
+                val = br[key]
+                env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
 
-                self._get_stat(s.pop(host), [host], phase)
-
-            self._get_stat(s, self.hosts, phase)
+        if bridges:
+            env["INPUT_NET_BRIDGES"] = ",".join(bridges)
 
     def _get_envs(self, config):
         try:
@@ -152,17 +177,7 @@ class Entrypoint:
             "INPUT_RAM": f"{int(ram / 3)}M",
         }
 
-        if "bridges" in config:
-            bridges = []
-            for br in config["bridges"]:
-                vbr = f"vir{br}"
-                bridges.append(vbr)
-                for key in config["bridges"][br]:
-                    val = config["bridges"][br][key]
-                    env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
-
-            if bridges:
-                env["INPUT_NET_BRIDGES"] = ",".join(bridges)
+        self._get_bridges(config, env)
 
         env_client = env
         env_server = env.copy()
