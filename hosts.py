@@ -158,6 +158,7 @@ class Host:
 
     def send_ctrl_c(self):
         self.p.send("\003")
+        self.p.sendline()
 
     def cmd_send(self, cmd):
         # empty buffer
