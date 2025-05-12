@@ -22,16 +22,20 @@ class PExpectStub:
         self.host = host
         self.alive = True
 
-        self.p = (
-            None
-            if dry_run
-            else pexpect.spawn(cmd, args, env=env, encoding="utf-8", **kwargs)
-        )
+        kwargs["env"] = env
+        kwargs["encoding"] = "utf-8"
+        self.p = self._spawn(cmd, args, **kwargs)
 
     def _log(self, func, *args, **kwargs):
         logger.log(
             self.loglvl, f"{self.host}: expect: {self.cmd}: {func}: {args} ({kwargs})"
         )
+
+    def _spawn(self, *args, **kwargs):
+        self._log("spawn", args, kwargs)
+        if self.dry_run:
+            return None
+        return pexpect.spawn(*args, **kwargs)
 
     def expect(self, *args, **kwargs):
         self._log("expect", args, kwargs)
@@ -121,8 +125,6 @@ class Host:
             self.log = PExpectLog(logger.debug, hostname)
 
     def _spawn(self, cmd, args=[], env={}):
-        logger.log(self.log_level, f"{self.hostname}: spawn: {cmd} {args} ({env})")
-
         return PExpectStub(
             cmd,
             args,
