@@ -6,6 +6,7 @@ Class for the entrypoint.sh script
 
 import logging
 import os
+import shlex
 import time
 
 from pexpect import TIMEOUT
@@ -67,13 +68,15 @@ class Entrypoint:
         err = False
         for step in validation:
             name = step["name"]
-            for line in step["run"].split("\n"):
-                if not line:
-                    continue
-                rc = self.cmd.call(line, fatal=False, cwd=self.log_dir)
-                if rc > 0:
-                    logger.error(f"Validation {name} has failed ({rc})")
-                    err = True
+            cmd = step["run"]
+            if "\n" in cmd:
+                # in one block to allow more advanced bash
+                cmd = shlex.quote(cmd).replace("\n", " ; ")
+                cmd = f"bash -ce{'x' if self.cmd.verbosity() else ''} {cmd}"
+            rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
+            if rc > 0:
+                logger.error(f"Validation {name} has failed ({rc})")
+                err = True
 
         return err
 
