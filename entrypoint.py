@@ -6,6 +6,9 @@ Class for the entrypoint.sh script
 
 import logging
 import os
+import time
+
+from pexpect import TIMEOUT
 
 import hosts
 
@@ -83,35 +86,40 @@ class Entrypoint:
         for step in test:
             name = step["name"]
             logger.info(f"test: step: {name}")
-            for who in step:
-                if who == "name":
+            for host in self.hosts:
+                self.hosts[host].cmd_send(f"## step: {time.asctime()}: {name}")
+
+            for who in (*self.hosts.keys(), "all"):
+                if who not in step:
                     continue
-                kwargs = {}
-                info = step[who]
-                ignore_err = False
-                match = False
-                if type(info) is str:
-                    cmd = info
-                else:
-                    cmd = info["run"]
-                    if "timeout_s" in info:
-                        kwargs["timeout"] = info["timeout_s"]
-                    ignore_err = info.get("ignore_err", False)
-                    match = info.get("match", False)
+
+                cmd = step[who]
+                if "\n" in cmd:
+                    cmd = f"{{\n{cmd}\n}}"
 
                 hosts = self.hosts.keys() if who == "all" else [who]
+                # run commands of the same step in parallel
                 for host in hosts:
-                    if match:
-                        out, rc = self.hosts[host].cmd_output_status(cmd, **kwargs)
-                        if out != match:
-                            logger.warn(f"{host}: '{cmd}': match: '{out}' vs '{match}")
-                            err = True
-                    else:
-                        rc = self.hosts[host].cmd_status(cmd, **kwargs)
-                    if not ignore_err and rc != 0:
-                        logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
-                        err = True
+                    self.hosts[host].cmd_send(cmd)
 
+            # then check status
+            for host in self.hosts:
+                kwargs = {}
+                if "timeout_s" in step:
+                    kwargs["timeout"] = int(step["timeout_s"])
+                ignore_err = step.get("ignore_err", False)
+                try:
+                    self.hosts[host].wait_for_prompt(**kwargs)
+                except TIMEOUT:
+                    if not ignore_err:
+                        logger.warn(f"{host}: '{cmd}': timeout: '{kwargs}'")
+                        err = True
+                    continue
+
+                rc = self.hosts[host].cmd_last_status()
+                if not ignore_err and rc != 0:
+                    logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
+                    err = True
             if err:
                 break
 

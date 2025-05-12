@@ -150,17 +150,17 @@ class Host:
     def send_ctrl_c(self):
         self.p.send("\003")
 
-    def cmd_output(self, cmd, expect=None, timeout=20):
+    def cmd_send(self, cmd):
         # empty buffer
         while True:
             try:
                 self.p.read_nonblocking(1024, 0)
             except pexpect.TIMEOUT:
                 break
-
-        logger.debug(f"{self.hostname}: output: '{cmd}': start")
-
         self.p.sendline(cmd)
+
+    # timeout: time without output in the serial
+    def wait(self, expect, timeout):
         lines = []
         buf = ""
         while True:
@@ -170,23 +170,27 @@ class Host:
                 if self.dry_run:
                     lines = [False]
                     break
-                logger.warn(f"{self.hostname}: output: '{cmd}': timeout: {timeout}")
                 self.send_ctrl_c()
                 raise e
             lines += buf.split("\r\n")
             buf = lines.pop()  # last line: either empty or not ending with \r\n
-            if buf == (expect if expect is not None else self.prompt):
+            if buf == expect:
                 buf = ""
                 break
 
         if buf:
             lines.append(buf)
 
-        logger.debug(f"{self.hostname}: output: '{cmd}': end ({len(lines) - 1})")
-
         return "\n".join(lines[1:])  # skip command
 
-    def _cmd_last_status(self):
+    def wait_for_prompt(self, timeout=20):
+        return self.wait(self.prompt, timeout)
+
+    def cmd_output(self, cmd, **kwargs):
+        self.cmd_send(cmd)
+        return self.wait_for_prompt(**kwargs)
+
+    def cmd_last_status(self):
         if self.dry_run:
             return 0
 
@@ -197,7 +201,7 @@ class Host:
 
     def cmd_output_status(self, cmd, **kwargs):
         try:
-            return self.cmd_output(cmd, **kwargs), self._cmd_last_status()
+            return self.cmd_output(cmd, **kwargs), self.cmd_last_status()
         except pexpect.TIMEOUT:
             return "", 128
 
@@ -213,7 +217,7 @@ class Host:
             self.cmd_wait(cmd, **kwargs)
         except pexpect.TIMEOUT:
             return 128
-        return self._cmd_last_status()
+        return self.cmd_last_status()
 
 
 class VM(Host):

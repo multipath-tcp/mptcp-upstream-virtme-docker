@@ -29,12 +29,12 @@ test1:
     - name: "greeting"
       client: 'echo "Hello from client: $HOSTNAME"'
       server: |-
-        echo "Hello from server: $HOSTNAME"
+        echo "Hello from server"
+        echo "I'm $HOSTNAME"
     - name: "welcoming"
-      all:
-        run: 'sleep 10'
-        timeout_s: 1
-        ignore_err: True
+      all: 'sleep 10'
+      timeout_s: 1
+      ignore_err: True
   validation:
     - name: "proc_net_dev"
       run: |-
