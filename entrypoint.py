@@ -187,7 +187,7 @@ class Entrypoint:
 
         return env_client, env_server
 
-    def run_test(self, name, config, id, total):
+    def run_test(self, config, name, id, total):
         logger.info(f"Starting test {id}/{total}: {name}")
 
         env_client, env_server = self._get_envs(config)
@@ -214,8 +214,9 @@ class Entrypoint:
         err = []
         id = 1
         total = len(tests)
-        for name in tests:
-            if self.run_test(name, tests[name], id, total):
+        for config in tests:
+            name = config["name"]
+            if self.run_test(config, name, id, total):
                 err.append(name)
             id += 1
 
