@@ -17,7 +17,7 @@ RUN apt-get update && \
 		ca-certificates gnupg2 net-tools kmod \
 		libdbus-1-dev libnl-genl-3-dev libibverbs-dev \
 		tcpdump \
-		pkgconf libmnl-dev libxtables-dev libatm1-dev libbsd-dev libbpf-dev libcap-dev libdb-dev libnsl-dev libselinux1-dev zlib1g-dev \
+		pkgconf libmnl-dev libxtables-dev libatm1-dev libbsd-dev libbpf-dev libc6-dev-i386 libcap-dev libdb-dev libnsl-dev libselinux1-dev zlib1g-dev \
 		clang clangd clang-tidy lld llvm llvm-dev libcap-dev \
 		gdb gdb-multiarch crash dwarves strace trace-cmd \
 		iptables ebtables nftables bridge-utils socat \
