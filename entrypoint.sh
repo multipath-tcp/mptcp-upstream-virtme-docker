@@ -276,7 +276,7 @@ _add_bridge() {
 	echo "allow ${br}" >>/etc/qemu/bridge.conf
 	brctl addbr "${br}"
 	ip addr add "${prefix}.1/24" dev "${br}"
-	ip link set "${br}" up
+	ip link set dev "${br}" mtu 12000 up
 
 	# one default address
 	if [ "${i}" = "0" ]; then

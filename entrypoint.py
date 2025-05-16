@@ -211,6 +211,7 @@ class Entrypoint:
             netem_cmd = "tc qdisc add dev '{}' root netem " + " ".join(tc_args)
 
             for iface in ifaces:
+                self.cmd.call(f"ip link set {iface} mtu 12000")
                 self.cmd.call(netem_cmd.format(iface))
 
             if not hw_accel:
