@@ -151,10 +151,17 @@ class Host:
             p.terminate(force=True)
 
     def terminate(self):
-        self._terminate(self.p)
+        if self.p.isalive():
+            self._terminate(self.p)
 
     def stop(self):
-        raise NotImplementedError
+        if not self.p:
+            return
+
+        self.terminate()
+        self.p = None
+
+        self.log.close()
 
     def send_ctrl_c(self):
         self.p.send("\003")
@@ -277,8 +284,5 @@ class VM(Host):
         self.serial = None
 
         self._terminate(serial)
-        if self.p.isalive():
-            self.p.terminate(force=True)
-        self.p = None
 
-        self.log.close()
+        super().stop()
