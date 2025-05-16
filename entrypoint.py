@@ -148,6 +148,40 @@ class Entrypoint:
                     with open(os.path.join(d, name), "a") as f:
                         print(self.hosts[host].cmd_output(cmd), file=f)
 
+    def _setup_net(self, config):
+        if "bridges" not in config:
+            return
+
+        hw_accel = config.get("bridges_hw_accel", True)
+        hw_cmd = "ethtool -K '{}' gro off gso off tso off tx off rx off sg off"
+
+        for br in config["bridges"]:
+            tc_args = []
+            for key in br:
+                if not br[key]:
+                    continue
+                if key == "rate_mbit":
+                    tc_args += ["rate", f"{br[key]}mbit"]
+                elif key == "delay_ms":
+                    tc_args += ["delay", f"{br[key]}ms"]
+                elif key == "loss_pc":
+                    tc_args += ["loss", f"{br[key]}%"]
+
+            if not tc_args:
+                continue
+
+            vbr = f"vir{br['name']}"
+            ifaces = os.listdir(f"/sys/devices/virtual/net/{vbr}/brif/")
+            netem_cmd = "tc qdisc add dev '{}' root netem " + " ".join(tc_args)
+
+            for iface in ifaces:
+                self.cmd.call(netem_cmd.format(iface))
+
+            if not hw_accel:
+                self.cmd.call(hw_cmd.format(vbr))
+                for iface in ifaces:
+                    self.cmd.call(hw_cmd.format(iface))
+
     def _setup_hosts(self):
         results_dir = f"RESULTS_DIR={shlex.quote(self.log_dir)}"
         for host in self.hosts.values():
@@ -161,11 +195,6 @@ class Entrypoint:
         for br in config["bridges"]:
             vbr = f"vir{br['name']}"
             bridges.append(vbr)
-            for key in br:
-                if key == "name":
-                    continue
-                val = br[key]
-                env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
 
         if bridges:
             env["INPUT_NET_BRIDGES"] = ",".join(bridges)
