@@ -6,6 +6,7 @@ Utils: Command class
 
 import logging
 import os
+import shlex
 import subprocess
 import sys
 
@@ -74,6 +75,9 @@ class CMD:
         self._log(cmd, env, "open")
         if self.dry_run:
             return None
+
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd)
 
         env = self._get_env(env)
         if "cwd" not in kwargs:
