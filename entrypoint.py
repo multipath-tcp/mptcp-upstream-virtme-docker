@@ -148,6 +148,11 @@ class Entrypoint:
                     with open(os.path.join(d, name), "a") as f:
                         print(self.hosts[host].cmd_output(cmd), file=f)
 
+    def _setup_hosts(self):
+        results_dir = f"RESULTS_DIR={shlex.quote(self.log_dir)}"
+        for host in self.hosts.values():
+            host.cmd_wait(results_dir)
+
     def _get_bridges(self, config, env):
         if "bridges" not in config:
             return
@@ -207,6 +212,8 @@ class Entrypoint:
         logger.info(f"Starting test {id}/{total}: {name}")
 
         self._start_vms(config)
+
+        self._setup_hosts()
 
         self._setup_net(config)
 
