@@ -136,6 +136,15 @@ class Entrypoint:
 
         return err
 
+    def _start_dstat_host(self):
+        self.cmd.call("/etc/init.d/pmcd start")
+        cmd = "dstat -tclm -o host.csv"
+        self.dstat = self.cmd.open(cmd, cwd=self.log_dir, mute=True)
+
+    def _stop_dstat_host(self):
+        self.dstat.terminate()
+        self.dstat.wait(timeout=5)
+
     def _start_dstat(self, hostname):
         host = self.hosts[hostname]
         ifaces = ",".join(host.get_ifaces()) + ",total"
@@ -267,6 +276,8 @@ class Entrypoint:
     def run_test(self, config, name, id, total):
         logger.info(f"Starting test {id}/{total}: {name}")
 
+        self._start_dstat_host()
+
         self._start_vms(config)
 
         self._setup_hosts()
@@ -284,6 +295,8 @@ class Entrypoint:
             logger.info("error(s) found during the tests, no validation")
         else:
             err = self._validation(config)
+
+        self._stop_dstat_host()
 
         return err
 
