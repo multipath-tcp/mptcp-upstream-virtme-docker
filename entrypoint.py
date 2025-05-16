@@ -196,14 +196,19 @@ class Entrypoint:
 
         return env_client, env_server
 
-    def run_test(self, config, name, id, total):
-        logger.info(f"Starting test {id}/{total}: {name}")
-
+    def _start_vms(self, config):
         env_client, env_server = self._get_envs(config)
         timeout = config.get("timeout_s", 3600)
 
         self._new_vm("client", env_client, timeout)
         self._new_vm("server", env_server, timeout)
+
+    def run_test(self, config, name, id, total):
+        logger.info(f"Starting test {id}/{total}: {name}")
+
+        self._start_vms(config)
+
+        self._setup_net(config)
 
         self._get_stats(config, "pre")
 
