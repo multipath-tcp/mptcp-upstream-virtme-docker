@@ -70,7 +70,7 @@ class CMD:
                 sys.exit(1)
             return e.returncode
 
-    def open(self, cmd, env=None, **kwargs):
+    def open(self, cmd, env=None, mute=False, **kwargs):
         self._log(cmd, env, "open")
         if self.dry_run:
             return None
@@ -78,11 +78,12 @@ class CMD:
         env = self._get_env(env)
         if "cwd" not in kwargs:
             kwargs["cwd"] = self.cwd
+        for fd in ("stdout", "stdin", "stderr"):
+            if fd not in kwargs:
+                kwargs[fd] = subprocess.DEVNULL if mute else subprocess.PIPE
+
         return subprocess.Popen(
             cmd,
             env=env,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             **kwargs,
         )
