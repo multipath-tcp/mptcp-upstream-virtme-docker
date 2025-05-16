@@ -163,6 +163,9 @@ class Host:
 
         self.log.close()
 
+    def get_ifaces(self):
+        raise NotImplementedError
+
     def send_ctrl_c(self):
         self.p.send("\003")
         self.p.sendline()
@@ -275,6 +278,10 @@ class VM(Host):
             raise e
 
         return serial, vsock
+
+    def get_ifaces(self):
+        n = self.env.get("INPUT_NET_BRIDGES", "").count(",") + 1
+        return [f"eth{x}" for x in range(n)]
 
     def stop(self):
         if not self.serial:

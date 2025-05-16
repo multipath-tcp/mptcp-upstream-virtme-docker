@@ -136,11 +136,26 @@ class Entrypoint:
 
         return err
 
+    def _start_dstat(self, hostname):
+        host = self.hosts[hostname]
+        ifaces = ",".join(host.get_ifaces()) + ",total"
+        out = os.path.join(self.log_dir, f"{hostname}.csv")
+        host.cmd_wait("/etc/init.d/pmcd start")
+        host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null &")
+
+    def _stop_dstat(self, hostname):
+        host = self.hosts[hostname]
+        host.cmd_wait("killall dstat; sync")
+
     def _get_stats(self, config, phase):
         if "stats" not in config:
             return
         stats = config["stats"]
         stat_dir = os.path.join(self.log_dir, "stats")
+
+        if phase == "post":
+            for host in self.hosts.keys():
+                self._stop_dstat(host)
 
         for key in (phase, "all"):
             if key not in stats:
@@ -155,6 +170,10 @@ class Entrypoint:
                     os.makedirs(d, exist_ok=True)
                     with open(os.path.join(d, name), "a") as f:
                         print(self.hosts[host].cmd_output(cmd), file=f)
+
+        if phase == "pre":
+            for host in self.hosts.keys():
+                self._start_dstat(host)
 
     def _setup_net(self, config):
         if "bridges" not in config:
