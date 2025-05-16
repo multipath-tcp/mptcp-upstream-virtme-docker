@@ -151,9 +151,19 @@ class Host:
             p.terminate(force=True)
 
     def terminate(self):
-        self._terminate(self.p)
+        if self.p.isalive():
+            self._terminate(self.p)
 
     def stop(self):
+        if not self.p:
+            return
+
+        self.terminate()
+        self.p = None
+
+        self.log.close()
+
+    def get_ifaces(self):
         raise NotImplementedError
 
     def send_ctrl_c(self):
@@ -269,6 +279,10 @@ class VM(Host):
 
         return serial, vsock
 
+    def get_ifaces(self):
+        n = self.env.get("INPUT_NET_BRIDGES", "").count(",") + 1
+        return [f"eth{x}" for x in range(n)]
+
     def stop(self):
         if not self.serial:
             return
@@ -277,8 +291,5 @@ class VM(Host):
         self.serial = None
 
         self._terminate(serial)
-        if self.p.isalive():
-            self.p.terminate(force=True)
-        self.p = None
 
-        self.log.close()
+        super().stop()

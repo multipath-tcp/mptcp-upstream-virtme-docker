@@ -7,6 +7,7 @@ Class for the entrypoint.sh script
 import logging
 import os
 import shlex
+import tempfile
 import time
 
 from pexpect import TIMEOUT
@@ -69,14 +70,21 @@ class Entrypoint:
         for step in validation:
             name = step["name"]
             cmd = step["run"]
+            cmd_file = None
             if "\n" in cmd:
                 # in one block to allow more advanced bash
-                cmd = shlex.quote(cmd).replace("\n", " ; ")
-                cmd = f"bash -ce{'x' if self.cmd.verbosity() else ''} {cmd}"
+                _, cmd_file = tempfile.mkstemp()
+                with open(cmd_file, "w") as f:
+                    print(cmd, file=f)
+
+                cmd = f"bash -e{'x' if self.cmd.verbosity() else ''} '{cmd_file}'"
             rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
             if rc > 0:
                 logger.error(f"Validation {name} has failed ({rc})")
                 err = True
+
+            if cmd_file:
+                os.unlink(cmd_file)
 
         return err
 
@@ -128,11 +136,35 @@ class Entrypoint:
 
         return err
 
+    def _start_dstat_host(self):
+        self.cmd.call("/etc/init.d/pmcd start")
+        cmd = "dstat -tclm -o host.csv"
+        self.dstat = self.cmd.open(cmd, cwd=self.log_dir, mute=True)
+
+    def _stop_dstat_host(self):
+        self.dstat.terminate()
+        self.dstat.wait(timeout=5)
+
+    def _start_dstat(self, hostname):
+        host = self.hosts[hostname]
+        ifaces = ",".join(host.get_ifaces()) + ",total"
+        out = os.path.join(self.log_dir, f"{hostname}.csv")
+        host.cmd_wait("/etc/init.d/pmcd start")
+        host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null &")
+
+    def _stop_dstat(self, hostname):
+        host = self.hosts[hostname]
+        host.cmd_wait("killall dstat; sync")
+
     def _get_stats(self, config, phase):
         if "stats" not in config:
             return
         stats = config["stats"]
         stat_dir = os.path.join(self.log_dir, "stats")
+
+        if phase == "post":
+            for host in self.hosts.keys():
+                self._stop_dstat(host)
 
         for key in (phase, "all"):
             if key not in stats:
@@ -148,6 +180,49 @@ class Entrypoint:
                     with open(os.path.join(d, name), "a") as f:
                         print(self.hosts[host].cmd_output(cmd), file=f)
 
+        if phase == "pre":
+            for host in self.hosts.keys():
+                self._start_dstat(host)
+
+    def _setup_net(self, config):
+        if "bridges" not in config:
+            return
+
+        hw_accel = config.get("bridges_hw_accel", True)
+        hw_cmd = "ethtool -K '{}' gro off gso off tso off tx off rx off sg off"
+
+        for br in config["bridges"]:
+            tc_args = []
+            for key in br:
+                if not br[key]:
+                    continue
+                if key == "rate_mbit":
+                    tc_args += ["rate", f"{br[key]}mbit"]
+                elif key == "delay_ms":
+                    tc_args += ["delay", f"{br[key]}ms"]
+                elif key == "loss_pc":
+                    tc_args += ["loss", f"{br[key]}%"]
+
+            if not tc_args:
+                continue
+
+            vbr = f"vir{br['name']}"
+            ifaces = os.listdir(f"/sys/devices/virtual/net/{vbr}/brif/")
+            netem_cmd = "tc qdisc add dev '{}' root netem " + " ".join(tc_args)
+
+            for iface in ifaces:
+                self.cmd.call(netem_cmd.format(iface))
+
+            if not hw_accel:
+                self.cmd.call(hw_cmd.format(vbr))
+                for iface in ifaces:
+                    self.cmd.call(hw_cmd.format(iface))
+
+    def _setup_hosts(self):
+        results_dir = f"RESULTS_DIR={shlex.quote(self.log_dir)}"
+        for host in self.hosts.values():
+            host.cmd_wait(results_dir)
+
     def _get_bridges(self, config, env):
         if "bridges" not in config:
             return
@@ -156,25 +231,29 @@ class Entrypoint:
         for br in config["bridges"]:
             vbr = f"vir{br['name']}"
             bridges.append(vbr)
-            for key in br:
-                if key == "name":
-                    continue
-                val = br[key]
-                env[f"INPUT_NET_BRIDGE_{vbr}_{key.upper()}"] = str(val)
 
         if bridges:
             env["INPUT_NET_BRIDGES"] = ",".join(bridges)
 
-    def _get_envs(self, config):
+    def _get_cpus(self, config):
+        return str(config.get("cpus", int(os.cpu_count() / 2)))
+
+    def _get_ram(self, config):
+        if "ram" in config:
+            return str(config["ram"])
+
         try:
             ram = "awk '/^MemAvailable:/ {print $2}' /proc/meminfo"
             ram = int(self.cmd.output(ram)) / 1024
         except ValueError:
             ram = 2048 * 3
 
+        return f"{int(ram / 3)}M"
+
+    def _get_envs(self, config):
         env = {
-            "INPUT_CPUS": str(int(os.cpu_count() / 2)),
-            "INPUT_RAM": f"{int(ram / 3)}M",
+            "INPUT_CPUS": self._get_cpus(config),
+            "INPUT_RAM": self._get_ram(config),
         }
 
         self._get_bridges(config, env)
@@ -187,14 +266,23 @@ class Entrypoint:
 
         return env_client, env_server
 
-    def run_test(self, config, name, id, total):
-        logger.info(f"Starting test {id}/{total}: {name}")
-
+    def _start_vms(self, config):
         env_client, env_server = self._get_envs(config)
         timeout = config.get("timeout_s", 3600)
 
         self._new_vm("client", env_client, timeout)
         self._new_vm("server", env_server, timeout)
+
+    def run_test(self, config, name, id, total):
+        logger.info(f"Starting test {id}/{total}: {name}")
+
+        self._start_dstat_host()
+
+        self._start_vms(config)
+
+        self._setup_hosts()
+
+        self._setup_net(config)
 
         self._get_stats(config, "pre")
 
@@ -207,6 +295,8 @@ class Entrypoint:
             logger.info("error(s) found during the tests, no validation")
         else:
             err = self._validation(config)
+
+        self._stop_dstat_host()
 
         return err
 
