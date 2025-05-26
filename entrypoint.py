@@ -26,6 +26,7 @@ class Entrypoint:
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
+        self.stopped = False
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
@@ -56,10 +57,13 @@ class Entrypoint:
         return vm
 
     def stop(self):
+        if self.stopped:
+            return
+        self.stopped = True
+
         for name in self.hosts:
             host = self.hosts[name]
             host.stop()
-        self.hosts.clear()
 
     def _validation(self, config):
         if "validation" not in config:
