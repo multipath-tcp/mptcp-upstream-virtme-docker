@@ -408,7 +408,9 @@ setup_env() {
 	else
 		# avoid override
 		RESULTS_DIR="$(_get_results_dir "${mode}")"
-		rm -rf "${RESULTS_DIR}"
+		if [ "${EXPECT}" != 0 ]; then
+			rm -rf "${RESULTS_DIR}"
+		fi
 
 		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
 		: "${INPUT_GCOV:=0}"
@@ -2222,6 +2224,7 @@ case "${INPUT_MODE}" in
 	;;
 "perf-normal" | "perf-debug")
 	mode="${INPUT_MODE:5}"
+	EXPECT=1
 	setup_env "${mode}"
 	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
 	# python env var to avoid creating __pycache__ in kernel src dir

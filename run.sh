@@ -29,6 +29,7 @@ docker run \
 	-v "${VIRTME_REAL_DIR}:${VIRTME_REAL_DIR}:rw" \
 	${VIRTME_PACKETDRILL_PATH:+-v "${VIRTME_PACKETDRILL_PATH}:/opt/packetdrill:rw"} \
 	-v "${HOME_DIR}:/root" \
+	-v "/etc/localtime:/etc/localtime:ro" \
 	${VIRTME_SYZKALLER_PATH:+ -v "${VIRTME_SYZKALLER_PATH}:/opt/syzkaller:rw"} \
 	${VIRTME_NG_PATH:+ -v "${VIRTME_NG_PATH}:/opt/virtme-ng:ro"} \
 	-w "${PWD}" \
