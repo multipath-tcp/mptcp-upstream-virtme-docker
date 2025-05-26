@@ -4,9 +4,11 @@
 Class for the entrypoint.sh script
 """
 
+import json
 import logging
 import os
 import shlex
+import statistics
 import tempfile
 import time
 
@@ -70,6 +72,10 @@ class Entrypoint:
             return True
         validation = config["validation"]
 
+        dstats = self._parse_dstats(config)
+        with open(os.path.join(self.log_dir, "dstat.json"), "w") as f:
+            print(json.dumps(dstats), file=f)
+
         err = False
         for step in validation:
             name = step["name"]
@@ -100,6 +106,7 @@ class Entrypoint:
 
         for step in test:
             name = step["name"]
+            dstat_only = step.get("dstat_only", None)
             logger.info(f"test: step: {name}")
             for host in self.hosts:
                 self.hosts[host].cmd_send(f"## step: {time.asctime()}: {name}")
@@ -116,6 +123,11 @@ class Entrypoint:
                 # run commands of the same step in parallel
                 for host in hosts:
                     self.hosts[host].cmd_send(cmd)
+
+            if dstat_only == "step" or dstat_only == "start":
+                if "dstat" not in config:
+                    config["dstat"] = {}
+                config["dstat"]["start"] = time.localtime(time.time())
 
             # then check status
             for host in self.hosts:
@@ -135,10 +147,105 @@ class Entrypoint:
                 if not ignore_err and rc != 0:
                     logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
                     err = True
+
+            if dstat_only == "step" or dstat_only == "end":
+                config["dstat"]["end"] = time.localtime(time.time())
+
             if err:
                 break
 
         return err
+
+    def _parse_dstat(self, config, fpath):
+        if not os.path.isfile(fpath):
+            logger.warn(f"No dstat file: {fpath}")
+            return {}
+
+        now = time.localtime(time.time())
+        stats = {}
+        with open(fpath) as csvfile:
+            # skip the extra headers
+            for _ in range(5):
+                csvfile.readline()
+
+            # "real" header
+            keys = csvfile.readline().rstrip().replace('"', "").split(",")
+            lkeys = len(keys)
+            for key in keys:
+                stats[key] = {"raw": []}
+
+            for line in csvfile.readlines():
+                line = line.rstrip().split(",")
+                if len(line) != lkeys:
+                    continue
+                for i in range(lkeys):
+                    val = line[i]
+                    if ":" in val:
+                        # 16-05 21:42:59
+                        # Add year: https://github.com/python/cpython/issues/70647
+                        val = f"{now.tm_year}-{val}"
+                        val = time.strptime(val, "%Y-%d-%m %H:%M:%S")
+                    elif "." in val:
+                        val = float(val)
+                    else:
+                        val = int(val)
+                    stats[keys[i]]["raw"].append(val)
+
+        dstat = config.get("dstat", {})
+        times = stats["time"]["raw"]
+        start, end = 0, len(times)
+
+        # remove extremes points, before and after the tests if specified
+        if "start" in dstat and "end" in dstat:
+            dstart = dstat["start"]
+            dend = dstat["end"]
+            for i in range(len(times)):
+                if times[i] < dstart:
+                    start = i + 1
+                elif times[i] >= dend:
+                    end = i - 1
+                    break
+        else:
+            logger.warn("No 'dstat_only' in the yaml")
+
+        # offset to avoid start / end noise.
+        start += dstat.get("offset_start", 1)
+        end -= dstat.get("offset_end", 1)
+
+        for key in keys:
+            s = stats[key]
+
+            s["filtered"] = filtered = s["raw"][start:end]
+
+            if key == "time":
+                s["raw_str"] = [time.asctime(x) for x in s["raw"]]
+                s["filtered_str"] = [time.asctime(x) for x in filtered]
+                s["diff"] = int(time.mktime(filtered[-1]) - time.mktime(filtered[0]))
+                continue
+
+            s["sum"] = sum(filtered)
+            s["diff"] = filtered[-1] - filtered[0]
+            s["min"] = min(filtered)
+            s["max"] = max(filtered)
+            s["mean"] = mean = statistics.mean(filtered)
+            s["median"] = statistics.median(filtered)
+            s["variance"] = statistics.variance(filtered, mean)
+            s["stdev"] = statistics.stdev(filtered, mean)
+            s["pvariance"] = statistics.pvariance(filtered, mean)
+            s["pstdev"] = statistics.pstdev(filtered, mean)
+            s["quartiles"] = statistics.quantiles(filtered, n=4)
+            s["deciles"] = statistics.quantiles(filtered, n=10)
+            s["percentiles"] = statistics.quantiles(filtered, n=100)
+
+        return stats
+
+    def _parse_dstats(self, config):
+        stats = {}
+        for name in (*self.hosts.keys(), "host"):
+            fpath = f"{os.path.join(self.log_dir, name)}.csv"
+            stats[name] = self._parse_dstat(config, fpath)
+
+        return stats
 
     def _start_dstat_host(self):
         self.cmd.call("/etc/init.d/pmcd start")
@@ -295,13 +402,12 @@ class Entrypoint:
 
         self._get_stats(config, "post")
         self.stop()
+        self._stop_dstat_host()
 
         if err:
             logger.info("error(s) found during the tests, no validation")
         else:
             err = self._validation(config)
-
-        self._stop_dstat_host()
 
         return err
 
