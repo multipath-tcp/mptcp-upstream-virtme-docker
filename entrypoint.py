@@ -219,8 +219,9 @@ class Entrypoint:
 
             if key == "time":
                 s["raw_str"] = [time.asctime(x) for x in s["raw"]]
-                s["filtered_str"] = [time.asctime(x) for x in filtered]
-                s["diff"] = int(time.mktime(filtered[-1]) - time.mktime(filtered[0]))
+                s["str"] = [time.asctime(x) for x in filtered]
+                s["sec"] = [int(time.mktime(x)) for x in filtered]
+                s["diff"] = s["sec"][-1] - s["sec"][0]
                 continue
 
             s["sum"] = sum(filtered)
