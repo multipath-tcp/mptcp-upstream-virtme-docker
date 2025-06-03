@@ -73,7 +73,7 @@ class Entrypoint:
         validation = config["validation"]
 
         dstats = self._parse_dstats(config)
-        with open(os.path.join(self.log_dir, "dstat.json"), "w") as f:
+        with open(os.path.join(self.log_dir, "stats", "dstat.json"), "w") as f:
             print(json.dumps(dstats), file=f)
 
         err = False
@@ -242,14 +242,17 @@ class Entrypoint:
     def _parse_dstats(self, config):
         stats = {}
         for name in (*self.hosts.keys(), "host"):
-            fpath = f"{os.path.join(self.log_dir, name)}.csv"
+            fpath = os.path.join(self.log_dir, "stats", name, "dstat.csv")
             stats[name] = self._parse_dstat(config, fpath)
 
         return stats
 
     def _start_dstat_host(self):
         self.cmd.call("/etc/init.d/pmcd start")
-        cmd = "dstat -tclm -o host.csv"
+        dirname = os.path.join(self.log_dir, "stats", "host")
+        os.makedirs(dirname, exist_ok=True)
+        out = os.path.join(dirname, "dstat.csv")
+        cmd = f"dstat -tclm -o '{out}'"
         self.dstat = self.cmd.open(cmd, cwd=self.log_dir, mute=True)
 
     def _stop_dstat_host(self):
@@ -259,7 +262,9 @@ class Entrypoint:
     def _start_dstat(self, hostname):
         host = self.hosts[hostname]
         ifaces = ",".join(host.get_ifaces()) + ",total"
-        out = os.path.join(self.log_dir, f"{hostname}.csv")
+        dirname = os.path.join(self.log_dir, "stats", hostname)
+        os.makedirs(dirname, exist_ok=True)
+        out = os.path.join(dirname, "dstat.csv")
         host.cmd_wait("/etc/init.d/pmcd start")
         host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null &")
 
