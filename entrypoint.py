@@ -224,6 +224,12 @@ class Entrypoint:
                 s["diff"] = s["sec"][-1] - s["sec"][0]
                 continue
 
+            # convert from bytes to bits
+            if key.startswith("net/"):
+                s["raw_bits"] = [int(x * 8) for x in s["raw"]]
+                s["bytes"] = filtered
+                s["filtered"] = filtered = [int(x * 8) for x in filtered]
+
             s["sum"] = sum(filtered)
             s["diff"] = filtered[-1] - filtered[0]
             s["min"] = min(filtered)
