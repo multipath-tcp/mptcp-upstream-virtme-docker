@@ -2080,6 +2080,7 @@ usage() {
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
 	echo " - connect: connect to a VM's remote shell via a VSOCK (set INPUT_VSOCK_CID for multiple VMs)."
+	echo " - gdb: connect to the GDB daemon"
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."
@@ -2210,7 +2211,7 @@ case "${INPUT_MODE}" in
 	exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
 	;;
 "gdb")
-	exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
+	exec gdb-multiarch -q -ex "target remote localhost:$((1234 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID))${1:+ ${*}}" vmlinux
 	;;
 "dump")
 	exec vng --dump "${1?}"

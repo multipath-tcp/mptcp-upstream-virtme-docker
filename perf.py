@@ -13,7 +13,7 @@ import signal
 import sys
 import yaml
 
-import cmd
+import logcmd
 import entrypoint
 
 logger = logging.getLogger("perf")
@@ -112,7 +112,7 @@ def get_args_parser():
 
 
 def get_tests(conf_file):
-    with open(conf_file, "r") as c:
+    with open(conf_file) as c:
         config = yaml.safe_load(c)
     return config
 
@@ -128,7 +128,7 @@ def main():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    command = cmd.CMD(args.dry_run, args.verbose, args.kernel_dir)
+    command = logcmd.CMD(args.dry_run, args.verbose, args.kernel_dir)
     ep = entrypoint.Entrypoint(command, args.mode, args.entrypoint, args.log_dir)
 
     if args.build:
