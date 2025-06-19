@@ -2080,6 +2080,7 @@ usage() {
 	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
 	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
 	echo " - connect: connect to a VM's remote shell via a VSOCK (set INPUT_VSOCK_CID for multiple VMs)."
+	echo " - gdb: connect to the GDB daemon"
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
 	echo
 	echo "This script needs to be ran from the root of kernel source code."

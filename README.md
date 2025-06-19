@@ -41,6 +41,7 @@ When launching the docker image, you have to specify the mode you want to use:
   (`normal` mode by default).
 - `connect`: connect to a VM's remote shell via a VSock. For multiple VMs
   running in parallel, set a different CID, e.g. `INPUT_VSOCK_CID=42`
+- `gdb`: connect to the GDB daemon.
 - `lcov2html`: Generate HTML from LCOV file(s) (available when tests have been
   executed with `INPUT_GCOV=1`).
 - `src`: `source` a given script file.
@@ -116,6 +117,24 @@ f055e439a1e7   mptcp/mptcp-upstream-virtme-docker:latest   "/entrypoint.sh manua
 50cd8ce27116   mptcp/mptcp-upstream-virtme-docker:latest   "/entrypoint.sh manual" (...)
 $ docker exec -it f055e439a1e7 /entrypoint.sh connect
 ```
+
+Similarly, if the same container is running multiple VMs, you might have to
+define `INPUT_VSOCK_CID` env var (e.g. `docker exec -e INPUT_VSOCK_CID=X`)
+which is `3` by default.
+
+### GDB
+
+By default, VMs are running a GDB daemon on port 1234. To attach is, you can use
+the following command:
+
+```bash
+docker exec -it \
+  "$(docker ps --filter "label=name=mptcp-upstream-virtme-docker" -l --format "{{.ID}}")" \
+  /entrypoint.sh gdb
+```
+
+This is similar to the previous section (Additional Shell), where the notes
+about multiple VMs still apply.
 
 ## Extension
 
