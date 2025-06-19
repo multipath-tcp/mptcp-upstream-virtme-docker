@@ -2211,7 +2211,7 @@ case "${INPUT_MODE}" in
 	exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
 	;;
 "gdb")
-	exec "${VIRTME_RUN}" --mods none --gdb --kdir "${VIRTME_CURRENT_BUILD_DIR}"
+	exec gdb-multiarch -q -ex "target remote localhost:$((1234 + INPUT_VSOCK_CID - DEFAULT_VSOCK_CID))${1:+ ${*}}" vmlinux
 	;;
 "dump")
 	exec vng --dump "${1?}"
