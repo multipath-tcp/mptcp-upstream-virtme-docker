@@ -95,7 +95,7 @@ ln -s /PATH/TO/THIS/REPO/run-tests-dev-clang.sh .virtme-clang.sh
 
 Then simply call `./.virtme.sh` or `.virtme-clang.sh`.
 
-### Remote Shell
+### Additional Shell
 
 To connect to an existing VM with a remote shell, you can use this command:
 
