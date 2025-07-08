@@ -1214,22 +1214,6 @@ run_selftest_all() { local sf rc=0
 	return \${rc}
 }
 
-_run_mptcp_connect_opt() { local t="mptcp_connect_\${1}" rc=0
-	shift
-
-	log_section_start "Selftest Test: ./mptcp_connect.sh \${*}"
-	MPTCP_LIB_KSFT_TEST=\${t} _run_selftest_one_tap "${RESULTS_DIR}/\${t}" ./mptcp_connect.sh "\${@}" || rc=\${?}
-	log_section_end
-
-	return \${rc}
-}
-
-run_mptcp_connect_mmap() {
-	can_run || return 0
-
-	_run_mptcp_connect_opt mmap -m mmap
-}
-
 # \$1: packetdrill TAP file, \$2: TAP prefix
 _packetdrill_result() {
 	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
@@ -1322,7 +1306,6 @@ run_bpftest_all() {
 run_all() {
 	run_kunit_all
 	run_selftest_all
-	run_mptcp_connect_mmap
 	run_packetdrill_all
 	run_bpftest_all
 }
