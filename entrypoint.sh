@@ -582,8 +582,9 @@ gen_kconfig() {
 
 	if is_mode_debug "${mode}"; then
 		kconfig+=(
-			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
-			-d SLUB_DEBUG_ON         # perf impact is too important
+			-e NET_NS_REFCNT_TRACKER    # now in debug.config, for < 6.9 kernels
+			-d SLUB_DEBUG_ON            # perf impact is too important
+			-d DEBUG_KMEMLEAK_AUTO_SCAN # we will scan at the end
 		)
 
 		local debug_config="kernel/configs/debug.config"
