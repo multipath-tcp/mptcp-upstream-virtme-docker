@@ -961,8 +961,6 @@ run_expect() {
 	local mode timestamps_sec_stop no_tap=1
 	mode="${1}"
 
-	EXPECT=1
-
 	if is_ci; then
 		no_tap=0 # we want subtests
 		timestamps_sec_stop=$(date +%s)
@@ -2185,6 +2183,7 @@ case "${INPUT_MODE}" in
 	;;
 "vm-expect" | "vm-auto")
 	check_source_exec_all
+	EXPECT=1
 	setup_env "${@:-normal}"
 	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 	prepare
