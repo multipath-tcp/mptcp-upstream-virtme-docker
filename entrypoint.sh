@@ -382,6 +382,7 @@ setup_env() {
 	export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 
 	if [ "${INPUT_CLEAN}" = 1 ]; then
+		printinfo "Cleaning build dir: ${VIRTME_BUILD_DIR}"
 		rm -rf "${VIRTME_BUILD_DIR}" "${VIRTME_PERF_DIR}"
 	fi
 
@@ -581,8 +582,9 @@ gen_kconfig() {
 
 	if is_mode_debug "${mode}"; then
 		kconfig+=(
-			-e NET_NS_REFCNT_TRACKER # useful for 'net' tests
-			-d SLUB_DEBUG_ON         # perf impact is too important
+			-e NET_NS_REFCNT_TRACKER    # now in debug.config, for < 6.9 kernels
+			-d SLUB_DEBUG_ON            # perf impact is too important
+			-d DEBUG_KMEMLEAK_AUTO_SCAN # we will scan at the end
 		)
 
 		local debug_config="kernel/configs/debug.config"
@@ -960,8 +962,6 @@ run_expect() {
 	local mode timestamps_sec_stop no_tap=1
 	mode="${1}"
 
-	EXPECT=1
-
 	if is_ci; then
 		no_tap=0 # we want subtests
 		timestamps_sec_stop=$(date +%s)
@@ -1316,6 +1316,7 @@ has_call_trace() {
 
 kmemleak_scan() {
 	if [ -e /sys/kernel/debug/kmemleak ]; then
+		sleep 5 # grace period of 5 sec
 		echo scan > /sys/kernel/debug/kmemleak
 		cat /sys/kernel/debug/kmemleak >> "${KMEMLEAK}"
 	fi
@@ -1415,7 +1416,6 @@ cd "${KERNEL_SRC}"
 
 rm -f "${KMEMLEAK}"
 kmemleak_scan
-kmemleak_scan # Do it twice, kmemleak likes to hide the leak on the first attempt
 gcov_extract
 
 # To run commands after having executed the tests
@@ -2184,6 +2184,7 @@ case "${INPUT_MODE}" in
 	;;
 "vm-expect" | "vm-auto")
 	check_source_exec_all
+	EXPECT=1
 	setup_env "${@:-normal}"
 	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
 	prepare
