@@ -382,6 +382,7 @@ setup_env() {
 	export KCONFIG_CONFIG="${VIRTME_KCONFIG}"
 
 	if [ "${INPUT_CLEAN}" = 1 ]; then
+		printinfo "Cleaning build dir: ${VIRTME_BUILD_DIR}"
 		rm -rf "${VIRTME_BUILD_DIR}" "${VIRTME_PERF_DIR}"
 	fi
 
