@@ -887,8 +887,7 @@ build_packetdrill() {
 
 	if [ "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE}" = "1" ]; then
 		printinfo "Packetdrill: not modifying the tolerance"
-	elif is_mode_debug "${mode}"; then
-		# Increase tolerance in debug mode: env can be very slow
+	else
 		cd ../mptcp
 		# reduce debug logs: too much
 		set_trace_off
@@ -897,7 +896,14 @@ build_packetdrill() {
 		for pf in $(git grep -l "^--tolerance_usecs="); do
 			# shellcheck disable=SC2013 # to filter duplicated ones
 			for val in $(grep "^--tolerance_usecs=" "${pf}" | cut -d= -f2 | sort -u); do
-				new_val=$((val * 2))
+				if is_mode_debug "${mode}"; then
+					# the environment can be very slow
+					new_val=$((val * 2))
+				else
+					# public CI can be quite loaded...
+					new_val=$((val * 3 / 2))
+				fi
+
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
 			done
 		done
