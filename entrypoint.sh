@@ -2142,6 +2142,13 @@ case "${INPUT_MODE}" in
 "btf-debug" | "manual-btf-debug")
 	go_manual "btf-debug" "${@}"
 	;;
+"auto")
+	if [ "${1}" = "btf" ]; then
+		go_expect "btf-${2?}" "${@:3}"
+	else
+		go_expect "${1?}" "${@:2}"
+	fi
+	;;
 "expect-normal" | "auto-normal")
 	go_expect "normal" "${@}"
 	;;
