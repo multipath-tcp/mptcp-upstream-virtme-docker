@@ -63,7 +63,7 @@ DEFAULT_HOSTNAME="mptcpdev"
 : "${INPUT_VSOCK_CID:="${DEFAULT_VSOCK_CID}"}"
 : "${INPUT_CI_RESULTS_DIR:=""}"
 : "${INPUT_CI_PRINT_EXIT_CODE:=1}"
-: "${INPUT_CI_TIMEOUT_SEC:=6300}"
+: "${INPUT_CI_TIMEOUT_SEC:=7200}"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
 : "${INPUT_FULL_DUMP:=0}"
@@ -82,7 +82,8 @@ fi
 : "${VIRTME_ARCH:="$(uname -m)"}"
 
 TIMESTAMPS_SEC_START=$(date +%s)
-# CI only: estimated time before (clone + boot) and after (artifacts) running this script
+# CI only: estimated time before (clone + boot) and after (artifacts + debug
+# output in case of timeout) running this script.
 VIRTME_CI_ESTIMATED_EXTRA_TIME="540"
 
 # max time to boot: it should take less than one minute with a debug kernel, *5 to be safe
