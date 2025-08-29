@@ -32,6 +32,7 @@ RUN apt-get update && \
 		golang \
 		mptcpize iperf3 netperf \
 		bmon ifstat dstat \
+		stress-ng \
 		python3-pexpect \
 		&& \
 	apt-get clean
