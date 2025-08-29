@@ -1919,6 +1919,40 @@ go_expect() {
 	analyze "${@}"
 }
 
+go_vm_manual() {
+	setup_env "${@:-normal}"
+	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	prepare
+	run
+}
+
+go_vm_expect() {
+	check_source_exec_all
+	EXPECT=1
+	setup_env "${@:-normal}"
+	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	prepare
+	run_expect "${@:-normal}"
+	analyze "${@:-normal}"
+}
+
+go_vm_auto() {
+	go_vm_expect "${@}"
+}
+
+go_perf() {
+	local mode="${1}"
+	shift
+
+	EXPECT=1
+	setup_env "${mode}"
+	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
+	# python env var to avoid creating __pycache__ in kernel src dir
+	TERM="" PYTHONDONTWRITEBYTECODE=1 \
+		/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
+		"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
+}
+
 static_analysis() {
 	local src obj ftmp
 	ftmp=$(mktemp)
@@ -2056,8 +2090,8 @@ usage() {
 	echo " - cmd: run the given command"
 	echo " - src: source a given script file"
 	echo " - static: run static analysis, with make W=1 C=1"
-	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default)"
-	echo " - vm-auto: same, then run the tests as well ('normal' mode by default)"
+	echo " - vm-manual: start the VM with what has already been built ('normal' mode by default, dash is optional)"
+	echo " - vm-auto: same, then run the tests as well ('normal' mode by default, dash is optional)"
 	echo " - connect: connect to a VM's remote shell via a VSOCK (set INPUT_VSOCK_CID for multiple VMs)."
 	echo " - gdb: connect to the GDB daemon"
 	echo " - lcov2html: generate html from lcov file (required INPUT_GCOV=1)"
@@ -2082,13 +2116,27 @@ fi
 trap 'exit_trap' EXIT
 
 case "${INPUT_MODE}" in
-"manual" | "normal" | "manual-normal")
+"manual")
+	if [ "${1}" = "normal" ] || [ "${1}" = "debug" ]; then
+		go_manual "${1}" "${@:2}"
+	else
+		go_manual "normal" "${@}"
+	fi
+	;;
+"normal" | "manual-normal")
 	go_manual "normal" "${@}"
 	;;
 "debug" | "manual-debug")
 	go_manual "debug" "${@}"
 	;;
-"btf" | "btf-normal" | "manual-btf" | "manual-btf-normal")
+"btf")
+	if [ "${1}" = "normal" ] || [ "${1}" = "debug" ]; then
+		go_manual "btf-${1}" "${@:2}"
+	else
+		go_manual "btf-normal" "${@}"
+	fi
+	;;
+"btf-normal" | "manual-btf" | "manual-btf-normal")
 	go_manual "btf-normal" "${@}"
 	;;
 "btf-debug" | "manual-btf-debug")
@@ -2172,20 +2220,18 @@ case "${INPUT_MODE}" in
 	setup_env "${@:-normal}"
 	static_analysis
 	;;
-"vm" | "vm-manual")
-	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
-	prepare
-	run
+"vm")
+	if [ "${1}" = "manual" ] || [ "${1}" = "auto" ]; then
+		"go_vm_${1}" "${@:2}"
+	else
+		go_vm_manual "${@}"
+	fi
+	;;
+"vm-manual")
+	go_vm_manual "${@}"
 	;;
 "vm-expect" | "vm-auto")
-	check_source_exec_all
-	EXPECT=1
-	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
-	prepare
-	run_expect "${@:-normal}"
-	analyze "${@:-normal}"
+	go_vm_expect "${@}"
 	;;
 "connect")
 	exec "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}" ${1:+--remote-cmd "${*}"}
@@ -2203,15 +2249,11 @@ case "${INPUT_MODE}" in
 	done
 	_lcov2html "${@}"
 	;;
+"perf")
+	go_perf "${1?}" "${@:2}"
+	;;
 "perf-normal" | "perf-debug")
-	mode="${INPUT_MODE:5}"
-	EXPECT=1
-	setup_env "${mode}"
-	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
-	# python env var to avoid creating __pycache__ in kernel src dir
-	TERM="" PYTHONDONTWRITEBYTECODE=1 \
-		/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
-		"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
+	go_perf "${INPUT_MODE:5}" "${@}"
 	;;
 *)
 	set +x

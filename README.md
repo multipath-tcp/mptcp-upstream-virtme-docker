@@ -16,6 +16,7 @@ When launching the docker image, you have to specify the mode you want to use:
   - `manual-debug`: With a debug kernel config.
   - `manual-btf-normal`: With BTF support (needed for BPF features), no debug.
   - `manual-btf-debug`: With BTF support (needed for BPF features), with debug.
+  - Note: `manual <mode>` (without dash) is also allowed.
 - `auto-*`: Build the kernel and dependences, start a VM, then run all the
   automatic tests from the VM:
   - `auto-normal`: With a non-debug kernel config.
@@ -24,7 +25,9 @@ When launching the docker image, you have to specify the mode you want to use:
   - `auto-btf-normal`: With BTF support (needed for BPF features), no debug.
   - `auto-btf-debug`: With BTF support (needed for BPF features), with debug.
   - `auto-btf-all`: With BTF support, first without debug, then with debug.
-- `perf-normal` and `perf-debug`: Perf regression tests: see [PERF.md](PERF.md).
+  - Note: `auto <mode>` (without dash) is also allowed (but not for `all`).
+- `perf-normal` and `perf-debug` (dash is optional): Perf regression tests: see
+  [PERF.md](PERF.md).
 - `make`: Run the `make` command with optional parameters.
 - `make.cross`: Run Intel's `make.cross` command with optional parameters.
 - `build`: Build everything, but don't start the VM (`normal` mode by default).
@@ -36,9 +39,9 @@ When launching the docker image, you have to specify the mode you want to use:
   `cmd bash` to have a prompt.
 - `static`: Run static analysis, with `make W=1 C=1`.
 - `vm-manual`: Start the VM with what has already been built (`normal` mode by
-  default).
+  default). The dash is optional.
 - `vm-auto`: Start the VM with what has already been built, then run the tests
-  (`normal` mode by default).
+  (`normal` mode by default). The dash is optional.
 - `connect`: connect to a VM's remote shell via a VSock. For multiple VMs
   running in parallel, set a different CID, e.g. `INPUT_VSOCK_CID=42`
 - `gdb`: connect to the GDB daemon.
