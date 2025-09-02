@@ -1313,11 +1313,12 @@ has_call_trace() {
 	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
-kmemleak_scan() {
-	if [ -e /sys/kernel/debug/kmemleak ]; then
+kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
+	if [ -e "\${p}" ]; then
 		sleep 5 # grace period of 5 sec
-		echo scan > /sys/kernel/debug/kmemleak
-		cat /sys/kernel/debug/kmemleak >> "${KMEMLEAK}"
+		echo scan > "\${p}" && cat "\${p}" >> "${KMEMLEAK}"
+		# second scan often surfaces issues the first scan missed
+		echo scan > "\${p}" && cat "\${p}" >> "${KMEMLEAK}"
 	fi
 }
 
