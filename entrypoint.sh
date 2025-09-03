@@ -1315,10 +1315,11 @@ has_call_trace() {
 
 kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 	if [ -e "\${p}" ]; then
+		echo scan > "\${p}"
 		sleep 5 # grace period of 5 sec
-		echo scan > "\${p}" && cat "\${p}" >> "${KMEMLEAK}"
 		# second scan often surfaces issues the first scan missed
-		echo scan > "\${p}" && cat "\${p}" >> "${KMEMLEAK}"
+		echo scan > "\${p}"
+		cat "\${p}" >> "${KMEMLEAK}"
 	fi
 }
 
