@@ -899,7 +899,7 @@ build_packetdrill() {
 			for val in $(grep "^--tolerance_usecs=" "${pf}" | cut -d= -f2 | sort -u); do
 				if is_mode_debug "${mode}"; then
 					# the environment can be very slow
-					new_val=$((val * 2))
+					new_val=$((val * 5 / 2))
 				else
 					# public CI can be quite loaded...
 					new_val=$((val * 3 / 2))
