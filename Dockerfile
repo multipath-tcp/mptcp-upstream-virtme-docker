@@ -91,16 +91,13 @@ RUN cd /opt && \
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.38"
 RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
+# temp workaround, see: https://github.com/arighi/virtme-ng/issues/353
+RUN sed -i 's/-o cache=always //' /usr/local/lib/python3.13/dist-packages/virtme/commands/run.py
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
 	type "$(basename "${i}")" >/dev/null 2>&1 || ln -sv "${i}" /usr/sbin/; \
     done
-
-# Temp workaround: bugs in v2.3
-RUN cd /tmp && \
-	wget -nv "https://mirrors.kernel.org/ubuntu/pool/universe/l/lcov/lcov_2.3.1-1_all.deb" && \
-	apt-get install -y ./lcov_2.3.1-1_all.deb
 
 # CCache for quicker builds with default colours
 # Note: use 'ccache -M xG' to increase max size, default is 5GB
