@@ -97,11 +97,6 @@ RUN for i in /usr/lib/klibc/bin/*; do \
 	type "$(basename "${i}")" >/dev/null 2>&1 || ln -sv "${i}" /usr/sbin/; \
     done
 
-# Temp workaround: bugs in v2.3
-RUN cd /tmp && \
-	wget -nv "https://mirrors.kernel.org/ubuntu/pool/universe/l/lcov/lcov_2.3.1-1_all.deb" && \
-	apt-get install -y ./lcov_2.3.1-1_all.deb
-
 # CCache for quicker builds with default colours
 # Note: use 'ccache -M xG' to increase max size, default is 5GB
 ENV PATH=/usr/lib/ccache:/opt/virtme-ng:${PATH}
