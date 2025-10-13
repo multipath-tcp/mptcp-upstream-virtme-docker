@@ -675,6 +675,9 @@ gen_kconfig() {
 		-d MISC_FILESYSTEMS -d SCSI
 	)
 
+	# initramfs is not needed, and there are issues with CoreUtils' 'date'
+	kconfig+=(-d BLK_DEV_INITRD)
+
 	# extra config
 	if [ -s "${1:-}" ]; then
 		local i
