@@ -616,12 +616,6 @@ gen_kconfig() {
 
 	# Debug info for developers
 	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
-	if with_clang; then
-		kconfig+=(-e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT)
-	else
-		# decode_stacktrace.sh script reports '??:?' with GCC and DWARF5
-		kconfig+=(-e DEBUG_INFO_DWARF4)
-	fi
 
 	# Compressed (old/new option)
 	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZSTD)
@@ -674,9 +668,6 @@ gen_kconfig() {
 		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
 		-d MISC_FILESYSTEMS -d SCSI
 	)
-
-	# Use ZSTD instead of GZIP if the option is available: faster
-	kconfig+=(-e KERNEL_ZSTD)
 
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
 	kconfig+=(-d BLK_DEV_INITRD)
