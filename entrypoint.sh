@@ -633,7 +633,7 @@ gen_kconfig() {
 		# Fix ./include/linux/if.h:28:10: fatal error:
 		#		sys/socket.h: no such file or directory
 		kconfig+=(-d IA32_EMULATION)
-	elif is_ci || [ "${mode}" != "debsym" ]; then
+	elif is_ci; then
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
 	fi
 
