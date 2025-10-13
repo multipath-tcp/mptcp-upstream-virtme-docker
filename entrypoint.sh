@@ -624,7 +624,7 @@ gen_kconfig() {
 	fi
 
 	# Compressed (old/new option)
-	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZLIB)
+	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZSTD)
 
 	# We need more debug info but it is slow to generate
 	if is_mode_btf "${mode}"; then
@@ -633,7 +633,7 @@ gen_kconfig() {
 		# Fix ./include/linux/if.h:28:10: fatal error:
 		#		sys/socket.h: no such file or directory
 		kconfig+=(-d IA32_EMULATION)
-	elif is_ci || [ "${mode}" != "debsym" ]; then
+	elif is_ci; then
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
 	fi
 
@@ -674,6 +674,9 @@ gen_kconfig() {
 		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
 		-d MISC_FILESYSTEMS -d SCSI
 	)
+
+	# Use ZSTD instead of GZIP if the option is available: faster
+	kconfig+=(-e KERNEL_ZSTD)
 
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
 	kconfig+=(-d BLK_DEV_INITRD)
