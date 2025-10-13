@@ -616,12 +616,6 @@ gen_kconfig() {
 
 	# Debug info for developers
 	kconfig+=(-e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e GDB_SCRIPTS)
-	if with_clang; then
-		kconfig+=(-e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT)
-	else
-		# decode_stacktrace.sh script reports '??:?' with GCC and DWARF5
-		kconfig+=(-e DEBUG_INFO_DWARF4)
-	fi
 
 	# Compressed (old/new option)
 	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZSTD)
