@@ -675,6 +675,9 @@ gen_kconfig() {
 		-d MISC_FILESYSTEMS -d SCSI
 	)
 
+	# Use ZSTD instead of GZIP if the option is available: faster
+	kconfig+=(-e KERNEL_ZSTD)
+
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
 	kconfig+=(-d BLK_DEV_INITRD)
 
