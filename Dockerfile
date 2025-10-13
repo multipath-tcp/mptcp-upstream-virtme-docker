@@ -19,7 +19,7 @@ RUN apt-get update && \
 		tcpdump \
 		pkgconf libmnl-dev libxtables-dev libatm1-dev libbsd-dev libbpf-dev gcc-multilib libcap-dev libdb-dev libnsl-dev libselinux1-dev zlib1g-dev \
 		clang clangd clang-tidy lld llvm llvm-dev libcap-dev \
-		gdb gdb-multiarch crash dwarves strace trace-cmd \
+		gdb gdb-multiarch crash dwarves strace trace-cmd linux-perf \
 		iptables ebtables nftables bridge-utils socat \
 		vim psmisc bash-completion less jq xxd \
 		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux gawk \
