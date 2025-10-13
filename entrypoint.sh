@@ -624,7 +624,7 @@ gen_kconfig() {
 	fi
 
 	# Compressed (old/new option)
-	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZLIB)
+	kconfig+=(-e DEBUG_INFO_COMPRESSED -e DEBUG_INFO_COMPRESSED_ZSTD)
 
 	# We need more debug info but it is slow to generate
 	if is_mode_btf "${mode}"; then
