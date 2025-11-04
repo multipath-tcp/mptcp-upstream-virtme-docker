@@ -1204,6 +1204,11 @@ run_selftest_all() { local sf rc=0
 	for sf in "${KERNEL_SRC}/${SELFTESTS_DIR}/"*.sh; do
 		if [ -x "\${sf}" ]; then
 			run_selftest_one "\${sf}" || rc=\${?}
+		elif [[ "\${sf}" == "${KERNEL_SRC}/${SELFTESTS_DIR}/mptcp_connect_"*".sh" ]]; then
+			# workaround for stable kernels
+			chmod +x "\${sf}"
+			run_selftest_one "\${sf}" || rc=\${?}
+			chmod -x "\${sf}"
 		fi
 	done
 
