@@ -902,7 +902,7 @@ build_packetdrill() {
 					new_val=$((val * 3))
 				else
 					# public CI can be quite loaded...
-					new_val=$((val * 3 / 2))
+					new_val=$((val * 2))
 				fi
 
 				sed -i "s/^--tolerance_usecs=${val}$/--tolerance_usecs=${new_val}/g" "${pf}"
