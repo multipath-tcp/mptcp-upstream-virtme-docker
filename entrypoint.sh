@@ -652,6 +652,9 @@ gen_kconfig() {
 	# Options for BPF
 	kconfig+=(-e BPF_JIT -e BPF_SYSCALL)
 
+	# There are some MEMCG specific code in MPTCP
+	kconfig+=(-e MEMCG)
+
 	# Extra options needed for packetdrill
 	# note: we still need SHA1 for fallback tests with v0
 	kconfig+=(-e TUN -e CRYPTO_USER_API_HASH -e CRYPTO_SHA1)
