@@ -1429,6 +1429,7 @@ fi
 
 # end
 echo "${VIRTME_SCRIPT_END}"
+/usr/lib/klibc/bin/poweroff
 EOF
 	chmod +x "${VIRTME_SCRIPT}"
 
@@ -1591,8 +1592,9 @@ expect {
 }
 
 if {${VSOCK_OK} == 1} {
+	# get end messages
+	expect_background eof
 	# stop vsock
-	send -- "exit\r"
 	close
 
 	# back to the serial, stop consuming stdout
@@ -1601,7 +1603,6 @@ if {${VSOCK_OK} == 1} {
 }
 
 set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
-send -- "/usr/lib/klibc/bin/poweroff\r"
 
 expect {
 	"KVM: entry failed, hardware error" {
