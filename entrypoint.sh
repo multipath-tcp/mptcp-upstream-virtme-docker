@@ -233,6 +233,15 @@ _get_results_dir() {
 	echo "${RESULTS_DIR_BASE}/${sha}/${1}${host}"
 }
 
+# $1: iterations (.1 sec)
+wait_prev_vm() {
+	for _ in $(seq "${1}"); do
+		[ -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh" ] || return 0
+		sleep .1
+	done
+	return 1
+}
+
 # $1: pid
 kill_wait() {
 	local pid="${1}"
@@ -2175,6 +2184,7 @@ case "${INPUT_MODE}" in
 	results=("$(_get_results_dir "normal")")
 	INPUT_MODE="auto-normal" "${0}" "${@}" || rc=${?}
 	results+=("$(_get_results_dir "debug")")
+	wait_prev_vm 100 || true
 	INPUT_MODE="auto-debug" "${0}" "${@}" || rc=${?}
 	print_summaries "${results[@]}"
 	exit ${rc}
@@ -2184,6 +2194,7 @@ case "${INPUT_MODE}" in
 	results=("$(_get_results_dir "btf-normal")")
 	INPUT_MODE="auto-btf-normal" "${0}" "${@}" || rc=${?}
 	results+=("$(_get_results_dir "btf-debug")")
+	wait_prev_vm 100 || true
 	INPUT_MODE="auto-btf-debug" "${0}" "${@}" || rc=${?}
 	print_summaries "${results[@]}"
 	exit ${rc}
