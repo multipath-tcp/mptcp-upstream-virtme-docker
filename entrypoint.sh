@@ -638,6 +638,11 @@ gen_kconfig() {
 		kconfig+=(-d IA32_EMULATION)
 	elif is_ci; then
 		kconfig+=(-e DEBUG_INFO_REDUCED -e DEBUG_INFO_SPLIT)
+
+		if ! with_clang; then
+			# decode_stacktrace.sh script reports '??:?' with DWARF5
+			kconfig+=(-e DEBUG_INFO_DWARF4)
+		fi
 	fi
 
 	# GCov for the CI
