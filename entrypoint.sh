@@ -987,7 +987,7 @@ run_expect() {
 	fi
 
 	# force a stop in case of panic, but avoid a reboot in "expect" mode
-	VIRTME_RUN_OPTS+=(--kopt panic=-1)
+	VIRTME_RUN_OPTS+=(--kopt panic=-1 --kopt oops=panic)
 	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
 
 	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
