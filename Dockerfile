@@ -90,7 +90,7 @@ RUN cd /opt && \
 		make install
 
 # Virtme NG
-ARG VIRTME_NG_VERSION="1.38"
+ARG VIRTME_NG_VERSION="1.40"
 RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
 # temp workaround, see: https://github.com/arighi/virtme-ng/issues/353
 RUN sed -i 's/-o cache=always //' /usr/local/lib/python3.13/dist-packages/virtme/commands/run.py
