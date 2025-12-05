@@ -666,6 +666,9 @@ gen_kconfig() {
 	# Options for BPF
 	kconfig+=(-e BPF_JIT -e BPF_SYSCALL)
 
+	# For TCP sockmap
+	kconfig+=(-e BPF_STREAM_PARSER)
+
 	# There are some MEMCG specific code in MPTCP
 	kconfig+=(-e MEMCG)
 
