@@ -660,11 +660,17 @@ gen_kconfig() {
 	# Extra sanity checks in networking: for the moment, small checks
 	kconfig+=(-e DEBUG_NET)
 
+	# Extra detailed debug info on WARN
+	kconfig+=(-e DEBUG_BUGVERBOSE_DETAILED)
+
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
 	# Options for BPF
 	kconfig+=(-e BPF_JIT -e BPF_SYSCALL)
+
+	# For TCP sockmap
+	kconfig+=(-e BPF_STREAM_PARSER)
 
 	# There are some MEMCG specific code in MPTCP
 	kconfig+=(-e MEMCG)
