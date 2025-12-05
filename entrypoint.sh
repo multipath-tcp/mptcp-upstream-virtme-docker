@@ -689,7 +689,7 @@ gen_kconfig() {
 	kconfig+=(
 		-d PCCARD -d MACINTOSH_DRIVERS -d SOUND -d USB_SUPPORT
 		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
-		-d MISC_FILESYSTEMS -d SCSI
+		-d MISC_FILESYSTEMS -d SCSI -d AGP
 	)
 
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
