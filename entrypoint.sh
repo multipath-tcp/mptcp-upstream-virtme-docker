@@ -660,6 +660,9 @@ gen_kconfig() {
 	# Extra sanity checks in networking: for the moment, small checks
 	kconfig+=(-e DEBUG_NET)
 
+	# Extra detailed debug info on WARN
+	kconfig+=(-e DEBUG_BUGVERBOSE_DETAILED)
+
 	# Extra options needed for MPTCP KUnit tests
 	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
 
