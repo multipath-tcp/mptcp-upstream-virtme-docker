@@ -1317,7 +1317,7 @@ run_bpftest_all() {
 
 		for sf in "${VIRTME_BUILD_DIR}/"test_progs*; do
 			if [ -x "\${sf}" ]; then
-				run_bpftest_one "\${sf}" mptcp || rc=\${?}
+				run_bpftest_one "\${sf}" "\${1:-mptcp}" || rc=\${?}
 			fi
 		done
 
