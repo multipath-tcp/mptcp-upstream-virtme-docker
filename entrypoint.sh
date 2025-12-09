@@ -43,6 +43,7 @@ DEFAULT_HOSTNAME="mptcpdev"
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=5G}"
 : "${INPUT_CCACHE_DIR:=""}"
+: "${INPUT_CCACHE_DISABLE:=""}"
 : "${INPUT_NO_BLOCK:=0}"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
@@ -117,6 +118,9 @@ BPFTESTS_DIR="${INPUT_BPFTESTS_DIR:-tools/testing/selftests/bpf}"
 BPFTESTS_CONFIG="${BPFTESTS_DIR}/config"
 
 export CCACHE_MAXSIZE="${INPUT_CCACHE_MAXSIZE}"
+if [ -n "${INPUT_CCACHE_DISABLE}" ]; then
+	export CCACHE_DISABLE="${INPUT_CCACHE_DISABLE}"
+fi
 
 VIRTME_CONFIGKERNEL="virtme-configkernel"
 VIRTME_RUN="virtme-run"
@@ -1317,7 +1321,7 @@ run_bpftest_all() {
 
 		for sf in "${VIRTME_BUILD_DIR}/"test_progs*; do
 			if [ -x "\${sf}" ]; then
-				run_bpftest_one "\${sf}" mptcp || rc=\${?}
+				run_bpftest_one "\${sf}" "\${1:-mptcp}" || rc=\${?}
 			fi
 		done
 
