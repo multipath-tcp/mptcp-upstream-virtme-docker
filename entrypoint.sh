@@ -667,8 +667,11 @@ gen_kconfig() {
 	# Extra detailed debug info on WARN
 	kconfig+=(-e DEBUG_BUGVERBOSE_DETAILED)
 
-	# Extra options needed for MPTCP KUnit tests
-	kconfig+=(-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS -m MPTCP_KUNIT_TEST)
+	# Extra options needed for MPTCP KUnit tests (+S on <v5.13)
+	kconfig+=(
+		-m KUNIT -e KUNIT_DEBUGFS -d KUNIT_ALL_TESTS
+		-m MPTCP_KUNIT_TEST -m MPTCP_KUNIT_TESTS
+	)
 
 	# Options for BPF
 	kconfig+=(-e BPF_JIT -e BPF_SYSCALL)
@@ -1195,11 +1198,6 @@ run_kunit_all() { local ko rc=0
 	can_run || return 0
 
 	cd "${KERNEL_SRC}"
-
-	# if this kernel doesn't have any tests, skip
-	if ! stat net/mptcp/*_test.c &>/dev/null; then
-		return 0
-	fi
 
 	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
 		run_kunit_one "\${ko}" || rc=\${?}
