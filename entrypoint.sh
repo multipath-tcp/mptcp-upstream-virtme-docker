@@ -1196,6 +1196,11 @@ run_kunit_all() { local ko rc=0
 
 	cd "${KERNEL_SRC}"
 
+	# if this kernel doesn't have any tests, skip
+	if ! stat net/mptcp/*_test.c &>/dev/null; then
+		return 0
+	fi
+
 	for ko in ${VIRTME_BUILD_DIR}/net/mptcp/*_test.ko; do
 		run_kunit_one "\${ko}" || rc=\${?}
 	done
