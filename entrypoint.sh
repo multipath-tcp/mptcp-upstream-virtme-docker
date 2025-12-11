@@ -499,39 +499,6 @@ setup_env() {
 	log_section_end
 }
 
-_get_last_iproute_version() {
-	curl https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/refs/tags 2>/dev/null |
-		grep "/tag/?h=v[0-9]" |
-		cut -d\' -f2 | cut -d= -f2 |
-		sort -Vu |
-		tail -n1
-}
-
-check_last_iproute() {
-	local last curr
-	# only check on CI
-	if ! is_ci; then
-		return 0
-	fi
-
-	# skip the check for stable, fine not to have the latest version
-	if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
-		return 0
-	fi
-
-	log_section_start "Check IPRoute2 version"
-
-	last="$(_get_last_iproute_version)"
-	curr="v$(ip -V | sed 's/.*iproute2-\([0-9.]\+\).*/\1/')"
-	if [ "${curr}" = "${last}" ]; then
-		printinfo "IPRoute2: using the last version: ${last}"
-	else
-		printerr "WARN: IPRoute2: not the last version: ${curr} < ${last}"
-	fi
-
-	log_section_end
-}
-
 _check_source_exec_one() {
 	local src="${1}"
 	local reason="${2}"
@@ -1947,7 +1914,6 @@ go_manual() {
 
 # $1: mode ; [ $2+: kconfig ]
 go_expect() {
-	check_last_iproute
 	check_source_exec_all
 
 	prepare_all auto "${@}"
