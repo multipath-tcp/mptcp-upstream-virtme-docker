@@ -573,7 +573,7 @@ gen_kconfig() {
 		# Introduced in v5.17
 		if [ ! -s "${debug_config}" ]; then
 			debug_config="${VIRTME_CACHE_DIR}/debug.config"
-			curl "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/kernel/configs/debug.config" >"${debug_config}"
+			curl "https://raw.githubusercontent.com/torvalds/linux/refs/tags/v5.17/${debug_config}" >"${debug_config}"
 		fi
 
 		vck+=(--custom "${debug_config}")
