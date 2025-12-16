@@ -1,4 +1,7 @@
 ---
+ci:
+    autoupdate_schedule: monthly
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -10,7 +13,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.8
+    rev: v0.14.9
     hooks:
       - id: ruff
         args: [--fix]
