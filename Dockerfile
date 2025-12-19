@@ -68,7 +68,7 @@ RUN cd /opt && \
 
 # Sparse
 ARG SPARSE_GIT_URL="git://git.kernel.org/pub/scm/devel/sparse/sparse.git"
-ARG SPARSE_GIT_SHA="09411a7a5127516a0741eb1bd8762642fa9197ce" # include a fix for 'unreplaced' issues and llvm 16
+ARG SPARSE_GIT_SHA="fbdde3127b83e6d09e0ba808d7925dd84407f3c6" # include a fix for __builtin_strlen
 RUN cd /opt && \
 	git clone "${SPARSE_GIT_URL}" sparse && \
 	cd "sparse" && \
