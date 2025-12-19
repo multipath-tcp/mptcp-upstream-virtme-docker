@@ -9,7 +9,7 @@ RUN apt-get update && \
 	apt-get dist-upgrade -y && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
-		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake \
+		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake cmake \
 		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
 		python3 python3-pip python3-pkg-resources file virtiofsd \
 		busybox-static coreutils python3-requests libvirt-clients udev \
@@ -79,6 +79,23 @@ RUN cd /opt && \
 		make PREFIX=/usr install && \
 		cd .. && \
 	rm -rf "sparse"
+
+# Pahole
+ARG PAHOLE_GIT_URL="git://git.kernel.org/pub/scm/devel/pahole/pahole.git"
+ARG PAHOLE_GIT_SHA="v1.31"
+RUN cd /opt && \
+	git clone "${PAHOLE_GIT_URL}" pahole && \
+	cd "pahole" && \
+		git checkout "${PAHOLE_GIT_SHA}" && \
+		git submodule update --init --recursive && \
+		mkdir build && \
+		cd build && \
+		cmake .. && \
+		make -j"$(nproc)" -l"$(nproc)" && \
+		make install && \
+		ldconfig && \
+		cd .. && \
+	rm -rf "pahole"
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://kernel.googlesource.com/pub/scm/network/iproute2/iproute2.git"
