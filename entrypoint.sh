@@ -156,6 +156,7 @@ LCOV_HTML=
 
 EXIT_STATUS=0
 EXIT_REASONS=()
+CRITICAL_ERRORS=()
 EXIT_TITLE="KVM Validation"
 EXPECT=0
 VIRTME_EXEC_RUN="${INPUT_VIRTME_EXEC_RUN:-"${KERNEL_SRC}/.virtme-exec-run"}"
@@ -1622,24 +1623,32 @@ ccache_stat() {
 	fi
 }
 
-# $1: category ; $2: reason
-_register_issue() {
-	local msg
-	msg="${1}: ${2}"
-
-	if [ "${#EXIT_REASONS[@]}" -eq 0 ]; then
-		EXIT_REASONS=("${msg}")
-	else
-		EXIT_REASONS+=("-" "${msg}")
-	fi
-}
-
 _had_issues() {
 	[ ${#EXIT_REASONS[@]} -gt 0 ]
 }
 
 _had_critical_issues() {
-	echo "${EXIT_REASONS[*]}" | grep -q "Critical"
+	[ ${#CRITICAL_ERRORS[@]} -gt 0 ]
+}
+
+# $1: category ; $2: reason
+_register_issue() {
+	local msg
+	msg="${1}: ${2}"
+
+	if [ "${1}" = "Critical" ]; then
+		if _had_critical_issues; then
+			CRITICAL_ERRORS+=("-" "${2}")
+		else
+			CRITICAL_ERRORS=("${2}")
+		fi
+	fi
+
+	if _had_issues; then
+		EXIT_REASONS+=("-" "${msg}")
+	else
+		EXIT_REASONS=("${msg}")
+	fi
 }
 
 # $1: end critical ; $2: end unstable
@@ -1811,6 +1820,7 @@ _gen_results_files() {
 	LANG=C /tap2json.py \
 		--output "${RESULTS_DIR}/results.json" \
 		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
+		--error "${CRITICAL_ERRORS[*]}" \
 		--only-fails \
 		"${RESULTS_DIR}"/*.tap
 }
@@ -1824,10 +1834,6 @@ analyze() {
 	shift
 
 	printinfo "Analyze results"
-
-	if is_ci; then
-		_gen_results_files || true
-	fi
 
 	echo -ne "\n${COLOR_GREEN}"
 	_print_summary_header "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
@@ -1876,6 +1882,10 @@ analyze() {
 	fi
 
 	echo -ne "${COLOR_RESET}"
+
+	if is_ci; then
+		_gen_results_files || true
+	fi
 
 	if [ "${EXIT_STATUS}" = "1" ]; then
 		echo
