@@ -69,10 +69,12 @@ RUN cd /opt && \
 # Sparse
 ARG SPARSE_GIT_URL="git://git.kernel.org/pub/scm/devel/sparse/sparse.git"
 ARG SPARSE_GIT_SHA="fbdde3127b83e6d09e0ba808d7925dd84407f3c6" # include a fix for __builtin_strlen
+COPY sparse-fix-__builtin_strlen.patch /opt/
 RUN cd /opt && \
 	git clone "${SPARSE_GIT_URL}" sparse && \
 	cd "sparse" && \
 		git checkout "${SPARSE_GIT_SHA}" && \
+		patch -p1 --merge < /opt/sparse-fix-__builtin_strlen.patch && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make PREFIX=/usr install && \
 		cd .. && \

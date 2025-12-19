@@ -1,0 +1,12 @@
+diff --git a/builtin.c b/builtin.c
+index 9149c43d..7573abf8 100644
+--- a/builtin.c
++++ b/builtin.c
+@@ -616,6 +616,7 @@ static int expand_strlen(struct expression *expr, int cost)
+ }
+ 
+ static struct symbol_op strlen_op = {
++	.evaluate = evaluate_to_int_const_expr,
+ 	.expand = expand_strlen,
+ };
+ 
