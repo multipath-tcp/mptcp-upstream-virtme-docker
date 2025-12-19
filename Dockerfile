@@ -67,7 +67,7 @@ RUN cd /opt && \
 				/usr/sbin/
 
 # Sparse
-ARG SPARSE_GIT_URL="git://git.kernel.org/pub/scm/devel/sparse/sparse.git"
+ARG SPARSE_GIT_URL="https://kernel.googlesource.com/pub/scm/devel/sparse/sparse.git"
 ARG SPARSE_GIT_SHA="fbdde3127b83e6d09e0ba808d7925dd84407f3c6" # include a fix for __builtin_strlen
 COPY sparse-fix-__builtin_strlen.patch /opt/
 RUN cd /opt && \
@@ -81,7 +81,7 @@ RUN cd /opt && \
 	rm -rf "sparse"
 
 # iproute
-ARG IPROUTE2_GIT_URL="git://git.kernel.org/pub/scm/network/iproute2/iproute2.git"
+ARG IPROUTE2_GIT_URL="https://kernel.googlesource.com/pub/scm/network/iproute2/iproute2.git"
 ARG IPROUTE2_GIT_SHA="v6.18.0"
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
