@@ -588,11 +588,15 @@ gen_kconfig() {
 	kconfig+=(
 		-e PANIC_ON_OOPS
 		-e SOFTLOCKUP_DETECTOR
-		-e BOOTPARAM_SOFTLOCKUP_PANIC # instead of blocking
 		-e HARDLOCKUP_DETECTOR
-		-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
 		-e DETECT_HUNG_TASK
-		-e BOOTPARAM_HUNG_TASK_PANIC # instead of blocking
+	)
+
+	# instead of blocking
+	VIRTME_RUN_OPTS+=(
+		--kopt softlockup_panic=1
+		--kopt nmi_watchdog=1
+		--kopt hung_task_panic=1
 	)
 
 	# Debug info for developers
