@@ -128,7 +128,8 @@ VIRTME_RUN_OPTS=(
 	--arch "${VIRTME_ARCH}"
 	--name "${INPUT_HOSTNAME}"
 	--mods=auto
-	--rw # Don't use "rwdir", it will use 9p ; in a container, we can use rw
+	--rw                 # "rwdir" will use 9p ; in a container, use "rw"
+	--overlay-rwdir /tmp # to support O_TMPFILE feature
 	--pwd
 	--server --port "${INPUT_VSOCK_CID}" # To connect to the VM using VSock
 	--show-command
