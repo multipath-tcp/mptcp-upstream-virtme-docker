@@ -100,7 +100,6 @@ BASH_PROFILE="/root/.bash_profile"
 
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
-VIRTME_HEADERS_DIR="${VIRTME_WORKDIR}/headers"
 VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
@@ -376,6 +375,7 @@ setup_env() {
 	is_mode_btf "${mode}" && VIRTME_BUILD_DIR+="-btf"
 	[ -n "${INPUT_BUILD_SUFFIX}" ] && VIRTME_BUILD_DIR+="-${INPUT_BUILD_SUFFIX}"
 
+	VIRTME_HEADERS_DIR="${VIRTME_BUILD_DIR}/usr/include"
 	VIRTME_PERF_DIR="${VIRTME_BUILD_DIR}/tools/perf"
 	VIRTME_TOOLS_SBIN_DIR="${VIRTME_BUILD_DIR}/tools/sbin"
 	VIRTME_CACHE_DIR="${VIRTME_BUILD_DIR}/.cache"
@@ -405,7 +405,6 @@ setup_env() {
 	mkdir -p \
 		"${VIRTME_BUILD_DIR}" \
 		"${VIRTME_SCRIPTS_DIR}" \
-		"${VIRTME_HEADERS_DIR}" \
 		"${VIRTME_PERF_DIR}" \
 		"${VIRTME_CACHE_DIR}" \
 		"${CCACHE_DIR}"
@@ -754,7 +753,7 @@ install_kernel_headers() {
 	# for BPFTrace and cie
 	cp -r include/ "${VIRTME_BUILD_DIR}"
 
-	_make_o headers_install INSTALL_HDR_PATH="${VIRTME_HEADERS_DIR}" || rc=${?}
+	_make_o headers_install || rc=${?}
 
 	log_section_end
 
@@ -827,7 +826,7 @@ build_selftests() {
 
 	log_section_start "Build the selftests $(basename "${SELFTESTS_DIR}")"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${SELFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}" -C "${SELFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
@@ -843,7 +842,7 @@ build_bpftests() {
 
 	log_section_start "Build BPFTests"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${BPFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}" -C "${BPFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
