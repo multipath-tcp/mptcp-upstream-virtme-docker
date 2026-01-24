@@ -827,7 +827,7 @@ build_selftests() {
 
 	log_section_start "Build the selftests $(basename "${SELFTESTS_DIR}")"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include/uapi" -C "${SELFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${SELFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
@@ -843,7 +843,7 @@ build_bpftests() {
 
 	log_section_start "Build BPFTests"
 
-	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include/uapi" -C "${BPFTESTS_DIR}" || rc=${?}
+	_make_o KHDR_INCLUDES="-I${VIRTME_HEADERS_DIR}/include" -C "${BPFTESTS_DIR}" || rc=${?}
 
 	log_section_end
 
