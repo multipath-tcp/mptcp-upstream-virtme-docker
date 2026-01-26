@@ -854,7 +854,7 @@ build_bpftests() {
 }
 
 build_packetdrill() {
-	local old_pwd kversion branch rc=0
+	local old_pwd kversion rc=0
 	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1 ]; then
 		printinfo "Skip Packetdrill build"
 		return 0
@@ -869,17 +869,23 @@ build_packetdrill() {
 	if [ "${INPUT_PACKETDRILL_NO_SYNC}" = "1" ]; then
 		printinfo "Packetdrill: no sync"
 	else
-		git fetch origin
-
-		branch="${PACKETDRILL_GIT_BRANCH}"
 		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
+			git fetch origin
 			kversion="mptcp-${KVER_MAJ}.${KVER_MIN}"
 			# set the new branch only if it exists. If not, take the dev one
 			if git show-ref --quiet "refs/remotes/origin/${kversion}"; then
-				branch="${kversion}"
+				git branch -f "${kversion}" "origin/${kversion}"
+				git checkout -f "${kversion}"
+			elif git show-ref --quiet "refs/remotes/origin/archived/${kversion}"; then
+				git branch -f "${kversion}" "origin/archived/${kversion}"
+				git checkout -f "${kversion}"
+			else
+				git reset --hard "origin/${PACKETDRILL_GIT_BRANCH}"
 			fi
+		else
+			git fetch origin "${PACKETDRILL_GIT_BRANCH}"
+			git reset --hard FETCH_HEAD
 		fi
-		git checkout -f "origin/${branch}"
 	fi
 	cd gtests/net/packetdrill/
 	./configure
@@ -915,6 +921,17 @@ build_packetdrill() {
 	log_section_end
 
 	return ${rc}
+}
+
+build_packetdrill_if_needed() {
+	# Try to build it only if it is really needed
+	if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ] ||
+		[ "${INPUT_PACKETDRILL_NO_SYNC}" = 1 ] ||
+		! [ -f "${VIRTME_EXEC_RUN}" ] ||
+		sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}" 2>/dev/null |
+		grep -q -e "packetdrill" -e "run_all"; then
+		build_packetdrill
+	fi
 }
 
 build_tests() {
@@ -1470,44 +1487,91 @@ EOF
 	cat <<EOF >"${VIRTME_RUN_EXPECT}"
 #!/usr/bin/expect -f
 
-set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
-spawn "${VIRTME_RUN_SCRIPT}"
-set serialID \$spawn_id
-expect {
-	"virtme-ng-init: initialization done\r" {
-		send_user "Waiting for the console to be ready\n"
-		send "\r"
-	} timeout {
-		send_user "\n$(log_section_end)"
-		send_user "Timeout virtme-ng-init: stopping\n"
-		exit 1
-	} eof {
-		send_user "\n$(log_section_end)"
-		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (ttyS0)\n"
-		exit 1
-	}
-}
+set unexpStop 0
+set serialID 0
 
-set timeout "1"
+for {set boot 0} {\$boot < 3} {incr boot 1} {
+	# not to prevent restart after a kill
+	exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
 
-for {set i 0} {\$i < 60} {incr i 1} {
+	send_user "Starting VM, attempt (\$boot)"
+	set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
+	spawn "${VIRTME_RUN_SCRIPT}"
+	set serialID \$spawn_id
+	set unexpStop 0
+
 	expect {
-		"root@${INPUT_HOSTNAME}" {
-			break
+		"virtme-ng-init: " {
+			send_user "Waiting for the virtme-ng-init to finish\n"
 		} timeout {
-			sleep 1
-			send "\r"
+			send_user "Timeout boot: stopping\n"
+			close
+			wait
+			continue
 		} eof {
-			send_user "\n$(log_section_end)"
-			send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (console)\n"
-			exit 1
+			send_user "Unexpected stop ttyS0\n"
+			set unexpStop 1
+			close
+			wait
+			continue
 		}
 	}
+
+	set timeout "60"
+	expect {
+		"virtme-ng-init: initialization done\r" {
+			send_user "Waiting for the console to be ready\n"
+			send "\r"
+		} timeout {
+			send_user "Timeout virtme-ng-init: stopping\n"
+			close
+			wait
+			continue
+		} eof {
+			send_user "Unexpected stop init\n"
+			set unexpStop 1
+			close
+			wait
+			continue
+		}
+	}
+
+	set timeout "1"
+
+	for {set csl 0} {\$csl < 60} {incr csl 1} {
+		expect {
+			"root@${INPUT_HOSTNAME}" {
+				break
+			} timeout {
+				sleep 1
+				send "\r"
+			} eof {
+				send_user "Unexpected stop console\n"
+				set unexpStop 1
+				close
+				wait
+				continue
+			}
+		}
+	}
+
+	if {\$csl >= 60} {
+		send_user "Timeout console: stopping (\$csl)\n"
+		close
+		wait
+		continue
+	}
+
+	break
 }
 
-if {\$i >= 60} {
+if {\$boot >= 3} {
 	send_user "\n$(log_section_end)"
-	send_user "Timeout console: stopping (\$i)\n"
+	if {\$unexpStop == 1} {
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (\$boot)\n"
+	} else {
+		send_user "Timeout boot (\$boot)\n"
+	}
 	exit 1
 }
 
@@ -1520,11 +1584,11 @@ if {${VSOCK_OK} == 1} {
 	set timeout "5"
 	spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
 	set consoleID \$spawn_id
+	send_user "\n$(log_section_end)"
 
 	expect {
 		"root@${INPUT_HOSTNAME}" {
-			send_user "\n$(log_section_end)"
-			send_user "Starting the validation script (after \$i sec)\n"
+			send_user "Starting the validation script (after \$csl sec, attempt: \$boot)\n"
 		} timeout {
 			send_user "Timeout VSOCK console: stopping\n"
 			send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
@@ -1536,6 +1600,7 @@ if {${VSOCK_OK} == 1} {
 		}
 	}
 } else {
+	send_user "\n$(log_section_end)"
 	# workaround to avoid more 'if' statements below
 	set consoleID \$spawn_id
 }
@@ -1937,7 +2002,7 @@ go_expect() {
 
 go_vm_manual() {
 	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	build_packetdrill_if_needed
 	prepare
 	run
 }
@@ -1946,7 +2011,7 @@ go_vm_expect() {
 	check_source_exec_all
 	EXPECT=1
 	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	build_packetdrill_if_needed
 	prepare
 	run_expect "${@:-normal}"
 	analyze "${@:-normal}"
