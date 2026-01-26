@@ -923,6 +923,17 @@ build_packetdrill() {
 	return ${rc}
 }
 
+build_packetdrill_if_needed() {
+	# Try to build it only if it is really needed
+	if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ] ||
+		[ "${INPUT_PACKETDRILL_NO_SYNC}" = 1 ] ||
+		! [ -f "${VIRTME_EXEC_RUN}" ] ||
+		sed "s/#.*//g;/^\s*$/d" "${VIRTME_EXEC_RUN}" 2>/dev/null |
+		grep -q -e "packetdrill" -e "run_all"; then
+		build_packetdrill
+	fi
+}
+
 build_tests() {
 	local mode
 	mode="${1}"
@@ -1991,7 +2002,7 @@ go_expect() {
 
 go_vm_manual() {
 	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	build_packetdrill_if_needed
 	prepare
 	run
 }
@@ -2000,7 +2011,7 @@ go_vm_expect() {
 	check_source_exec_all
 	EXPECT=1
 	setup_env "${@:-normal}"
-	[ "${INPUT_PACKETDRILL_STABLE}" = "1" ] && build_packetdrill
+	build_packetdrill_if_needed
 	prepare
 	run_expect "${@:-normal}"
 	analyze "${@:-normal}"
