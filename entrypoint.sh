@@ -1536,10 +1536,10 @@ if {${VSOCK_OK} == 1} {
 	set timeout "5"
 	spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
 	set consoleID \$spawn_id
+	send_user "\n$(log_section_end)"
 
 	expect {
 		"root@${INPUT_HOSTNAME}" {
-			send_user "\n$(log_section_end)"
 			send_user "Starting the validation script (after \$i sec)\n"
 		} timeout {
 			send_user "Timeout VSOCK console: stopping\n"
@@ -1552,6 +1552,7 @@ if {${VSOCK_OK} == 1} {
 		}
 	}
 } else {
+	send_user "\n$(log_section_end)"
 	# workaround to avoid more 'if' statements below
 	set consoleID \$spawn_id
 }
