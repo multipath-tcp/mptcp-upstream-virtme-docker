@@ -1473,6 +1473,22 @@ EOF
 set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 spawn "${VIRTME_RUN_SCRIPT}"
 set serialID \$spawn_id
+
+expect {
+	"virtme-ng-init: " {
+		send_user "Waiting for the virtme-ng-init to finish\n"
+	} timeout {
+		send_user "\n$(log_section_end)"
+		send_user "Timeout boot: stopping\n"
+		exit 1
+	} eof {
+		send_user "\n$(log_section_end)"
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (ttyS0)\n"
+		exit 1
+	}
+}
+
+set timeout "60"
 expect {
 	"virtme-ng-init: initialization done\r" {
 		send_user "Waiting for the console to be ready\n"
@@ -1483,7 +1499,7 @@ expect {
 		exit 1
 	} eof {
 		send_user "\n$(log_section_end)"
-		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (ttyS0)\n"
+		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (init)\n"
 		exit 1
 	}
 }
