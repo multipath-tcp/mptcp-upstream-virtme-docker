@@ -854,7 +854,7 @@ build_bpftests() {
 }
 
 build_packetdrill() {
-	local old_pwd kversion branch rc=0
+	local old_pwd kversion rc=0
 	if [ "${INPUT_BUILD_SKIP_PACKETDRILL}" = 1 ]; then
 		printinfo "Skip Packetdrill build"
 		return 0
@@ -869,17 +869,20 @@ build_packetdrill() {
 	if [ "${INPUT_PACKETDRILL_NO_SYNC}" = "1" ]; then
 		printinfo "Packetdrill: no sync"
 	else
-		git fetch origin
-
-		branch="${PACKETDRILL_GIT_BRANCH}"
 		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
+			git fetch origin
 			kversion="mptcp-${KVER_MAJ}.${KVER_MIN}"
 			# set the new branch only if it exists. If not, take the dev one
 			if git show-ref --quiet "refs/remotes/origin/${kversion}"; then
-				branch="${kversion}"
+				git branch -f "${kversion}" "origin/${kversion}"
+				git checkout -f "${kversion}"
+			else
+				git reset --hard "origin/${PACKETDRILL_GIT_BRANCH}"
 			fi
+		else
+			git fetch origin "${PACKETDRILL_GIT_BRANCH}"
+			git reset --hard FETCH_HEAD
 		fi
-		git checkout -f "origin/${branch}"
 	fi
 	cd gtests/net/packetdrill/
 	./configure
