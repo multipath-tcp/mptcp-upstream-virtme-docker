@@ -876,6 +876,9 @@ build_packetdrill() {
 			if git show-ref --quiet "refs/remotes/origin/${kversion}"; then
 				git branch -f "${kversion}" "origin/${kversion}"
 				git checkout -f "${kversion}"
+			elif git show-ref --quiet "refs/remotes/origin/archived/${kversion}"; then
+				git branch -f "${kversion}" "origin/archived/${kversion}"
+				git checkout -f "${kversion}"
 			else
 				git reset --hard "origin/${PACKETDRILL_GIT_BRANCH}"
 			fi
