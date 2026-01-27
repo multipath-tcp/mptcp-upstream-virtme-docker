@@ -1491,7 +1491,7 @@ EOF
 set unexp_stop 0
 set serial_id 0
 
-set max_boot 3
+set max_boot 5
 for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 	if {\$boot > 0} {
 		send_user "\n$(log_section_end)"
