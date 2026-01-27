@@ -1478,7 +1478,7 @@ EOF
 
 	cat <<EOF >"${VIRTME_RUN_SCRIPT}"
 #! /bin/bash
-echo -e "$(log_section_start "Boot VM")"
+echo -e "$(log_section_start "Boot VM (\$1)")"
 set -x
 "${VIRTME_RUN}" ${VIRTME_RUN_OPTS[@]} ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts ${VIRTME_RUN_QEMU_OPTS[@]}} 2>&1 | tr -d '\r'
 EOF
@@ -1491,12 +1491,17 @@ set unexpStop 0
 set serialID 0
 
 for {set boot 0} {\$boot < 3} {incr boot 1} {
-	# not to prevent restart after a kill
-	exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
+	if {\$boot > 0} {
+		send_user "\n$(log_section_end)"
+		close
+		wait
 
-	send_user "Starting VM, attempt (\$boot)"
+		# not to prevent restart after a kill
+		exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
+	}
+
 	set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
-	spawn "${VIRTME_RUN_SCRIPT}"
+	spawn "${VIRTME_RUN_SCRIPT}" \$boot
 	set serialID \$spawn_id
 	set unexpStop 0
 
@@ -1505,14 +1510,10 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 			send_user "Waiting for the virtme-ng-init to finish\n"
 		} timeout {
 			send_user "Timeout boot: stopping\n"
-			close
-			wait
 			continue
 		} eof {
 			send_user "Unexpected stop ttyS0\n"
 			set unexpStop 1
-			close
-			wait
 			continue
 		}
 	}
@@ -1524,14 +1525,10 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 			send "\r"
 		} timeout {
 			send_user "Timeout virtme-ng-init: stopping\n"
-			close
-			wait
 			continue
 		} eof {
 			send_user "Unexpected stop init\n"
 			set unexpStop 1
-			close
-			wait
 			continue
 		}
 	}
@@ -1548,8 +1545,6 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 			} eof {
 				send_user "Unexpected stop console\n"
 				set unexpStop 1
-				close
-				wait
 				continue
 			}
 		}
@@ -1557,8 +1552,6 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 
 	if {\$csl >= 60} {
 		send_user "Timeout console: stopping (\$csl)\n"
-		close
-		wait
 		continue
 	}
 
