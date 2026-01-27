@@ -34,7 +34,7 @@ RUN apt-get update && \
 		bmon ifstat dstat \
 		stress-ng \
 		python3-pexpect \
-		nvme-cli fio \
+		nvme-cli fio keyutils ktls-utils \
 		&& \
 	apt-get clean
 
