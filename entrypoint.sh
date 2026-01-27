@@ -1488,13 +1488,13 @@ EOF
 	cat <<EOF >"${VIRTME_RUN_EXPECT}"
 #!/usr/bin/expect -f
 
-set unexpStop 0
-set serialID 0
+set unexp_stop 0
+set serial_id 0
 
 for {set boot 0} {\$boot < 3} {incr boot 1} {
 	if {\$boot > 0} {
 		send_user "\n$(log_section_end)"
-		if {\$unexpStop == 0} {
+		if {\$unexp_stop == 0} {
 			close
 			wait
 		}
@@ -1505,8 +1505,8 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 
 	set timeout "${VIRTME_EXPECT_BOOT_TIMEOUT}"
 	spawn "${VIRTME_RUN_SCRIPT}" \$boot
-	set serialID \$spawn_id
-	set unexpStop 0
+	set serial_id \$spawn_id
+	set unexp_stop 0
 
 	expect {
 		"virtme-ng-init: " {
@@ -1516,7 +1516,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 			continue
 		} eof {
 			send_user "Unexpected stop ttyS0\n"
-			set unexpStop 1
+			set unexp_stop 1
 			continue
 		}
 	}
@@ -1531,7 +1531,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 			continue
 		} eof {
 			send_user "Unexpected stop init\n"
-			set unexpStop 1
+			set unexp_stop 1
 			continue
 		}
 	}
@@ -1547,7 +1547,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 				send "\r"
 			} eof {
 				send_user "Unexpected stop console\n"
-				set unexpStop 1
+				set unexp_stop 1
 				continue
 			}
 		}
@@ -1563,7 +1563,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 
 if {\$boot >= 3} {
 	send_user "\n$(log_section_end)"
-	if {\$unexpStop == 1} {
+	if {\$unexp_stop == 1} {
 		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (\$boot)\n"
 	} else {
 		send_user "Timeout boot (\$boot)\n"
@@ -1579,7 +1579,7 @@ if {${VSOCK_OK} == 1} {
 
 	set timeout "5"
 	spawn "${VIRTME_RUN}" --mods none --client --port "${INPUT_VSOCK_CID}"
-	set consoleID \$spawn_id
+	set console_id \$spawn_id
 	send_user "\n$(log_section_end)"
 
 	expect {
@@ -1587,18 +1587,18 @@ if {${VSOCK_OK} == 1} {
 			send_user "Starting the validation script (after \$csl sec, attempt: \$boot)\n"
 		} timeout {
 			send_user "Timeout VSOCK console: stopping\n"
-			send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+			send -i \$serial_id -- "/usr/lib/klibc/bin/poweroff\r"
 			exit 1
 		} eof {
 			send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (VSOCK console)\n"
-			send -i \$serialID -- "/usr/lib/klibc/bin/poweroff\r"
+			send -i \$serial_id -- "/usr/lib/klibc/bin/poweroff\r"
 			exit 1
 		}
 	}
 } else {
 	send_user "\n$(log_section_end)"
 	# workaround to avoid more 'if' statements below
-	set consoleID \$spawn_id
+	set console_id \$spawn_id
 }
 
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
@@ -1611,15 +1611,15 @@ expect {
 		send_user "\n$(log_section_end)"
 		send_user "Timeout: Getting more info\n"
 		# stop consuming serial's stdout
-		expect_background -i \$serialID
-		send -i \$serialID -- "${VIRTME_SCRIPT_TIMEOUT}\r"
+		expect_background -i \$serial_id
+		send -i \$serial_id -- "${VIRTME_SCRIPT_TIMEOUT}\r"
 		set timeout "60"
 		expect {
-			-i \$serialID "${VIRTME_SCRIPT_TIMEOUT_END}" {
+			-i \$serial_id "${VIRTME_SCRIPT_TIMEOUT_END}" {
 				send_user "Timeout: Getting more info: end\n"
 			} timeout {
 				send_user "Timeout: Getting more info: timeout\n"
-				send -i \$serialID "\x03\r"
+				send -i \$serial_id "\x03\r"
 			} eof {
 				send_user "Timeout: Getting more info: unexpected end\n"
 			}
@@ -1627,7 +1627,7 @@ expect {
 
 		send_user "Timeout: Getting more info via GDB\n"
 		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
-		set gdbID \$spawn_id
+		set gdb_id \$spawn_id
 		expect {
 			"detached" {
 				send_user "Timeout: Getting more info via GDB: end\n"
@@ -1640,7 +1640,7 @@ expect {
 		}
 		close
 
-		set spawn_id \$consoleID
+		set spawn_id \$console_id
 		send_user "Timeout: sending Ctrl+C\n"
 		send "\x03\r"
 		sleep 2
@@ -1658,7 +1658,7 @@ if {${VSOCK_OK} == 1} {
 	close
 
 	# back to the serial, stop consuming stdout
-	set spawn_id \$serialID
+	set spawn_id \$serial_id
 	expect_background
 }
 
