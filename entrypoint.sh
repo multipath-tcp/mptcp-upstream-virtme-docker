@@ -1493,8 +1493,10 @@ set serialID 0
 for {set boot 0} {\$boot < 3} {incr boot 1} {
 	if {\$boot > 0} {
 		send_user "\n$(log_section_end)"
-		close
-		wait
+		if {\$unexpStop == 0} {
+			close
+			wait
+		}
 
 		# not to prevent restart after a kill
 		exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
