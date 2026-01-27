@@ -1491,7 +1491,8 @@ EOF
 set unexp_stop 0
 set serial_id 0
 
-for {set boot 0} {\$boot < 3} {incr boot 1} {
+set max_boot 3
+for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 	if {\$boot > 0} {
 		send_user "\n$(log_section_end)"
 		if {\$unexp_stop == 0} {
@@ -1538,7 +1539,8 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 
 	set timeout "1"
 
-	for {set csl 0} {\$csl < 60} {incr csl 1} {
+	set max_csl 60
+	for {set csl 0} {\$csl < \$max_csl} {incr csl 1} {
 		expect {
 			"root@${INPUT_HOSTNAME}" {
 				break
@@ -1553,7 +1555,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 		}
 	}
 
-	if {\$csl >= 60} {
+	if {\$csl >= \$max_csl} {
 		send_user "Timeout console: stopping (\$csl)\n"
 		continue
 	}
@@ -1561,7 +1563,7 @@ for {set boot 0} {\$boot < 3} {incr boot 1} {
 	break
 }
 
-if {\$boot >= 3} {
+if {\$boot >= \$max_boot} {
 	send_user "\n$(log_section_end)"
 	if {\$unexp_stop == 1} {
 		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP} (\$boot)\n"
