@@ -869,6 +869,7 @@ build_packetdrill() {
 	if [ "${INPUT_PACKETDRILL_NO_SYNC}" = "1" ]; then
 		printinfo "Packetdrill: no sync"
 	else
+		git checkout -f "${PACKETDRILL_GIT_BRANCH}"
 		if [ "${INPUT_PACKETDRILL_STABLE}" = "1" ]; then
 			git fetch origin
 			kversion="mptcp-${KVER_MAJ}.${KVER_MIN}"
