@@ -1629,7 +1629,6 @@ expect {
 
 		send_user "Timeout: Getting more info via GDB\n"
 		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
-		set gdb_id \$spawn_id
 		expect {
 			"detached" {
 				send_user "Timeout: Getting more info via GDB: end\n"
