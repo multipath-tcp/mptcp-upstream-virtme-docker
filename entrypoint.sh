@@ -1744,7 +1744,13 @@ _print_issues() {
 }
 
 _has_call_trace() {
-	grep -q "Call Trace:" "${OUTPUT_VIRTME}"
+	grep -aA 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}" |
+		grep -q "Call Trace:"
+}
+
+_has_call_trace_at_boot() {
+	grep -aB 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}" |
+		grep -q "Call Trace:"
 }
 
 _print_line() {
@@ -1809,6 +1815,14 @@ _print_kmemleak() {
 	decode_stacktrace <"${KMEMLEAK}"
 	_print_line
 	echo "KMemLeak detected"
+}
+
+_has_boot_failure() {
+	grep -q "Boot VM (1)" "${OUTPUT_VIRTME}"
+}
+
+_print_boot_failure() {
+	echo "Had $(grep -c "Boot VM " "${OUTPUT_VIRTME}") boot attempts"
 }
 
 # $1: mode, rest: args for kconfig
@@ -1955,6 +1969,21 @@ analyze() {
 	if _has_kmemleak; then
 		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "KMemLeak"
+		EXIT_STATUS=1
+	fi
+
+	if _has_call_trace_at_boot; then
+		# not to print errors twice
+		if ! _has_call_trace; then
+			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+		fi
+		# TODO: remove the next two lines when the root cause is known
+		_register_issue "Critical" "Call Traces at boot time"
+		EXIT_STATUS=1
+	elif _has_boot_failure; then
+		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
+		# TODO: remove the next two lines when the root cause is known
+		_register_issue "Critical" "Boot failures"
 		EXIT_STATUS=1
 	fi
 
