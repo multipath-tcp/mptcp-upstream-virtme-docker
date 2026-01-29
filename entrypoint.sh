@@ -1496,6 +1496,22 @@ for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 	if {\$boot > 0} {
 		send_user "\n$(log_section_end)"
 		if {\$unexp_stop == 0} {
+			set timeout "60"
+			send_user "Timeout: Getting more info via GDB\n"
+			spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
+			expect {
+				"detached" {
+					send_user "Timeout: Getting more info via GDB: end\n"
+				} timeout {
+					send_user "Timeout: Getting more info via GDB: timeout\n"
+					send "\x03\r"
+				} eof {
+					send_user "Timeout: Getting more info via GDB: unexpected end\n"
+				}
+			}
+			close
+
+			set spawn_id \$serial_id
 			close
 			wait
 		}
