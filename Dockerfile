@@ -47,7 +47,7 @@ RUN cd /opt && \
 	tar xzf byobu.tar.gz && \
 	cd byobu-*/ && \
 		./autogen.sh && \
-		./configure --prefix=/usr && \
+		./configure --prefix=/usr --sysconfdir=/etc && \
 		make -j"$(nproc)" -l"$(nproc)" && \
 		make install
 
