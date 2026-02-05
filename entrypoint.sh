@@ -1745,14 +1745,29 @@ _print_issues() {
 	fi
 }
 
+# $1: A: after, B: before
+_get_output_around_start() {
+	grep -a"${1}" 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}"
+}
+
+_get_output_after_start() {
+	_get_output_around_start A
+}
+
+_get_output_before_start() {
+	_get_output_around_start B
+}
+
+_call_trace() {
+	grep -q "Call Trace:"
+}
+
 _has_call_trace() {
-	grep -aA 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}" |
-		grep -q "Call Trace:"
+	_get_output_after_start | _call_trace
 }
 
 _has_call_trace_at_boot() {
-	grep -aB 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}" |
-		grep -q "Call Trace:"
+	_get_output_before_start | _call_trace
 }
 
 _print_line() {
