@@ -1510,6 +1510,7 @@ for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 				}
 			}
 			close
+			wait
 
 			set spawn_id \$serial_id
 			close
@@ -1656,6 +1657,7 @@ expect {
 			}
 		}
 		close
+		wait
 
 		set spawn_id \$console_id
 		send_user "Timeout: sending Ctrl+C\n"
