@@ -108,6 +108,7 @@ VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
 VIRTME_SCRIPT_TIMEOUT_GDB="${VIRTME_SCRIPTS_DIR}/gdb.timeout"
+VIRTME_SCRIPT_TIMEOUT_GDB_END="__VIRTME_TIMEOUT_GDB_END__"
 VIRTME_RUN_SCRIPT="${VIRTME_SCRIPTS_DIR}/virtme.sh"
 VIRTME_RUN_EXPECT="${VIRTME_SCRIPTS_DIR}/virtme.expect"
 
@@ -1658,6 +1659,7 @@ expect {
 		}
 		close
 		wait
+		send_user "${VIRTME_SCRIPT_TIMEOUT_GDB_END}"
 
 		set spawn_id \$console_id
 		send_user "Timeout: sending Ctrl+C\n"
@@ -1758,16 +1760,37 @@ _get_output_before_start() {
 	_get_output_around_start B
 }
 
+_get_output_around_stop() {
+	local arg="${1}"
+	shift
+
+	# either the script was able to finish, or the timeout message
+	grep -a"${arg}" 9999999 -e "${VIRTME_SCRIPT_END}" \
+		-e "${VIRTME_SCRIPT_TIMEOUT_GDB_END}" "${@}"
+}
+
+_get_output_after_stop() {
+	_get_output_around_stop A "${OUTPUT_VIRTME}"
+}
+
+_get_output_before_stop() {
+	_get_output_around_stop B
+}
+
 _call_trace() {
 	grep -q "Call Trace:"
 }
 
 _has_call_trace() {
-	_get_output_after_start | _call_trace
+	_get_output_after_start | _get_output_before_stop | _call_trace
 }
 
 _has_call_trace_at_boot() {
 	_get_output_before_start | _call_trace
+}
+
+_has_call_trace_at_shutdown() {
+	_get_output_after_stop | _call_trace
 }
 
 _print_line() {
@@ -1946,6 +1969,8 @@ analyze() {
 	local mode="${1}"
 	shift
 
+	local has_call_trace=0
+
 	printinfo "Analyze results"
 
 	echo -ne "\n${COLOR_GREEN}"
@@ -1963,6 +1988,7 @@ analyze() {
 
 	# look for crashes/warnings
 	if _has_call_trace; then
+		has_call_trace=1
 		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "$(_get_call_trace_status)"
 		EXIT_STATUS=1
@@ -1991,16 +2017,25 @@ analyze() {
 
 	if _has_call_trace_at_boot; then
 		# not to print errors twice
-		if ! _has_call_trace; then
+		if [ "${has_call_trace}" = 0 ]; then
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+			has_call_trace=1
 		fi
-		# TODO: remove the next two lines when the root cause is known
 		_register_issue "Critical" "Call Traces at boot time"
 		EXIT_STATUS=1
 	elif _has_boot_failure; then
 		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
-		# TODO: remove the next two lines when the root cause is known
 		_register_issue "Critical" "Boot failures"
+		EXIT_STATUS=1
+	fi
+
+	if _has_call_trace_at_shutdown; then
+		# not to print errors twice
+		if [ "${has_call_trace}" = 0 ]; then
+			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+			has_call_trace=1
+		fi
+		_register_issue "Critical" "Call Traces at shutdown time"
 		EXIT_STATUS=1
 	fi
 
