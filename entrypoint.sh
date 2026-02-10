@@ -158,6 +158,7 @@ LCOV_HTML=
 EXIT_STATUS=0
 EXIT_REASONS=()
 CRITICAL_ERRORS=()
+OTHER_ERRORS=()
 EXIT_TITLE="KVM Validation"
 EXPECT=0
 VIRTME_EXEC_RUN="${INPUT_VIRTME_EXEC_RUN:-"${KERNEL_SRC}/.virtme-exec-run"}"
@@ -1717,6 +1718,10 @@ _had_critical_issues() {
 	[ ${#CRITICAL_ERRORS[@]} -gt 0 ]
 }
 
+_had_other_issues() {
+	[ ${#OTHER_ERRORS[@]} -gt 0 ]
+}
+
 # $1: category ; $2: reason
 _register_issue() {
 	local msg
@@ -1727,6 +1732,12 @@ _register_issue() {
 			CRITICAL_ERRORS+=("-" "${2}")
 		else
 			CRITICAL_ERRORS=("${2}")
+		fi
+	elif [ "${1}" != "Unstable" ]; then
+		if _had_other_issues; then
+			OTHER_ERRORS+=("-" "${2}")
+		else
+			OTHER_ERRORS=("${2}")
 		fi
 	fi
 
@@ -1957,6 +1968,7 @@ _gen_results_files() {
 		--output "${RESULTS_DIR}/results.json" \
 		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
 		--error "${CRITICAL_ERRORS[*]}" \
+		--warn "${OTHER_ERRORS[*]}" \
 		--only-fails \
 		"${RESULTS_DIR}"/*.tap
 }

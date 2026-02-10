@@ -40,6 +40,8 @@ def get_args_parser():
         "tapfiles", metavar="tapfiles", type=str, nargs="*", help="Input TAP file(s)"
     )
 
+    parser.add_argument("--warn", "-w", action="store", help="Append warning message")
+
     return parser
 
 
@@ -123,11 +125,11 @@ def add_info(results, infos):
     return results
 
 
-def add_error(results, error):
+def add_field(results, key, val):
     if "results" not in results:
         results = {"results": results}
 
-    results["error"] = error
+    results[key] = val
 
     return results
 
@@ -155,6 +157,9 @@ if __name__ == "__main__":
         main_results = add_info(main_results, args.info)
 
     if args.error:
-        main_results = add_error(main_results, args.error)
+        main_results = add_field(main_results, "error", args.error)
+
+    if args.warn:
+        main_results = add_field(main_results, "warn", args.warn)
 
     write_json(args.output, main_results)
