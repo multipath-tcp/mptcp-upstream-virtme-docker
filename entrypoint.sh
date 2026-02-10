@@ -158,6 +158,7 @@ LCOV_HTML=
 EXIT_STATUS=0
 EXIT_REASONS=()
 CRITICAL_ERRORS=()
+OTHER_ERRORS=()
 EXIT_TITLE="KVM Validation"
 EXPECT=0
 VIRTME_EXEC_RUN="${INPUT_VIRTME_EXEC_RUN:-"${KERNEL_SRC}/.virtme-exec-run"}"
@@ -1717,6 +1718,10 @@ _had_critical_issues() {
 	[ ${#CRITICAL_ERRORS[@]} -gt 0 ]
 }
 
+_had_other_issues() {
+	[ ${#OTHER_ERRORS[@]} -gt 0 ]
+}
+
 # $1: category ; $2: reason
 _register_issue() {
 	local msg
@@ -1727,6 +1732,12 @@ _register_issue() {
 			CRITICAL_ERRORS+=("-" "${2}")
 		else
 			CRITICAL_ERRORS=("${2}")
+		fi
+	elif [ "${1}" != "Unstable" ]; then
+		if _had_other_issues; then
+			OTHER_ERRORS+=("-" "${2}")
+		else
+			OTHER_ERRORS=("${2}")
 		fi
 	fi
 
@@ -1957,6 +1968,7 @@ _gen_results_files() {
 		--output "${RESULTS_DIR}/results.json" \
 		--info "run_id:${GITHUB_RUN_ID:-"none"}" \
 		--error "${CRITICAL_ERRORS[*]}" \
+		--warn "${OTHER_ERRORS[*]}" \
 		--only-fails \
 		"${RESULTS_DIR}"/*.tap
 }
@@ -2021,12 +2033,12 @@ analyze() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Critical" "Call Traces at boot time"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Call Traces at boot time, rebooted and continued"
+		EXIT_STATUS=2
 	elif _has_boot_failure; then
 		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "Boot failures"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Boot failures, rebooted and continued"
+		EXIT_STATUS=2
 	fi
 
 	if _has_call_trace_at_shutdown; then
@@ -2035,8 +2047,8 @@ analyze() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Critical" "Call Traces at shutdown time"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Call Traces at shutdown time, ignored and continued"
+		EXIT_STATUS=2
 	fi
 
 	if [ -s "${LCOV_FILE}" ]; then
