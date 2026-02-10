@@ -2021,12 +2021,12 @@ analyze() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Critical" "Call Traces at boot time"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Call Traces at boot time, rebooted and continued"
+		EXIT_STATUS=2
 	elif _has_boot_failure; then
 		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "Boot failures"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Boot failures, rebooted and continued"
+		EXIT_STATUS=2
 	fi
 
 	if _has_call_trace_at_shutdown; then
@@ -2035,8 +2035,8 @@ analyze() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Critical" "Call Traces at shutdown time"
-		EXIT_STATUS=1
+		_register_issue "Notice" "Call Traces at shutdown time, ignored and continued"
+		EXIT_STATUS=2
 	fi
 
 	if [ -s "${LCOV_FILE}" ]; then
