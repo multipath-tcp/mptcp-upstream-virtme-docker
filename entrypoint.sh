@@ -1499,7 +1499,7 @@ for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 		send_user "\n$(log_section_end)"
 		if {\$unexp_stop == 0} {
 			set timeout "60"
-			send_user "Timeout: Getting more info via GDB\n"
+			send_user "$(log_section_start "Timeout: Getting more info via GDB")\n"
 			spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
 			expect {
 				"detached" {
@@ -1511,6 +1511,7 @@ for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 					send_user "Timeout: Getting more info via GDB: unexpected end\n"
 				}
 			}
+			send_user "\n$(log_section_end)"
 			close
 			wait
 
@@ -1630,7 +1631,7 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "\n$(log_section_end)"
-		send_user "Timeout: Getting more info\n"
+		send_user "$(log_section_start "Timeout: Getting more info via SysRq")\n"
 		# stop consuming serial's stdout
 		expect_background -i \$serial_id
 		send -i \$serial_id -- "${VIRTME_SCRIPT_TIMEOUT}\r"
@@ -1645,8 +1646,9 @@ expect {
 				send_user "Timeout: Getting more info: unexpected end\n"
 			}
 		}
+		send_user "\n$(log_section_end)"
 
-		send_user "Timeout: Getting more info via GDB\n"
+		send_user "$(log_section_start "Timeout: Getting more info via GDB")\n"
 		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
 		expect {
 			"detached" {
@@ -1658,6 +1660,7 @@ expect {
 				send_user "Timeout: Getting more info via GDB: unexpected end\n"
 			}
 		}
+		send_user "\n$(log_section_end)"
 		close
 		wait
 		send_user "${VIRTME_SCRIPT_TIMEOUT_GDB_END}"
