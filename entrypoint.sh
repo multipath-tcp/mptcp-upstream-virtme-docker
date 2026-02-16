@@ -2421,7 +2421,11 @@ case "${INPUT_MODE}" in
 	;;
 "vm")
 	if [ "${1}" = "manual" ] || [ "${1}" = "auto" ]; then
-		"go_vm_${1}" "${@:2}"
+		if [ "${2}" = "btf" ]; then
+			"go_vm_${1}" "${2}-${3}" "${@:4}"
+		else
+			"go_vm_${1}" "${@:2}"
+		fi
 	else
 		go_vm_manual "${@}"
 	fi
