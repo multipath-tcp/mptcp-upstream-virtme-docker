@@ -195,6 +195,11 @@ if is_github_action; then
 		echo -e "\n::group::${COLOR_YELLOW}${*}${COLOR_RESET}"
 	}
 
+	# $1: description
+	log_section_start_no_color() {
+		echo -e "\n::group::${*}"
+	}
+
 	log_section_end() {
 		echo -e "::endgroup::\n"
 	}
@@ -202,6 +207,11 @@ else
 	# $1: description
 	log_section_start() {
 		printinfo "${@}"
+	}
+
+	# $1: description
+	log_section_start_no_color() {
+		echo "${START_PRINT:-}${*}"
 	}
 
 	log_section_end() {
@@ -1499,7 +1509,7 @@ for {set boot 0} {\$boot < \$max_boot} {incr boot 1} {
 		send_user "\n$(log_section_end)"
 		if {\$unexp_stop == 0} {
 			set timeout "60"
-			send_user "$(log_section_start "Timeout: Getting more info via GDB")\n"
+			send_user "$(log_section_start_no_color "Timeout: Getting more info via GDB")\n"
 			spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
 			expect {
 				"detached" {
@@ -1631,7 +1641,7 @@ expect {
 		send_user "validation script ended with success\n"
 	} timeout {
 		send_user "\n$(log_section_end)"
-		send_user "$(log_section_start "Timeout: Getting more info via SysRq")\n"
+		send_user "$(log_section_start_no_color "Timeout: Getting more info via SysRq")\n"
 		# stop consuming serial's stdout
 		expect_background -i \$serial_id
 		send -i \$serial_id -- "${VIRTME_SCRIPT_TIMEOUT}\r"
@@ -1648,7 +1658,7 @@ expect {
 		}
 		send_user "\n$(log_section_end)"
 
-		send_user "$(log_section_start "Timeout: Getting more info via GDB")\n"
+		send_user "$(log_section_start_no_color "Timeout: Getting more info via GDB")\n"
 		spawn gdb-multiarch --batch -x "${VIRTME_SCRIPT_TIMEOUT_GDB}" vmlinux
 		expect {
 			"detached" {
