@@ -1788,9 +1788,10 @@ _get_output_around_stop() {
 	local arg="${1}"
 	shift
 
-	# either the script was able to finish, or the timeout message
+	# either the script was able to finish, or the timeout/stop message
 	grep -a"${arg}" 9999999 -e "${VIRTME_SCRIPT_END}" \
-		-e "${VIRTME_SCRIPT_TIMEOUT_GDB_END}" "${@}"
+		-e "${VIRTME_SCRIPT_TIMEOUT_GDB_END}" \
+		-e "${VIRTME_SCRIPT_UNEXPECTED_STOP}" "${@}"
 }
 
 _get_output_after_stop() {
