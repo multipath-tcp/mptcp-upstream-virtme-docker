@@ -440,7 +440,7 @@ setup_env() {
 			rm -rf "${RESULTS_DIR}"
 		fi
 
-		: "${INPUT_CPUS:=2}" # limit to 2 cores for now
+		: "${INPUT_CPUS:=4}" # limit to 4 cores for now
 		: "${INPUT_GCOV:=0}"
 
 		# add net support, can be useful, but delay the start of the tests (~1 sec?)
