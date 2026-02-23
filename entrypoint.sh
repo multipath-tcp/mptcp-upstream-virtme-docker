@@ -425,12 +425,14 @@ setup_env() {
 	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
 	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
 
+	local ram_mul=1
 	if is_ci; then
 		# Root dir: not to have to go down dirs to get artifacts
 		RESULTS_DIR="${KERNEL_SRC}${INPUT_CI_RESULTS_DIR:+/${INPUT_CI_RESULTS_DIR}}$(_get_results_dir_suffix)"
 
 		: "${INPUT_CPUS:=$(nproc)}" # use all available resources
 		: "${INPUT_GCOV:=1}"
+		ram_mul=2 # because it is available and dedicated to this task
 
 		# The CI doesn't need to access to the outside world, so no '--net'
 	else
@@ -456,7 +458,7 @@ setup_env() {
 	fi
 
 	# More needed for GCOV, not to swap
-	: "${INPUT_RAM:="$((1024 * INPUT_CPUS + 1024 * INPUT_GCOV))M"}"
+	: "${INPUT_RAM:="$((512 * INPUT_CPUS * ram_mul + 1024 * INPUT_GCOV))M"}"
 
 	VIRTME_RUN_OPTS+=(
 		--kdir "${VIRTME_BUILD_DIR}"
@@ -1026,7 +1028,7 @@ export SELFTESTS_MPTCP_LIB_COLOR_FORCE="${INPUT_SELFTESTS_MPTCP_LIB_COLOR_FORCE}
 export SELFTESTS_MPTCP_LIB_NO_TAP="${no_tap}"
 
 set_max_threads() {
-	# if QEmu without KVM support
+	# if QEmu without KVM support or debug mode
 	if [[ "${mode}" == *"debug" ]] ||
 	   { [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
 	     [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; }; then
