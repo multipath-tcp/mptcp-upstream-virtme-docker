@@ -2158,6 +2158,7 @@ static_analysis() {
 	local src obj ftmp
 	ftmp=$(mktemp)
 
+	set_trace_off
 	for src in net/mptcp/*.c; do
 		obj="${src/%.c/.o}"
 		if [[ ${src} == *"_test.mod.c" ]]; then
@@ -2179,6 +2180,7 @@ static_analysis() {
 			printerr "Found make C=1 issues for ${src}"
 		fi
 	done
+	set_trace_on
 
 	rm -f "${ftmp}"
 }
