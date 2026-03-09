@@ -471,6 +471,26 @@ setup_env() {
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
 	fi
 
+	if [ -n "${INPUT_KOPTS}" ]; then
+		local array=() kopt
+		read -r -a array <<<"${INPUT_KOPTS}"
+		for kopt in "${array[@]}"; do
+			VIRTME_RUN_OPTS+=(--kopt "${kopt}")
+		done
+	fi
+
+	if [ -n "${INPUT_VIRTME_RUN_OPTS}" ]; then
+		local array=()
+		read -r -a array <<<"${INPUT_VIRTME_RUN_OPTS}"
+		VIRTME_RUN_OPTS+=("${array[@]}")
+	fi
+
+	if [ -n "${INPUT_VIRTME_RUN_QEMU_OPTS}" ]; then
+		local array=()
+		read -r -a array <<<"${INPUT_VIRTME_RUN_QEMU_OPTS}"
+		VIRTME_RUN_QEMU_OPTS+=("${array[@]}")
+	fi
+
 	mkdir -p "${RESULTS_DIR}"
 	OUTPUT_VIRTME="${RESULTS_DIR}/output.log"
 	TESTS_SUMMARY="${RESULTS_DIR}/summary.txt"
