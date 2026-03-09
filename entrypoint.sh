@@ -466,6 +466,14 @@ setup_env() {
 		--memory "${INPUT_RAM}"
 	)
 
+	# instead of blocking
+	VIRTME_RUN_OPTS+=(
+		--kopt softlockup_panic=1
+		--kopt nmi_watchdog=1
+		--kopt hung_task_panic=1
+		--kopt ftrace_dump_on_oops
+	)
+
 	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
 		VIRTME_RUN_OPTS+=(--disable-microvm)
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
@@ -624,14 +632,6 @@ gen_kconfig() {
 		-e SOFTLOCKUP_DETECTOR
 		-e HARDLOCKUP_DETECTOR
 		-e DETECT_HUNG_TASK
-	)
-
-	# instead of blocking
-	VIRTME_RUN_OPTS+=(
-		--kopt softlockup_panic=1
-		--kopt nmi_watchdog=1
-		--kopt hung_task_panic=1
-		--kopt ftrace_dump_on_oops
 	)
 
 	# Debug info for developers
