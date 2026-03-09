@@ -611,6 +611,7 @@ gen_kconfig() {
 		--kopt softlockup_panic=1
 		--kopt nmi_watchdog=1
 		--kopt hung_task_panic=1
+		--kopt ftrace_dump_on_oops
 	)
 
 	# Debug info for developers
