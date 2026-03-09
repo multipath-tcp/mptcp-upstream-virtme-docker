@@ -1804,7 +1804,11 @@ _get_output_after_start() {
 }
 
 _get_output_before_start() {
-	_get_output_around_start B
+	if grep -q "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}"; then
+		_get_output_around_start B
+	else
+		cat "${OUTPUT_VIRTME}"
+	fi
 }
 
 _get_output_around_stop() {
