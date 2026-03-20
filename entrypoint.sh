@@ -466,9 +466,38 @@ setup_env() {
 		--memory "${INPUT_RAM}"
 	)
 
+	# instead of blocking
+	VIRTME_RUN_OPTS+=(
+		--kopt softlockup_panic=1
+		--kopt nmi_watchdog=1
+		--kopt hung_task_panic=1
+		--kopt workqueue.panic_on_stall=1
+		--kopt ftrace_dump_on_oops
+	)
+
 	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
 		VIRTME_RUN_OPTS+=(--disable-microvm)
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
+	fi
+
+	if [ -n "${INPUT_KOPTS}" ]; then
+		local array=() kopt
+		read -r -a array <<<"${INPUT_KOPTS}"
+		for kopt in "${array[@]}"; do
+			VIRTME_RUN_OPTS+=(--kopt "${kopt}")
+		done
+	fi
+
+	if [ -n "${INPUT_VIRTME_RUN_OPTS}" ]; then
+		local array=()
+		read -r -a array <<<"${INPUT_VIRTME_RUN_OPTS}"
+		VIRTME_RUN_OPTS+=("${array[@]}")
+	fi
+
+	if [ -n "${INPUT_VIRTME_RUN_QEMU_OPTS}" ]; then
+		local array=()
+		read -r -a array <<<"${INPUT_VIRTME_RUN_QEMU_OPTS}"
+		VIRTME_RUN_QEMU_OPTS+=("${array[@]}")
 	fi
 
 	mkdir -p "${RESULTS_DIR}"
@@ -604,13 +633,7 @@ gen_kconfig() {
 		-e SOFTLOCKUP_DETECTOR
 		-e HARDLOCKUP_DETECTOR
 		-e DETECT_HUNG_TASK
-	)
-
-	# instead of blocking
-	VIRTME_RUN_OPTS+=(
-		--kopt softlockup_panic=1
-		--kopt nmi_watchdog=1
-		--kopt hung_task_panic=1
+		-e WQ_WATCHDOG
 	)
 
 	# Debug info for developers
@@ -1783,7 +1806,11 @@ _get_output_after_start() {
 }
 
 _get_output_before_start() {
-	_get_output_around_start B
+	if grep -q "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}"; then
+		_get_output_around_start B
+	else
+		cat "${OUTPUT_VIRTME}"
+	fi
 }
 
 _get_output_around_stop() {
