@@ -471,6 +471,7 @@ setup_env() {
 		--kopt softlockup_panic=1
 		--kopt nmi_watchdog=1
 		--kopt hung_task_panic=1
+		--kopt workqueue.panic_on_stall=1
 		--kopt ftrace_dump_on_oops
 	)
 
@@ -632,6 +633,7 @@ gen_kconfig() {
 		-e SOFTLOCKUP_DETECTOR
 		-e HARDLOCKUP_DETECTOR
 		-e DETECT_HUNG_TASK
+		-e WQ_WATCHDOG
 	)
 
 	# Debug info for developers
