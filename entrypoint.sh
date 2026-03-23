@@ -1641,7 +1641,7 @@ if {${VSOCK_OK} == 1} {
 
 	expect {
 		"root@${INPUT_HOSTNAME}" {
-			send_user "Starting the validation script (after \$csl sec, attempt: \$boot)\n"
+			send_user "VSOCK console is ready\n"
 		} timeout {
 			send_user "Timeout VSOCK console: stopping\n"
 			send -i \$serial_id -- "/usr/lib/klibc/bin/poweroff\r"
@@ -1654,10 +1654,14 @@ if {${VSOCK_OK} == 1} {
 	}
 } else {
 	send_user "\n$(log_section_end)"
+	send_user "VSOCK console is not usable in this kernel version\n"
+	# echo the script name, used in the analysis: commands are not echoed here
+	send_user "Going to start ${VIRTME_SCRIPT}\n"
 	# workaround to avoid more 'if' statements below
 	set console_id \$spawn_id
 }
 
+send_user "Starting the validation script (after \$csl sec, attempt: \$boot)\n"
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
 send -- "stdbuf -oL ${VIRTME_SCRIPT}\r"
 
