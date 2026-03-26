@@ -41,7 +41,7 @@ DEFAULT_VSOCK_CID="3"
 DEFAULT_HOSTNAME="mptcpdev"
 
 # The behaviour can be changed with 'input' env var
-: "${INPUT_CCACHE_MAXSIZE:=5G}"
+: "${INPUT_CCACHE_MAXSIZE:=2G}"
 : "${INPUT_CCACHE_DIR:=""}"
 : "${INPUT_CCACHE_DISABLE:=""}"
 : "${INPUT_NO_BLOCK:=0}"
