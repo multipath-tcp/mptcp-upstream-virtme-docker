@@ -2243,7 +2243,7 @@ print_conclusion() {
 	echo -n "${EXIT_TITLE}: "
 
 	if _had_issues; then
-		_print_issues "❌" "🔴"
+		_print_issues "❌" "⚠️ "
 	elif [ "${rc}" != "0" ]; then
 		echo "Script error! ❓"
 	else
