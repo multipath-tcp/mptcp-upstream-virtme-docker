@@ -79,7 +79,7 @@ RUN cd /opt && \
 	rm -rf "sparse"
 
 # Pahole
-ARG PAHOLE_GIT_URL="git://git.kernel.org/pub/scm/devel/pahole/pahole.git"
+ARG PAHOLE_GIT_URL="https://kernel.googlesource.com/pub/scm/devel/pahole/pahole.git"
 ARG PAHOLE_GIT_SHA="v1.31"
 RUN cd /opt && \
 	git clone "${PAHOLE_GIT_URL}" pahole && \
