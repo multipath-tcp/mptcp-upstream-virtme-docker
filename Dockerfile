@@ -110,7 +110,8 @@ RUN cd /opt && \
 
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.41"
-RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
+RUN pip3 install --no-cache-dir --break-system-packages \
+	virtme-ng=="${VIRTME_NG_VERSION}"
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
