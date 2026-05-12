@@ -97,18 +97,21 @@ RUN cd /opt && \
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://kernel.googlesource.com/pub/scm/network/iproute2/iproute2.git"
-ARG IPROUTE2_GIT_SHA="v6.19.0"
+ARG IPROUTE2_GIT_SHA="v7.0.0"
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
 	cd iproute2 && \
 		git checkout "${IPROUTE2_GIT_SHA}" && \
 		./configure --color=auto && \
 		make -j"$(nproc)" -l"$(nproc)" && \
-		make install
+		make install && \
+		cd .. && \
+	rm -rf iproute2
 
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.41"
-RUN pip3 install --break-system-packages virtme-ng=="${VIRTME_NG_VERSION}"
+RUN pip3 install --no-cache-dir --break-system-packages \
+	virtme-ng=="${VIRTME_NG_VERSION}"
 
 # to quickly shutdown the VM and more
 RUN for i in /usr/lib/klibc/bin/*; do \
