@@ -104,7 +104,9 @@ RUN cd /opt && \
 		git checkout "${IPROUTE2_GIT_SHA}" && \
 		./configure --color=auto && \
 		make -j"$(nproc)" -l"$(nproc)" && \
-		make install
+		make install && \
+		cd .. && \
+	rm -rf iproute2
 
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.41"
