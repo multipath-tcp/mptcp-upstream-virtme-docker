@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-FROM ubuntu:25.10
+FROM ubuntu:26.04
 
 LABEL name=mptcp-upstream-virtme-docker
 
@@ -10,7 +10,7 @@ RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake cmake \
-		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
+		libelf-dev flex git curl tar hashalot qemu-system-x86 sudo expect \
 		python3 python3-pip python3-pkg-resources file virtiofsd \
 		busybox-static coreutils python3-requests libvirt-clients udev \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
@@ -80,7 +80,7 @@ RUN cd /opt && \
 
 # Pahole
 ARG PAHOLE_GIT_URL="https://kernel.googlesource.com/pub/scm/devel/pahole/pahole.git"
-ARG PAHOLE_GIT_SHA="v1.31"
+ARG PAHOLE_GIT_SHA="6fd0dacc9418b103af4245ab300b9c135bcdb383" # fix discarded-qualifiers
 RUN cd /opt && \
 	git clone "${PAHOLE_GIT_URL}" pahole && \
 	cd "pahole" && \
