@@ -12,6 +12,7 @@ VIRTME_GIT_DIR="$(realpath "$(git rev-parse --git-common-dir)")"
 VIRTME_REAL_DIR="$(realpath .virtme)"
 
 HOME_DIR="$(realpath "$(dirname "${0}")/.home")"
+mkdir -p "${HOME_DIR}"
 
 envs=()
 for env in "${!INPUT_@}"; do
