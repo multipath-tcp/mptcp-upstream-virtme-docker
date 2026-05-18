@@ -999,6 +999,12 @@ EOF
 		echo "PS1='${ps1}'" >>"${BASH_PROFILE}"
 	fi
 
+	# Also in the manual mode + useful misc.
+	if ! [ -s "/root/.bashrc" ]; then
+		cp -v /etc/skel/.* /root/
+		sed -i 's/^#\(force_color_prompt=yes\)/\1/g' /root/.bashrc
+	fi
+
 	if [ -f "${VIRTME_PREPARE_POST}" ]; then
 		# shellcheck source=/dev/null
 		source "${VIRTME_PREPARE_POST}"
