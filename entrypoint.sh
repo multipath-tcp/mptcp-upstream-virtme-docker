@@ -48,6 +48,7 @@ DEFAULT_HOSTNAME="mptcpdev"
 : "${INPUT_PACKETDRILL_NO_SYNC:=0}"
 : "${INPUT_PACKETDRILL_NO_MORE_TOLERANCE:=0}"
 : "${INPUT_PACKETDRILL_STABLE:=0}"
+: "${INPUT_PACKETDRILL_NO_IGNORE_DEBUG:=0}"
 : "${INPUT_RUN_LOOP_CONTINUE:=0}"
 : "${INPUT_RUN_TESTS_ONLY:=""}"
 : "${INPUT_RUN_TESTS_EXCEPT:=""}"
@@ -1279,9 +1280,16 @@ run_selftest_all() { local sf rc=0
 }
 
 # \$1: packetdrill TAP file, \$2: TAP prefix
-_packetdrill_result() {
+_packetdrill_result() { local ign
 	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
 		sed -i "s#\${PWD}/#packetdrill: #g" "\${1}" # remove long path + prefix
+
+		# ignore errors in debug mode, only look for critical issues.
+		if [[ "${mode}" == *"debug" ]] && [ "${INPUT_PACKETDRILL_NO_IGNORE_DEBUG}" = 0 ]; then
+			[ "${no_tap}" = 0 ] && ign="IGNORE Flaky" || ign="[IGNO] (flaky)"
+			sed -i "s/^not ok \(.*\)/ok \\1 # \${ign}/g" "\${1}"
+		fi
+
 		return 0
 	fi
 
@@ -1966,7 +1974,7 @@ _print_tests_result() {
 	_print_tests_results_subtests "packetdrill_"
 
 	if is_ci; then
-		flaky="$(grep --text --no-filename -F " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap || true)"
+		flaky="$(grep --text --no-filename -F " # IGNORE Flaky" "${RESULTS_DIR}"/*_subtests.tap "${RESULTS_DIR}"/packetdrill_*.tap || true)"
 	else
 		flaky="$(grep --text --no-filename -F "[IGNO] (flaky)" "${RESULTS_DIR}"/*.tap || true)"
 	fi
