@@ -97,7 +97,7 @@ RUN cd /opt && \
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://kernel.googlesource.com/pub/scm/network/iproute2/iproute2.git"
-ARG IPROUTE2_GIT_SHA="v7.0.0"
+ARG IPROUTE2_GIT_SHA="v7.1.0"
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
 	cd iproute2 && \
