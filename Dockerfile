@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-FROM ubuntu:25.10
+FROM ubuntu:26.04
 
 LABEL name=mptcp-upstream-virtme-docker
 
@@ -10,7 +10,7 @@ RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake cmake \
-		libelf-dev flex git curl tar hashalot qemu-kvm sudo expect \
+		libelf-dev flex git curl tar hashalot qemu-system-x86 sudo expect \
 		python3 python3-pip python3-pkg-resources file virtiofsd \
 		busybox-static coreutils python3-requests libvirt-clients udev \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
@@ -39,8 +39,8 @@ RUN apt-get update && \
 	apt-get clean
 
 # byobu (not to have a dep to iproute2)
-ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.14.tar.gz"
-ARG BYOBU_SUM="478e15a38a57678e4bd2cd55994ea1edece2d10bb6bf0a3de8f0b2dd8df35485  byobu.tar.gz"
+ARG BYOBU_URL="https://github.com/dustinkirkland/byobu/archive/refs/tags/6.16.tar.gz"
+ARG BYOBU_SUM="ce294bbc2c04c2b2dd79e2d0ec336812d8e9bd4d9a7f696e2ba335ecbc17fe68  byobu.tar.gz"
 RUN cd /opt && \
 	curl -L "${BYOBU_URL}" -o byobu.tar.gz && \
 	echo "${BYOBU_SUM}" | sha256sum -c && \
@@ -80,7 +80,7 @@ RUN cd /opt && \
 
 # Pahole
 ARG PAHOLE_GIT_URL="https://kernel.googlesource.com/pub/scm/devel/pahole/pahole.git"
-ARG PAHOLE_GIT_SHA="v1.31"
+ARG PAHOLE_GIT_SHA="6fd0dacc9418b103af4245ab300b9c135bcdb383" # fix discarded-qualifiers
 RUN cd /opt && \
 	git clone "${PAHOLE_GIT_URL}" pahole && \
 	cd "pahole" && \
@@ -97,7 +97,7 @@ RUN cd /opt && \
 
 # iproute
 ARG IPROUTE2_GIT_URL="https://kernel.googlesource.com/pub/scm/network/iproute2/iproute2.git"
-ARG IPROUTE2_GIT_SHA="v7.0.0"
+ARG IPROUTE2_GIT_SHA="v7.1.0"
 RUN cd /opt && \
 	git clone "${IPROUTE2_GIT_URL}" iproute2 && \
 	cd iproute2 && \

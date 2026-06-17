@@ -2437,10 +2437,16 @@ case "${INPUT_MODE}" in
 	;;
 "make.cross")
 	setup_env "${INPUT_ENV:-normal}"
-	MAKE_CROSS="/usr/sbin/make.cross"
-	wget https://raw.githubusercontent.com/intel/lkp-tests/master/sbin/make.cross -O "${MAKE_CROSS}"
-	chmod +x "${MAKE_CROSS}"
-	COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
+	LKP="${VIRTME_WORKDIR}/lkp"
+	if [ ! -d "${LKP}" ]; then
+		git clone --no-checkout --depth=1 --filter=tree:0 \
+			https://github.com/intel/lkp-tests.git "${LKP}"
+		git -C "${LKP}" sparse-checkout set --no-cone /kbuild
+		git -C "${LKP}" checkout
+	fi
+	MAKE_CROSS="${LKP}/kbuild/make.cross"
+	PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+		COMPILER_INSTALL_PATH="${VIRTME_WORKDIR}/0day" \
 		COMPILER="${COMPILER}" \
 		"${MAKE_CROSS}" "${@}"
 	;;
