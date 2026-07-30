@@ -1408,9 +1408,13 @@ gcov_extract() {
 	fi
 }
 
-# \$1: max iterations (<1 means no limit) ; args: what needs to be executed
+# \$1: max iterations (<1 means no limit) ;
+# \$2: function to invoke once per iteration ;
+# \$3+: args passed to that function
 run_loop_n() { local i tdir rc=0
 	n=\${1}
+	fn=\${2}
+	shift
 	shift
 
 	tdir="${KERNEL_SRC}/${SELFTESTS_DIR}"
@@ -1423,7 +1427,7 @@ run_loop_n() { local i tdir rc=0
 	while true; do
 		echo -e "\n\n\t=== ${COLOR_BLUE}Attempt: \${i} (\$(date -R))${COLOR_RESET} ===\n\n"
 
-		if ! "\${@}" || has_call_trace; then
+		if ! "\${fn}" "\${@}" || has_call_trace; then
 			rc=1
 
 			echo -e "\n\n\t=== ${COLOR_RED}ERROR after \${i} attempts (\$(date -R))${COLOR_RESET} ===\n\n"
@@ -1452,6 +1456,65 @@ run_loop_n() { local i tdir rc=0
 # args: what needs to be executed
 run_loop() {
 	run_loop_n 0 "\${@}"
+}
+
+# $1: bn (script basename) ; $2: content ;
+# $3+: extra args passed to the script.
+frozen_iter() {
+	local bn=\${1} content=\${2}
+	shift 2
+	local extra=("\${@}")
+	local tdir="${KERNEL_SRC}/${SELFTESTS_DIR}"
+	local tap_bn="selftest_\${bn:0:-3}"
+	local tap_file="${RESULTS_DIR}/\${tap_bn}.tap"
+
+	log_section_start "Selftest Test: \${bn}\${extra[@]:+ \${extra[*]}}"
+	( cd "\${tdir}" && _run_selftest_one_tap "${RESULTS_DIR}/\${tap_bn}" \
+		exec -a "./\${bn}" bash -s "\${extra[@]}" ) <<<"\${content}"
+	log_section_end
+
+	if [ -s "\${tap_file}" ] && grep -q "^not ok" "\${tap_file}"; then
+		return 1
+	fi
+	return 0
+}
+
+# Like run_loop but reads the script body
+# once into memory. Later edits to the script
+# are ignored.
+run_frozen() {
+	local src content bn arg
+
+	# find the first arg that is an existing file (script).
+	for arg in "\${@}"; do
+		if [ -f "\${arg}" ]; then
+			src="\${arg}"
+			break
+		elif [ -f "${KERNEL_SRC}/${SELFTESTS_DIR}/\${arg#./}" ]; then
+			src="${KERNEL_SRC}/${SELFTESTS_DIR}/\${arg#./}"
+			break
+		fi
+	done
+
+	if [ -z "\${src}" ]; then
+		echo "run_frozen: no script file found in args" >&2
+		return 1
+	fi
+
+	# capture the script body
+	bn=\$(basename "\${src}")
+	content=\$(cat "\${src}")
+
+	# slice off every arg after the script as extra.
+	local extra=() i
+	for ((i=1; i<=\${#@}; i++)); do
+		if [ "\${!i}" = "\${src}" ] || [ "\${!i}" = "\${arg}" ]; then
+			break
+		fi
+	done
+	extra=("\${@:\$((i+1))}")
+
+	run_loop_n 0 frozen_iter "\${bn}" "\${content}" "\${extra[@]}"
 }
 
 # args: what needs to be executed
