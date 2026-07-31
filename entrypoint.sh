@@ -1458,6 +1458,58 @@ run_loop() {
 	run_loop_n 0 "\${@}"
 }
 
+# $1: source script path ; stdout: inlined content
+# Recursively inline any sibling/parent .sh library referenced via a
+# leading ". ... <lib>.sh ..." or "source <path>" line.
+freeze_script() {
+	local src="\${1}" dir lib_relpath lib_path bn
+	dir=\$(dirname "\${src}")
+	bn=\$(basename "\${src}")
+
+	lib_relpath=\$(grep -m1 -E '^[[:space:]]*(\.|source)[[:space:]]+' "\${src}" 2>/dev/null |
+		sed -nE 's@^.*"([^"]+)"?[[:space:]]*\$@\1@p' |
+		sed -E 's@^\)/@@')
+
+	if [ -n "\${lib_relpath}" ]; then
+		if [ "\${lib_relpath#*/}" != "\${lib_relpath}" ]; then
+			local _try_base="\${lib_relpath#*/}"
+			local _try_dir="\${dir}"
+			while [ -n "\${_try_dir}" ]; do
+				if [ -f "\${_try_dir}/\${_try_base}" ]; then
+					lib_path="\${_try_dir}/\${_try_base}"
+					break
+				fi
+				[ "\${_try_dir%/*}" = "\${_try_dir}" ] && break
+				_try_dir="\${_try_dir%/*}"
+			done
+		fi
+
+		# Resolve relative "../foo" by walking up from dir.
+		if [ -z "\${lib_path:-}" ]; then
+			case "\${lib_relpath}" in
+			/*) lib_path="\${lib_relpath}" ;;
+			../*)
+				local rest="\${lib_relpath}"
+				lib_path="\${dir}"
+				while [[ "\${rest}" = ../* ]]; do
+					lib_path="\${lib_path%/*}"
+					rest="\${rest#../}"
+				done
+				lib_path="\${lib_path}/\${rest}"
+				;;
+			*) lib_path="\${dir}/\${lib_relpath}" ;;
+			esac
+		fi
+
+		if [ -n "\${lib_path:-}" ] && [ -f "\${lib_path}" ]; then
+			freeze_script "\${lib_path}"
+			printf '%s\n' "# frozen: \$(basename "\${lib_path}") inlined above"
+		fi
+	fi
+
+	sed -E 's@^[[:space:]]*(\.|source)[[:space:]]+.*\$@@' "\${src}"
+}
+
 # $1: bn (script basename) ; $2: content ;
 # $3+: extra args passed to the script.
 frozen_iter() {
@@ -1480,8 +1532,9 @@ frozen_iter() {
 }
 
 # Like run_loop but reads the script body
+# with all referenced libraries inlined
 # once into memory. Later edits to the script
-# are ignored.
+# and its sibling libraries are ignored.
 run_frozen() {
 	local src content bn arg
 
@@ -1502,8 +1555,9 @@ run_frozen() {
 	fi
 
 	# capture the script body
+	# with all referenced libraries recursively inlined above it
 	bn=\$(basename "\${src}")
-	content=\$(cat "\${src}")
+	content=\$(freeze_script "\${src}")
 
 	# slice off every arg after the script as extra.
 	local extra=() i
