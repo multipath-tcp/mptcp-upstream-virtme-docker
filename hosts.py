@@ -6,6 +6,7 @@ Class for the entrypoint.sh script
 
 import logging
 import os
+
 import pexpect
 
 logger = logging.getLogger(__name__)
