@@ -139,13 +139,13 @@ class Entrypoint:
                     self.hosts[host].wait_for_prompt(**kwargs)
                 except TIMEOUT:
                     if not ignore_err:
-                        logger.warn(f"{host}: '{cmd}': timeout: '{kwargs}'")
+                        logger.warning(f"{host}: '{cmd}': timeout: '{kwargs}'")
                         err = True
                     continue
 
                 rc = self.hosts[host].cmd_last_status()
                 if not ignore_err and rc != 0:
-                    logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
+                    logger.warning(f"{host}: '{cmd}': rc: '{rc}'")
                     err = True
 
             if dstat_only == "step" or dstat_only == "end":
@@ -158,7 +158,7 @@ class Entrypoint:
 
     def _parse_dstat(self, config, fpath):
         if not os.path.isfile(fpath):
-            logger.warn(f"No dstat file: {fpath}")
+            logger.warning(f"No dstat file: {fpath}")
             return {}
 
         now = time.localtime(time.time())
@@ -174,7 +174,7 @@ class Entrypoint:
             for key in keys:
                 stats[key] = {"raw": []}
 
-            for line in csvfile.readlines():
+            for line in csvfile:
                 line = line.rstrip().split(",")
                 if len(line) != lkeys:
                     continue
@@ -206,7 +206,7 @@ class Entrypoint:
                     end = i - 1
                     break
         else:
-            logger.warn("No 'dstat_only' in the yaml")
+            logger.warning("No 'dstat_only' in the yaml")
 
         # offset to avoid start / end noise.
         start += dstat.get("offset_start", 1)

@@ -11,10 +11,11 @@ import os
 import shutil
 import signal
 import sys
+
 import yaml
 
-import logcmd
 import entrypoint
+import logcmd
 
 logger = logging.getLogger("perf")
 
