@@ -130,7 +130,7 @@ class Host:
         if log is None:
             self.log = PExpectLog(logger.debug, hostname)
 
-    def _spawn(self, cmd, args=[], env={}):
+    def _spawn(self, cmd, args=None, env=None):
         return PExpectStub(
             cmd,
             args,
