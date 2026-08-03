@@ -186,12 +186,12 @@ class Host:
         while True:
             try:
                 buf += self.p.read_nonblocking(1024, timeout)
-            except pexpect.TIMEOUT as e:
+            except pexpect.TIMEOUT:
                 if self.dry_run:
                     lines = [False]
                     break
                 self.send_ctrl_c()
-                raise e
+                raise
             lines += buf.split("\r\n")
             buf = lines.pop()  # last line: either empty or not ending with \r\n
             if buf == expect:
@@ -228,9 +228,9 @@ class Host:
     def cmd_wait(self, cmd, ignore_timeout=False, **kwargs):
         try:
             self.cmd_output(cmd, **kwargs)
-        except pexpect.TIMEOUT as e:
+        except pexpect.TIMEOUT:
             if not ignore_timeout:
-                raise e
+                raise
 
     def cmd_status(self, cmd, **kwargs):
         try:
@@ -261,10 +261,10 @@ class VM(Host):
         serial = self._spawn(self.script, args, self.env)
         try:
             serial.expect(self.prompt, timeout=60)
-        except (pexpect.EOF, pexpect.TIMEOUT) as e:
+        except (pexpect.EOF, pexpect.TIMEOUT):
             logger.fatal("Unable to get VSOCK access")
             self._terminate(serial)
-            raise e
+            raise
 
         args = ["--mods", "none", "--client", "--port", str(self.cid)]
         vsock = self._spawn("virtme-run", args)
@@ -272,10 +272,10 @@ class VM(Host):
             vsock.expect(self.prompt, timeout=5)
             self.prompt = f"|{self.prompt}: "
             vsock.sendline(f"PS1='{self.prompt}'")
-        except (pexpect.EOF, pexpect.TIMEOUT) as e:
+        except (pexpect.EOF, pexpect.TIMEOUT):
             logger.fatal("Unable to get VSOCK access")
             self._terminate(serial)
-            raise e
+            raise
 
         return serial, vsock
 
