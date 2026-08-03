@@ -286,7 +286,7 @@ class Entrypoint:
         stat_dir = os.path.join(self.log_dir, "stats")
 
         if phase == "post":
-            for host in self.hosts.keys():
+            for host in self.hosts:
                 self._stop_dstat(host)
 
         for key in (phase, "all"):
@@ -304,7 +304,7 @@ class Entrypoint:
                         print(self.hosts[host].cmd_output(cmd), file=f)
 
         if phase == "pre":
-            for host in self.hosts.keys():
+            for host in self.hosts:
                 self._start_dstat(host)
 
     def _setup_net(self, config):
