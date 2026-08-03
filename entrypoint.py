@@ -40,8 +40,8 @@ class Entrypoint:
         if int(self.cmd.verbosity()) > 1:
             log = None
         else:
-            os.makedirs(self.log_dir, exist_ok=True)
-            log = open(os.path.join(self.log_dir, f"{hostname}.log"), "a")
+            # the log will be closed during the vm.stop() step
+            log = open(os.path.join(self.log_dir, f"{hostname}.log"), "a")  # noqa: SIM115
 
         vm = hosts.VM(
             self.mode,
