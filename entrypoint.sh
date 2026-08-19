@@ -1639,6 +1639,10 @@ if {\$boot >= \$max_boot} {
 	} else {
 		send_user "Timeout boot (\$boot)\n"
 	}
+
+	# not to prevent restart after a kill
+	exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
+
 	exit 1
 }
 
@@ -1723,6 +1727,10 @@ expect {
 		send "\x03\r"
 		sleep 2
 		send "\x03\r"
+
+		# Always better to shutdown properly if that works
+		send "/usr/lib/klibc/bin/poweroff\r"
+		send -i \$serial_id -- "/usr/lib/klibc/bin/poweroff\r"
 	} eof {
 		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP}\n"
 		exit 1
@@ -1744,8 +1752,14 @@ set timeout "${VIRTME_EXPECT_SHUTDOWN_TIMEOUT}"
 
 expect {
 	"KVM: entry failed, hardware error" {
+		# not to prevent restart after a kill
+		exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
+
 		exit 1
 	} timeout {
+		# not to prevent restart after a kill
+		exec rm -f "/tmp/virtme-console/${INPUT_VSOCK_CID}.sh"
+
 		exit 1
 	} eof {
 		exit 0
