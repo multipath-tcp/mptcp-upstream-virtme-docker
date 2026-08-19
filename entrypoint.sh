@@ -1727,6 +1727,10 @@ expect {
 		send "\x03\r"
 		sleep 2
 		send "\x03\r"
+
+		# Always better to shutdown properly if that works
+		send "/usr/lib/klibc/bin/poweroff\r"
+		send -i \$serial_id -- "/usr/lib/klibc/bin/poweroff\r"
 	} eof {
 		send_user "${VIRTME_SCRIPT_UNEXPECTED_STOP}\n"
 		exit 1
