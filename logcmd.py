@@ -47,9 +47,9 @@ class CMD:
             )
         except subprocess.CalledProcessError as e:
             if fatal:
-                logger.fatal(f"'{cmd}', error: {e.returncode}, {repr(e.output)}")
+                logger.fatal(f"'{cmd}', error: {e.returncode}, {e.output!r}")
                 sys.exit(1)
-            raise e
+            raise
 
     def call(self, cmd, fatal=True, env=None, **kwargs):
         self._log(cmd, env, "call")

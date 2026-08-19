@@ -40,8 +40,8 @@ class Entrypoint:
         if int(self.cmd.verbosity()) > 1:
             log = None
         else:
-            os.makedirs(self.log_dir, exist_ok=True)
-            log = open(os.path.join(self.log_dir, f"{hostname}.log"), "a")
+            # the log will be closed during the vm.stop() step
+            log = open(os.path.join(self.log_dir, f"{hostname}.log"), "a")  # noqa: SIM115
 
         vm = hosts.VM(
             self.mode,
@@ -139,13 +139,13 @@ class Entrypoint:
                     self.hosts[host].wait_for_prompt(**kwargs)
                 except TIMEOUT:
                     if not ignore_err:
-                        logger.warn(f"{host}: '{cmd}': timeout: '{kwargs}'")
+                        logger.warning(f"{host}: '{cmd}': timeout: '{kwargs}'")
                         err = True
                     continue
 
                 rc = self.hosts[host].cmd_last_status()
                 if not ignore_err and rc != 0:
-                    logger.warn(f"{host}: '{cmd}': rc: '{rc}'")
+                    logger.warning(f"{host}: '{cmd}': rc: '{rc}'")
                     err = True
 
             if dstat_only == "step" or dstat_only == "end":
@@ -158,7 +158,7 @@ class Entrypoint:
 
     def _parse_dstat(self, config, fpath):
         if not os.path.isfile(fpath):
-            logger.warn(f"No dstat file: {fpath}")
+            logger.warning(f"No dstat file: {fpath}")
             return {}
 
         now = time.localtime(time.time())
@@ -174,7 +174,7 @@ class Entrypoint:
             for key in keys:
                 stats[key] = {"raw": []}
 
-            for line in csvfile.readlines():
+            for line in csvfile:
                 line = line.rstrip().split(",")
                 if len(line) != lkeys:
                     continue
@@ -206,7 +206,7 @@ class Entrypoint:
                     end = i - 1
                     break
         else:
-            logger.warn("No 'dstat_only' in the yaml")
+            logger.warning("No 'dstat_only' in the yaml")
 
         # offset to avoid start / end noise.
         start += dstat.get("offset_start", 1)
@@ -286,7 +286,7 @@ class Entrypoint:
         stat_dir = os.path.join(self.log_dir, "stats")
 
         if phase == "post":
-            for host in self.hosts.keys():
+            for host in self.hosts:
                 self._stop_dstat(host)
 
         for key in (phase, "all"):
@@ -304,7 +304,7 @@ class Entrypoint:
                         print(self.hosts[host].cmd_output(cmd), file=f)
 
         if phase == "pre":
-            for host in self.hosts.keys():
+            for host in self.hosts:
                 self._start_dstat(host)
 
     def _setup_net(self, config):
