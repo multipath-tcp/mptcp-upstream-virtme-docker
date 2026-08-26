@@ -1390,12 +1390,22 @@ has_call_trace() {
 
 kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 	if [ -e "\${p}" ]; then
+		echo "Starting KMemleak scan"
 		echo scan > "\${p}"
 		sleep 5 # grace period of 5 sec
 		# second scan often surfaces issues the first scan missed
 		echo scan > "\${p}"
 		cat "\${p}" >> "${KMEMLEAK}"
+		if [ -s "${KMEMLEAK}" ]; then
+			echo "Potential memory leak found:"
+			cat "${KMEMLEAK}"
+		fi
 	fi
+}
+
+has_kmemleak() {
+	kmemleak_scan
+	[ -s "${KMEMLEAK}" ]
 }
 
 gcov_extract() {
@@ -1425,7 +1435,7 @@ run_loop_n() { local i tdir rc=0
 	while true; do
 		echo -e "\n\n\t=== ${COLOR_BLUE}Attempt: \${i} (\$(date -R))${COLOR_RESET} ===\n\n"
 
-		if ! "\${@}" || has_call_trace; then
+		if ! "\${@}" || has_call_trace || has_kmemleak; then
 			rc=1
 
 			echo -e "\n\n\t=== ${COLOR_RED}ERROR after \${i} attempts (\$(date -R))${COLOR_RESET} ===\n\n"
@@ -1487,7 +1497,6 @@ fi
 
 cd "${KERNEL_SRC}"
 
-rm -f "${KMEMLEAK}"
 kmemleak_scan
 gcov_extract
 
