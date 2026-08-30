@@ -417,7 +417,7 @@ class Entrypoint:
         self._stop_dstat_host()
 
         if err:
-            logger.info("error(s) found during the tests, no validation")
+            logger.warning("error(s) found during the tests, no validation")
         else:
             err = self._validation(config)
 
