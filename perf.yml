@@ -1,4 +1,6 @@
 # This is just a sample file
+# yamllint disable rule:line-length
+---
 
 - name: "Test 1"
   timeout_s: 3600
