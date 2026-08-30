@@ -39,6 +39,9 @@ class Entrypoint:
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
+    def get_git_sha(self):
+        return self.git_sha
+
     def build(self):
         cmd = f"{self.script} build {self.mode}"
         self.cmd.call(cmd)
@@ -561,8 +564,5 @@ class Entrypoint:
             elif self.regression(config, name):
                 reg.append(name)
             id += 1
-
-        # TODO: export JSON: git_sha, git_tag, date, errors, regressions
-        # TODO: use this to create a new matrix in html
 
         return err, reg

@@ -6,11 +6,13 @@ Perf script interacting with entrypoint
 """
 
 import argparse
+import json
 import logging
 import os
 import shutil
 import signal
 import sys
+from datetime import time
 
 import yaml
 
@@ -72,6 +74,12 @@ def get_args_parser():
         default="/entrypoint.sh",
         type=check_script_arg,
         help="Entrypoint script",
+    )
+
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit results in JSON format",
     )
 
     parser.add_argument(
@@ -142,6 +150,7 @@ def main():
         level=level,
         format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
+        stream=sys.stderr if args.json else sys.stdout,
     )
 
     ep = entrypoint.Entrypoint(
@@ -165,6 +174,18 @@ def main():
     signal.signal(signal.SIGINT, handler)
 
     err, reg = ep.run_tests(get_tests(args.config))
+
+    if args.json:
+        json_output = {
+            "date": time.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "git_sha": ep.get_git_sha(),
+            "regressions": reg,
+            "errors": err,
+        }
+        print(json.dumps(json_output))
+        # No exit with a specific code when emitting JSON here: output is parsed
+        return
+
     exit = 0
     if reg:
         logger.warning(f"Regressions with tests: {reg}")
