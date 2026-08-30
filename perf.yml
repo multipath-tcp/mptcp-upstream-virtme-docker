@@ -59,7 +59,7 @@
         - net/eth0
         - recv
         - mean
-      var_pc: 1.0
+      alpha: 0.05
       history_max_n: 10
       history_since: 0
     - name: "Client recv second link"
@@ -69,6 +69,6 @@
         - net/eth1
         - recv
         - mean
-      var_pc: 1.0
+      alpha: 0.05
       history_max_n: 10
       history_since: 0

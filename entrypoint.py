@@ -15,6 +15,7 @@ import tempfile
 import time
 
 from pexpect import TIMEOUT
+from scipy import stats
 
 import hosts
 
@@ -124,7 +125,9 @@ class Entrypoint:
             json_field = check.get("json_field", None)
             last_res = self._get_info(latest_file, json_field)
 
-            var_pc = float(check.get("var_pc", 1.0))
+            alpha = float(check.get("alpha", 0.05))
+            if not 0 < alpha < 1:
+                raise ValueError(f"{name}: {check_name}: alpha must be between 0 and 1")
             history_max_n = int(check.get("history_max_n", 0))
             history_since = int(check.get("history_since", 0))
 
@@ -147,18 +150,31 @@ class Entrypoint:
 
                 prev_results.append(self._get_info(file_path, json_field))
 
-            if not prev_results:
-                logger.info(f"{name}: {check_name}: nothing to compare")
+            if len(prev_results) < 2:
+                logger.info(
+                    f"{name}: {check_name}: need at least two previous measurements"
+                )
                 continue
 
-            # TODO: use Student's t-test
             mean = statistics.mean(prev_results)
-            if last_res < mean * (100 - var_pc) or last_res > mean * (100 + var_pc):
-                msg = f"got {last_res}, had {mean}"
+            stdev = statistics.stdev(prev_results, mean)
+            if stdev == 0:
+                p_value = 1 if last_res == mean else 0
+            else:
+                p_value = stats.ttest_1samp(prev_results, last_res).pvalue
+
+            if p_value < alpha:
+                msg = (
+                    f"got {last_res}, had {mean}; "
+                    f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
+                )
                 reg = self._mark_reg(latest, name, check_name, msg)
                 continue
 
-            logger.info(f"{name}: {check_name}: no regression ({mean} vs {last_res})")
+            logger.info(
+                f"{name}: {check_name}: no regression "
+                f"({mean} vs {last_res}, p-value {p_value:.6g})"
+            )
 
         return reg
 
