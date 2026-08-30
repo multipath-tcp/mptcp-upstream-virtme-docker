@@ -77,6 +77,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--info",
+        "-I",
+        action="append",
+        metavar="key:value",
+        help="Add extra info in the JSON, can be used multiple times",
+    )
+
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit results in JSON format",
@@ -182,6 +190,15 @@ def main():
             "regressions": reg,
             "errors": err,
         }
+
+        for info in args.info:
+            info = info.split(":", 1)
+            if len(info) != 2:
+                logger.warning("Skip info: " + info[0])
+                continue
+
+            json_output[info[0]] = info[1]
+
         print(json.dumps(json_output))
         # No exit with a specific code when emitting JSON here: output is parsed
         return
