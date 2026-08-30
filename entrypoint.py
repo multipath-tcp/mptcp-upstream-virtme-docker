@@ -7,7 +7,9 @@ Class for the entrypoint.sh script
 import json
 import logging
 import os
+import re
 import shlex
+import shutil
 import statistics
 import tempfile
 import time
@@ -20,11 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir):
+    def __init__(self, cmd, mode, script, log_dir, reg_dir):
         self.cmd = cmd
         self.mode = mode
         self.script = script
         self.log_dir = os.path.realpath(log_dir)
+        self.reg_dir = None if reg_dir is None else os.path.realpath(reg_dir)
+
+        os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
+        os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -66,6 +72,122 @@ class Entrypoint:
         for name in self.hosts:
             host = self.hosts[name]
             host.stop()
+
+    def _get_reg_dir(self, name):
+        return os.path.join(self.reg_dir, re.sub(r"\W", "_", name))
+
+    def _get_info(self, file_path, json_field):
+        with open(file_path) as f:
+            if json_field:
+                info = json.load(f)
+                for field in json_field:
+                    if field.isdigit():
+                        field = int(field)
+                    info = info[field]
+            else:
+                info = f.readline().strip("\n")
+
+        return float(info)
+
+    def mark_reg(self, latest, name, check_name, msg):
+        open(os.path.join(latest, "skip"), "a").close()
+        logger.warning(f"Regression in {name}, check '{check_name}': {msg}")
+
+    def regression(self, config, name):
+        reg = False
+        if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
+            return reg
+        regression = config["regression"]
+
+        dir_path = self._get_reg_dir(name)
+        latest = os.path.join(dir_path, "latest")
+        last = int(os.path.basename(os.path.realpath(latest)))
+
+        if last == 0:
+            logger.info("Nothing to compare: first time")
+
+        for check in regression:
+            check_name = check["name"]
+            file = check["file"]
+
+            latest_file = os.path.join(latest, file)
+            if not os.path.isfile(latest_file):
+                msg = f"{file}' is not available in latest"
+                self.mark_reg(latest, name, check_name, msg)
+                continue
+
+            json_field = check.get("json_field", None)
+            last_res = self._get_info(latest_file, json_field)
+
+            var_pc = float(check.get("var_pc", 1.0))
+            history_max_n = int(check.get("history_max_n", 0))
+            history_since = int(check.get("history_since", 0))
+
+            prev = last
+            prev_results = []
+            while prev > history_since and (
+                history_max_n == 0 or len(prev_results) < history_max_n
+            ):
+                prev -= 1
+
+                prev_dir = os.path.join(dir_path, str(prev))
+                file_path = os.path.join(prev_dir, file)
+                if (
+                    not os.path.isdir(prev_dir)
+                    or os.path.isfile(os.path.join(prev_dir, "skip"))
+                    or not os.path.isfile(file_path)
+                ):
+                    logger.debug(f"skip: {prev_dir}")
+                    continue
+
+                prev_results.append(self._get_info(file_path, json_field))
+
+            if not prev_results:
+                logger.info(f"{name}: {check_name}: nothing to compare")
+                continue
+
+            # TODO: use Student's t-test
+            mean = statistics.mean(prev_results)
+            if last_res < mean * (100 - var_pc) or last_res > mean * (100 + var_pc):
+                msg = f"got {last_res}, had {mean}"
+                self.mark_reg(latest, name, check_name, msg)
+                continue
+
+            logger.info(f"{name}: {check_name}: no regression ({mean} vs {last_res})")
+
+        return reg
+
+    def _save_results(self, name, err):
+        if self.reg_dir is None or self.cmd.dry_run:
+            logger.warning("Regressions are not tracked")
+            return
+
+        # create new dir and point latest to it
+        dir_path = self._get_reg_dir(name)
+        latest = os.path.join(dir_path, "latest")
+        if os.path.islink(latest):
+            prev = os.path.basename(os.path.realpath(latest))
+            new = f"{int(prev) + 1}"
+            os.remove(latest)
+        else:
+            new = "0"
+        new_path = os.path.join(dir_path, new)
+        os.makedirs(new_path, exist_ok=True)
+        os.symlink(new_path, latest)
+
+        # symlink to the log dir
+        os.symlink(
+            os.path.relpath(self.log_dir, new_path),
+            os.path.join(self.reg_dir, "logs"),
+        )
+
+        # copy stats and artifacts
+        shutil.copytree(os.path.join(self.log_dir, "stats"), new_path)
+        shutil.copytree(os.path.join(self.log_dir, "artifacts"), new_path)
+
+        if err:
+            # easy to handle
+            open(os.path.join(new_path, "skip"), "a").close()
 
     def _validation(self, config):
         if "validation" not in config:
@@ -421,16 +543,24 @@ class Entrypoint:
         else:
             err = self._validation(config)
 
+        self._save_results(name, err)
+
         return err
 
     def run_tests(self, tests):
         err = []
+        reg = []
         id = 1
         total = len(tests)
         for config in tests:
             name = config["name"]
             if self.run_test(config, name, id, total):
                 err.append(name)
+            elif self.regression(config, name):
+                reg.append(name)
             id += 1
 
-        return err
+        # TODO: export JSON: git_sha, git_tag, date, errors, regressions
+        # TODO: use this to create a new matrix in html
+
+        return err, reg

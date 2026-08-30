@@ -102,6 +102,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-dir",
+        "-r",
+        action="store",
+        type=check_dir_arg,
+        help="Regression directory",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="count",
@@ -129,8 +137,13 @@ def main():
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    command = logcmd.CMD(args.dry_run, args.verbose, args.kernel_dir)
-    ep = entrypoint.Entrypoint(command, args.mode, args.entrypoint, args.log_dir)
+    ep = entrypoint.Entrypoint(
+        logcmd.CMD(args.dry_run, args.verbose, args.kernel_dir),
+        args.mode,
+        args.entrypoint,
+        args.log_dir,
+        args.reg_dir,
+    )
 
     if args.build:
         ep.build()
@@ -143,10 +156,16 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    err = ep.run_tests(get_tests(args.config))
+    err, reg = ep.run_tests(get_tests(args.config))
+    exit = 0
+    if reg:
+        logger.warning(f"Regressions with tests: {reg}")
+        exit = 42
     if err:
         logger.error(f"Error with tests: {err}")
-        sys.exit(1)
+        exit = 1
+    if exit:
+        sys.exit(exit)
 
 
 if __name__ == "__main__":
