@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir, reg_dir):
+    def __init__(self, cmd, mode, script, log_dir, reg_dir, save_results):
         self.cmd = cmd
         self.mode = mode
         self.script = script
         self.log_dir = os.path.realpath(log_dir)
         self.reg_dir = None if reg_dir is None else os.path.realpath(reg_dir)
+        self.save_results = save_results
 
         os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
@@ -543,7 +544,8 @@ class Entrypoint:
         else:
             err = self._validation(config)
 
-        self._save_results(name, err)
+        if self.save_results:
+            self._save_results(name, err)
 
         return err
 

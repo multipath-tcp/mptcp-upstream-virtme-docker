@@ -110,6 +110,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--save-results",
+        "-s",
+        action="store_true",
+        help="Save the results of the tests",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="count",
@@ -143,6 +150,7 @@ def main():
         args.entrypoint,
         args.log_dir,
         args.reg_dir,
+        args.save_results,
     )
 
     if args.build:
