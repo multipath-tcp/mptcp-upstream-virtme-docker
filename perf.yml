@@ -4,13 +4,14 @@
   timeout_s: 3600
   bridges:
     - name: "br0"
-      rate_mbit: 123
-      delay_ms: 12
-      loss_pc: 1
+      rate_mbit: 10
+      delay_ms: 5
+      loss_pc: 0
     - name: "br1"
-      rate_mbit: 321
-      delay_ms: 21
-      loss_pc: 2
+      rate_mbit: 10
+      delay_ms: 5
+      loss_pc: 0
+  bridges_hw_accel: true
   stats:
     pre:
       - name: "nstat_reset"
