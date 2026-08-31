@@ -146,6 +146,7 @@ VIRTME_RUN_QEMU_OPTS=(
 # results dir
 RESULTS_DIR_BASE="${VIRTME_WORKDIR}/results"
 RESULTS_DIR=
+PERF_REG_DIR="${VIRTME_WORKDIR}/perf_reg"
 
 # log files
 OUTPUT_VIRTME=
@@ -2203,16 +2204,25 @@ go_vm_auto() {
 }
 
 go_perf() {
-	local mode="${1}"
+	local mode="${1}" perf_params
 	shift
 
 	EXPECT=1
 	setup_env "${mode}"
+	perf_params=(
+		-m "${mode}"
+		--log-dir "${RESULTS_DIR}"
+		"${INPUT_TRACE:+-v}"
+	)
+	if is_ci; then
+		: "${INPUT_CI_RESULTS_DIR:=".virtme/perf"}"
+		: "${INPUT_GCOV:=0}"
+		perf_params+=(--reg-dir "${PERF_REG_DIR}")
+	fi
 	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
 	# python env var to avoid creating __pycache__ in kernel src dir
 	TERM="" PYTHONDONTWRITEBYTECODE=1 \
-		/perf.py -m "${mode}" --log-dir "${RESULTS_DIR}" \
-		"${INPUT_TRACE:+-v}" "${@}" || EXIT_STATUS=$?
+		/perf.py "${perf_params[@]}" "${@}" || EXIT_STATUS=$?
 }
 
 static_analysis() {

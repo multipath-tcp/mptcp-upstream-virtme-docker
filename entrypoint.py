@@ -7,12 +7,15 @@ Class for the entrypoint.sh script
 import json
 import logging
 import os
+import re
 import shlex
+import shutil
 import statistics
 import tempfile
 import time
 
 from pexpect import TIMEOUT
+from scipy import stats
 
 import hosts
 
@@ -20,17 +23,31 @@ logger = logging.getLogger(__name__)
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir):
+    def __init__(self, cmd, mode, script, log_dir, reg_dir, save_results):
         self.cmd = cmd
         self.mode = mode
         self.script = script
-        self.log_dir = os.path.realpath(log_dir)
+        self.log_dir_parent = os.path.realpath(log_dir)
+        self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
+        self.save_results = save_results
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
         self.stopped = False
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
+
+    def _set_dirs(self, name):
+        self.log_dir = os.path.join(self.log_dir_parent, name)
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
+        os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
+
+        if self.reg_dir_parent is not None:
+            self.reg_dir = os.path.join(self.reg_dir_parent, name)
+            os.makedirs(self.reg_dir, exist_ok=True)
+        else:
+            self.reg_dir = None
 
     def build(self):
         cmd = f"{self.script} build {self.mode}"
@@ -67,9 +84,149 @@ class Entrypoint:
             host = self.hosts[name]
             host.stop()
 
-    def _validation(self, config):
+    def _get_reg_dir(self, name):
+        return os.path.join(self.reg_dir, re.sub(r"\W", "_", name))
+
+    def _get_info(self, file_path, json_field):
+        with open(file_path) as f:
+            if json_field:
+                info = json.load(f)
+                for field in json_field:
+                    if field.isdigit():
+                        field = int(field)
+                    info = info[field]
+            else:
+                info = f.readline().strip("\n")
+
+        return float(info)
+
+    def _mark_reg(self, latest, name, check_name, msg):
+        open(os.path.join(latest, "skip"), "a").close()
+        logger.warning(f"Regression in {name}, check '{check_name}': {msg}")
+        return True
+
+    def regression(self, config, name, id, total):
+        reg = False
+        if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
+            return reg
+
+        logger.info(f"Checking regression {id}/{total}: {name}")
+
+        regression = config["regression"]
+
+        global_config = regression.get("global", {})
+        dir_path = self._get_reg_dir(name)
+        latest = os.path.join(dir_path, "latest")
+        last = int(os.path.basename(os.path.realpath(latest)))
+
+        if last == 0:
+            logger.info("Nothing to compare: first time")
+
+        for step in regression["steps"]:
+            check = global_config | step
+            check_name = check["name"]
+            file = check["file"]
+
+            latest_file = os.path.join(latest, file)
+            if not os.path.isfile(latest_file):
+                msg = f"{file}' is not available in latest"
+                reg = self._mark_reg(latest, name, check_name, msg)
+                continue
+
+            json_field = check.get("json_field", None)
+            last_res = self._get_info(latest_file, json_field)
+
+            alpha = float(check.get("alpha", 0.05))
+            if not 0 < alpha < 1:
+                raise ValueError(f"{name}: {check_name}: alpha must be between 0 and 1")
+            history_max_n = int(check.get("history_max_n", 0))
+            history_since = int(check.get("history_since", 0))
+
+            prev = last
+            prev_results = []
+            while prev > history_since and (
+                history_max_n == 0 or len(prev_results) < history_max_n
+            ):
+                prev -= 1
+
+                prev_dir = os.path.join(dir_path, str(prev))
+                file_path = os.path.join(prev_dir, file)
+                if (
+                    not os.path.isdir(prev_dir)
+                    or os.path.isfile(os.path.join(prev_dir, "skip"))
+                    or not os.path.isfile(file_path)
+                ):
+                    logger.debug(f"skip: {prev_dir}")
+                    continue
+
+                prev_results.append(self._get_info(file_path, json_field))
+
+            if len(prev_results) < 2:
+                logger.info(
+                    f"{name}: {check_name}: need at least two previous measurements"
+                )
+                continue
+
+            mean = statistics.mean(prev_results)
+            stdev = statistics.stdev(prev_results, mean)
+            if stdev == 0:
+                p_value = 1 if last_res == mean else 0
+            else:
+                p_value = stats.ttest_1samp(prev_results, last_res).pvalue
+
+            if p_value < alpha:
+                msg = (
+                    f"got {last_res}, had {mean}; "
+                    f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
+                )
+                reg = self._mark_reg(latest, name, check_name, msg)
+                continue
+
+            logger.info(
+                f"{name}: {check_name}: no regression "
+                f"({mean} vs {last_res}, p-value {p_value:.6g})"
+            )
+
+        return reg
+
+    def _save_results(self, name, err):
+        if self.reg_dir is None or self.cmd.dry_run:
+            logger.warning("Regressions are not tracked")
+            return
+
+        # create new dir and point latest to it
+        dir_path = self._get_reg_dir(name)
+        latest = os.path.join(dir_path, "latest")
+        if os.path.islink(latest):
+            prev = os.path.basename(os.path.realpath(latest))
+            new = f"{int(prev) + 1}"
+            os.remove(latest)
+        else:
+            new = "0"
+        new_path = os.path.join(dir_path, new)
+        os.makedirs(new_path, exist_ok=True)
+        os.symlink(new_path, latest)
+
+        # symlink to the log dir
+        os.symlink(
+            os.path.relpath(self.log_dir, new_path),
+            os.path.join(self.reg_dir, "logs"),
+        )
+
+        # copy stats and artifacts
+        shutil.copytree(os.path.join(self.log_dir, "stats"), new_path)
+        shutil.copytree(os.path.join(self.log_dir, "artifacts"), new_path)
+
+        if err:
+            # easy to handle
+            open(os.path.join(new_path, "skip"), "a").close()
+
+    def validation(self, config, name, id, total):
         if "validation" not in config:
             return True
+
+        logger.info(f"Starting validation {id}/{total}: {name}")
+
         validation = config["validation"]
 
         dstats = self._parse_dstats(config)
@@ -96,15 +253,18 @@ class Entrypoint:
             if cmd_file:
                 os.unlink(cmd_file)
 
+        if self.save_results:
+            self._save_results(name, err)
+
         return err
 
-    def _run_test(self, config):
-        if "test" not in config:
+    def _run_steps(self, config):
+        if "steps" not in config:
             return True
-        test = config["test"]
+        steps = config["steps"]
         err = False
 
-        for step in test:
+        for step in steps:
             name = step["name"]
             dstat_only = step.get("dstat_only", None)
             logger.info(f"test: step: {name}")
@@ -410,27 +570,58 @@ class Entrypoint:
 
         self._get_stats(config, "pre")
 
-        err = self._run_test(config)
+        err = self._run_steps(config)
 
         self._get_stats(config, "post")
         self.stop()
         self._stop_dstat_host()
 
-        if err:
-            logger.info("error(s) found during the tests, no validation")
-        else:
-            err = self._validation(config)
-
         return err
 
-    def run_tests(self, tests):
-        err = []
+    def run_tests(self, tests_id, config):
+        global_name = config["name"]
+        global_name_n = f"{tests_id:02d}-{global_name}"
+        global_config = config.get("global", {})
+        tests = config["tests"]
+        results = {}
+        exit = 0
         id = 1
         total = len(tests)
-        for config in tests:
-            name = config["name"]
-            if self.run_test(config, name, id, total):
-                err.append(name)
+
+        self._set_dirs(global_name_n)
+        logger.info(f"Starting tests {global_name_n}")
+
+        for test in tests:
+            test_config = global_config | test
+            name = test_config["name"]
+            name_n = f"{global_name}: {name}"
+            results[global_name_n] = {
+                id: {
+                    "result": "fail",
+                    "name": name_n,
+                }
+            }
+            if self.run_test(test_config, name, id, total):
+                logger.warning(f"{global_name}: {name}: error found, no validation")
+                results[global_name_n][id]["comment"] = "test error"
+                exit = 1
+            elif self.validation(test_config, name, id, total):
+                logger.warning(
+                    f"{global_name}: {name}: validation failed, no regression check"
+                )
+                results[global_name_n][id]["comment"] = "validation error"
+                exit = 42 if exit == 0 else exit
+            elif self.regression(test_config, name, id, total):
+                logger.warning(f"{global_name}: {name}: regression found")
+                results[global_name_n][id]["comment"] = "regression found"
+                exit = 42 if exit == 0 else exit
+            else:
+                logger.info(f"{global_name}: {name}: success")
+                results[global_name_n][id]["result"] = "pass"
+
+            logger.info(f"Ending test {id}/{total}: {name}")
+
             id += 1
 
-        return err
+        logger.info(f"Ending tests: {global_name_n}")
+        return results, exit

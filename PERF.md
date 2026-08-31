@@ -3,6 +3,10 @@
 Performance regressions is a tricky topic: the idea is to control most
 parameters, and compare some specific aspects with a tolerance.
 
+Each regression check uses Student's t-test to compare the mean of prior
+successful measurements against the latest measurement. A regression is reported
+when the p-value is below `alpha`. At least two prior measurements are required.
+
 ## Deployment
 
 Two modes are currently supported: virtual only, with physical network cards.

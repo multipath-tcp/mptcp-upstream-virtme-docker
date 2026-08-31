@@ -33,7 +33,7 @@ RUN apt-get update && \
 		mptcpize iperf3 netperf \
 		bmon ifstat dstat \
 		stress-ng \
-		python3-pexpect \
+		python3-jsonschema python3-pexpect python3-scipy \
 		nvme-cli fio keyutils ktls-utils libnss-myhostname \
 		&& \
 	apt-get clean
@@ -125,6 +125,7 @@ ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
 
-COPY entrypoint.sh *.py *.yml /
+COPY entrypoint.sh *.py /
+COPY ./perf/* /perf/
 
 ENTRYPOINT ["/entrypoint.sh"]
