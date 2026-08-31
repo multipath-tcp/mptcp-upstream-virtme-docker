@@ -64,8 +64,8 @@ def get_args_parser():
     parser.add_argument(
         "--config",
         "-c",
-        action="store",
-        default="/perf/perf.yml",
+        action="append",
+        default=["/perf/perf.yml"],
         type=check_file_arg,
         help="YAML config file",
     )
@@ -205,8 +205,12 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    results, exit = ep.run_tests(get_tests(args.config))
-
+    results = {}
+    id = 1
+    for conf_file in args.config:
+        result, exit = ep.run_tests(id, get_tests(conf_file))
+        results.update(result)
+        id += 1
 
     if args.json:
         if args.info:

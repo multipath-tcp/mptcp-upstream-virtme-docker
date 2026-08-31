@@ -27,12 +27,9 @@ class Entrypoint:
         self.cmd = cmd
         self.mode = mode
         self.script = script
-        self.log_dir = os.path.realpath(log_dir)
-        self.reg_dir = None if reg_dir is None else os.path.realpath(reg_dir)
+        self.log_dir_parent = os.path.realpath(log_dir)
+        self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
         self.save_results = save_results
-
-        os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
-        os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -40,6 +37,17 @@ class Entrypoint:
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
+    def _set_dirs(self, name):
+        self.log_dir = os.path.join(self.log_dir_parent, name)
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
+        os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
+
+        if self.reg_dir_parent is not None:
+            self.reg_dir = os.path.join(self.reg_dir_parent, name)
+            os.makedirs(self.reg_dir, exist_ok=True)
+        else:
+            self.reg_dir = None
 
     def build(self):
         cmd = f"{self.script} build {self.mode}"
@@ -564,7 +572,7 @@ class Entrypoint:
 
         return err
 
-    def run_tests(self, config):
+    def run_tests(self, tests_id, config):
         global_name = config["name"]
         global_config = config.get("global", {})
         tests = config["tests"]
@@ -572,6 +580,10 @@ class Entrypoint:
         exit = 0
         id = 1
         total = len(tests)
+
+        self._set_dirs(f"{tests_id:02d}-{global_name}")
+        logger.info(f"Starting tests {tests_id}: {global_name}")
+
         for test in tests:
             test_config = global_config | test
             name = test_config["name"]
