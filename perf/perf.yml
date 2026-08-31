@@ -3,31 +3,31 @@
 # yamllint disable rule:line-length
 ---
 
-global: {}
+global:
+  timeout_s: 3600
+  bridges:
+    - name: "br0"
+      rate_mbit: 10
+      delay_ms: 5
+      loss_pc: 0
+    - name: "br1"
+      rate_mbit: 10
+      delay_ms: 5
+      loss_pc: 0
+  bridges_hw_accel: true
+  stats:
+    pre:
+      - name: "nstat_reset"
+        run: "nstat"
+    post:
+      - name: "nstat"
+        run: "nstat"
+    all:
+      - name: "proc_net_dev"
+        run: "cat /proc/net/dev"
 
 tests:
   - name: "Test 1"
-    timeout_s: 3600
-    bridges:
-      - name: "br0"
-        rate_mbit: 10
-        delay_ms: 5
-        loss_pc: 0
-      - name: "br1"
-        rate_mbit: 10
-        delay_ms: 5
-        loss_pc: 0
-    bridges_hw_accel: true
-    stats:
-      pre:
-        - name: "nstat_reset"
-          run: "nstat"
-      post:
-        - name: "nstat"
-          run: "nstat"
-      all:
-        - name: "proc_net_dev"
-          run: "cat /proc/net/dev"
     steps:
       - name: "tcpdump"
         all: |-

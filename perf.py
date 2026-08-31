@@ -57,7 +57,7 @@ def get_args_parser():
         "--config",
         "-c",
         action="store",
-        default="/perf.yml",
+        default="/perf/perf.yml",
         type=check_file_arg,
         help="YAML config file",
     )
@@ -148,7 +148,7 @@ def get_tests(conf_file):
     with open(conf_file) as c:
         config = yaml.safe_load(c)
 
-    schema_file = os.path.join(os.path.dirname(__file__), "perf.schema")
+    schema_file = os.path.join(os.path.dirname(__file__), "perf", "perf.schema")
     with open(schema_file) as s:
         schema = json.load(s)
     jsonschema.validate(config, schema)

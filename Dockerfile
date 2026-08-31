@@ -125,6 +125,7 @@ ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
 
-COPY entrypoint.sh *.py *.yml *.schema /
+COPY entrypoint.sh *.py /
+COPY ./perf/* /perf/
 
 ENTRYPOINT ["/entrypoint.sh"]
