@@ -41,6 +41,15 @@ def check_script_arg(path):
     return path
 
 
+def check_output_file_arg(path):
+    try:
+        with open(path, "w"):
+            pass
+    except OSError:
+        raise argparse.ArgumentTypeError(f"'{path}' is not a valid output file.")
+    return os.path.realpath(path)
+
+
 def get_args_parser():
     parser = argparse.ArgumentParser(
         description="MPTCP Perf checker",
@@ -87,8 +96,9 @@ def get_args_parser():
 
     parser.add_argument(
         "--json",
-        action="store_true",
-        help="Emit results in JSON format",
+        action="store",
+        type=check_output_file_arg,
+        help="Output results to this file in JSON format",
     )
 
     parser.add_argument(
@@ -165,7 +175,6 @@ def main():
         level=level,
         format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        stream=sys.stderr if args.json else sys.stdout,
     )
 
     ep = entrypoint.Entrypoint(
@@ -208,7 +217,9 @@ def main():
 
             json_output[info[0]] = info[1]
 
-        print(json.dumps(json_output))
+        with open(args.json, "w") as f:
+            json.dump(json_output, f)
+
         # No exit with a specific code when emitting JSON here: output is parsed
         return
 
