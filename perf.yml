@@ -2,73 +2,76 @@
 # yamllint disable rule:line-length
 ---
 
-- name: "Test 1"
-  timeout_s: 3600
-  bridges:
-    - name: "br0"
-      rate_mbit: 10
-      delay_ms: 5
-      loss_pc: 0
-    - name: "br1"
-      rate_mbit: 10
-      delay_ms: 5
-      loss_pc: 0
-  bridges_hw_accel: true
-  stats:
-    pre:
-      - name: "nstat_reset"
-        run: "nstat"
-    post:
-      - name: "nstat"
-        run: "nstat"
-    all:
-      - name: "proc_net_dev"
-        run: "cat /proc/net/dev"
-  steps:
-    - name: "tcpdump"
-      all: |-
-        tcpdump -i any -s 150 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
-    - name: "mptcp endpoints"
-      server: |-
-        ip mptcp endpoint add 10.0.1.3 dev eth1 signal
-      client: |-
-        ip mptcp limits set add_addr_accepted 2
-    - name: "iperf3 server"
-      server: |-
-        iperf3 -s -D
-        port=":$(printf "%04X" "5201") 0A" ; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
-      timeout_s: 10
-    - name: "iperf3 client"
-      client: |-
-        iperf3 -c 10.0.0.3 --mptcp --json -R -Z -t 10 -P 1 --get-server-output > "${RESULTS_DIR}/artifacts/iperf_cli.json"
-      dstat_only: "step"
-  validation:
-    - name: "iperf"
-      run: |-
-        [ -s artifacts/iperf_cli.json ]
-        cd stats
-        [ $(jq -r '.["host"]["time"]["diff"]' dstat.json || echo 0) -ge 6 ]
-        [ $(jq -r '.["host"]["time"]["diff"]' dstat.json || echo 0) -le 11 ]
-        [ $(jq -r '.["client"]["net/eth0:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
-        [ $(jq -r '.["client"]["net/eth1:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
-  regression:
-    - name: "Client recv primary link"
-      file: "stats/dstat.json"
-      json_field:
-        - client
-        - net/eth0
-        - recv
-        - mean
-      alpha: 0.05
-      history_max_n: 10
-      history_since: 0
-    - name: "Client recv second link"
-      file: "stats/dstat.json"
-      json_field:
-        - client
-        - net/eth1
-        - recv
-        - mean
-      alpha: 0.05
-      history_max_n: 10
-      history_since: 0
+global: {}
+
+tests:
+  - name: "Test 1"
+    timeout_s: 3600
+    bridges:
+      - name: "br0"
+        rate_mbit: 10
+        delay_ms: 5
+        loss_pc: 0
+      - name: "br1"
+        rate_mbit: 10
+        delay_ms: 5
+        loss_pc: 0
+    bridges_hw_accel: true
+    stats:
+      pre:
+        - name: "nstat_reset"
+          run: "nstat"
+      post:
+        - name: "nstat"
+          run: "nstat"
+      all:
+        - name: "proc_net_dev"
+          run: "cat /proc/net/dev"
+    steps:
+      - name: "tcpdump"
+        all: |-
+          tcpdump -i any -s 150 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
+      - name: "mptcp endpoints"
+        server: |-
+          ip mptcp endpoint add 10.0.1.3 dev eth1 signal
+        client: |-
+          ip mptcp limits set add_addr_accepted 2
+      - name: "iperf3 server"
+        server: |-
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A" ; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - name: "iperf3 client"
+        client: |-
+          iperf3 -c 10.0.0.3 --mptcp --json -R -Z -t 10 -P 1 --get-server-output > "${RESULTS_DIR}/artifacts/iperf_cli.json"
+        dstat_only: "step"
+    validation:
+      - name: "iperf"
+        run: |-
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ $(jq -r '.["host"]["time"]["diff"]' dstat.json || echo 0) -ge 6 ]
+          [ $(jq -r '.["host"]["time"]["diff"]' dstat.json || echo 0) -le 11 ]
+          [ $(jq -r '.["client"]["net/eth0:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
+          [ $(jq -r '.["client"]["net/eth1:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
+    regression:
+      - name: "Client recv primary link"
+        file: "stats/dstat.json"
+        json_field:
+          - client
+          - net/eth0
+          - recv
+          - mean
+        alpha: 0.05
+        history_max_n: 10
+        history_since: 0
+      - name: "Client recv second link"
+        file: "stats/dstat.json"
+        json_field:
+          - client
+          - net/eth1
+          - recv
+          - mean
+        alpha: 0.05
+        history_max_n: 10
+        history_since: 0

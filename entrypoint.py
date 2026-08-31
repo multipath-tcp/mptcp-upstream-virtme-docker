@@ -569,16 +569,19 @@ class Entrypoint:
 
         return err
 
-    def run_tests(self, tests):
+    def run_tests(self, config):
+        global_config = config.get("global", {})
+        tests = config["tests"]
         err = []
         reg = []
         id = 1
         total = len(tests)
-        for config in tests:
-            name = config["name"]
-            if self.run_test(config, name, id, total):
+        for test in tests:
+            test_config = global_config | test
+            name = test_config["name"]
+            if self.run_test(test_config, name, id, total):
                 err.append(name)
-            elif self.regression(config, name):
+            elif self.regression(test_config, name):
                 reg.append(name)
             id += 1
 
