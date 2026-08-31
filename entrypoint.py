@@ -241,13 +241,13 @@ class Entrypoint:
 
         return err
 
-    def _run_test(self, config):
-        if "test" not in config:
+    def _run_steps(self, config):
+        if "steps" not in config:
             return True
-        test = config["test"]
+        steps = config["steps"]
         err = False
 
-        for step in test:
+        for step in steps:
             name = step["name"]
             dstat_only = step.get("dstat_only", None)
             logger.info(f"test: step: {name}")
@@ -553,7 +553,7 @@ class Entrypoint:
 
         self._get_stats(config, "pre")
 
-        err = self._run_test(config)
+        err = self._run_steps(config)
 
         self._get_stats(config, "post")
         self.stop()

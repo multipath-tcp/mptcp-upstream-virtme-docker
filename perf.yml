@@ -24,7 +24,7 @@
     all:
       - name: "proc_net_dev"
         run: "cat /proc/net/dev"
-  test:
+  steps:
     - name: "tcpdump"
       all: |-
         tcpdump -i any -s 150 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
