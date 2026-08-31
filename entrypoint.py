@@ -105,10 +105,13 @@ class Entrypoint:
         logger.warning(f"Regression in {name}, check '{check_name}': {msg}")
         return True
 
-    def regression(self, config, name):
+    def regression(self, config, name, id, total):
         reg = False
         if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
             return reg
+
+        logger.info(f"Checking regression {id}/{total}: {name}")
+
         regression = config["regression"]
 
         global_config = regression.get("global", {})
@@ -218,9 +221,12 @@ class Entrypoint:
             # easy to handle
             open(os.path.join(new_path, "skip"), "a").close()
 
-    def validation(self, config):
+    def validation(self, config, name, id, total):
         if "validation" not in config:
             return True
+
+        logger.info(f"Starting validation {id}/{total}: {name}")
+
         validation = config["validation"]
 
         dstats = self._parse_dstats(config)
@@ -597,16 +603,21 @@ class Entrypoint:
                 logger.warning(f"{name}: error found, no validation")
                 results[global_name][id]["comment"] = "test error"
                 exit = 1
-            elif self.validation(test_config):
+            elif self.validation(test_config, name, id, total):
                 logger.warning(f"{name}: validation failed, no regression check")
                 results[global_name][id]["comment"] = "validation error"
                 exit = 42 if exit == 0 else exit
-            elif self.regression(test_config, name):
+            elif self.regression(test_config, name, id, total):
                 logger.warning(f"{name}: regression found")
                 results[global_name][id]["comment"] = "regression found"
                 exit = 42 if exit == 0 else exit
             else:
+                logger.info(f"{name}: success")
                 results[global_name][id]["result"] = "pass"
+
+            logger.info(f"Ending test {id}/{total}: {name}")
+
             id += 1
 
+        logger.info(f"Ending tests {tests_id}: {global_name}")
         return results, exit
