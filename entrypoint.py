@@ -23,13 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir, reg_dir, save_results):
+    def __init__(self, cmd, mode, script, log_dir, reg_dir):
         self.cmd = cmd
         self.mode = mode
         self.script = script
         self.log_dir_parent = os.path.realpath(log_dir)
         self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
-        self.save_results = save_results
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -253,8 +252,7 @@ class Entrypoint:
             if cmd_file:
                 os.unlink(cmd_file)
 
-        if self.save_results:
-            self._save_results(name, err)
+        self._save_results(name, err)
 
         return err
 
