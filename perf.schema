@@ -72,8 +72,7 @@
           "items": { "$ref": "#/$defs/validation" }
         },
         "regression": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/regression" }
+          "$ref": "#/$defs/regression"
         },
         "dstat": {
           "type": "object",
@@ -189,7 +188,21 @@
     "regression": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "file"],
+      "required": ["steps"],
+      "properties": {
+        "global": {
+          "$ref": "#/$defs/regressionConfig",
+          "default": {}
+        },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/regressionStep" }
+        }
+      }
+    },
+    "regressionConfig": {
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string",
@@ -220,6 +233,12 @@
           "minimum": 0
         }
       }
+    },
+    "regressionStep": {
+      "allOf": [
+        { "$ref": "#/$defs/regressionConfig" },
+        { "required": ["name", "file"] }
+      ]
     }
   }
 }

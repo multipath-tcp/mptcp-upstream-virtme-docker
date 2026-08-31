@@ -105,6 +105,7 @@ class Entrypoint:
             return reg
         regression = config["regression"]
 
+        global_config = regression.get("global", {})
         dir_path = self._get_reg_dir(name)
         latest = os.path.join(dir_path, "latest")
         last = int(os.path.basename(os.path.realpath(latest)))
@@ -112,7 +113,8 @@ class Entrypoint:
         if last == 0:
             logger.info("Nothing to compare: first time")
 
-        for check in regression:
+        for step in regression["steps"]:
+            check = global_config | step
             check_name = check["name"]
             file = check["file"]
 

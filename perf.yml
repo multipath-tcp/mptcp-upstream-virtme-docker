@@ -55,23 +55,22 @@ tests:
           [ $(jq -r '.["client"]["net/eth0:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
           [ $(jq -r '.["client"]["net/eth1:recv"]["mean"] | round' dstat.json || echo 0) -gt 9500000 ]
     regression:
-      - name: "Client recv primary link"
-        file: "stats/dstat.json"
-        json_field:
-          - client
-          - net/eth0
-          - recv
-          - mean
+      global:
         alpha: 0.05
         history_max_n: 10
         history_since: 0
-      - name: "Client recv second link"
-        file: "stats/dstat.json"
-        json_field:
-          - client
-          - net/eth1
-          - recv
-          - mean
-        alpha: 0.05
-        history_max_n: 10
-        history_since: 0
+      steps:
+        - name: "Client recv primary link"
+          file: "stats/dstat.json"
+          json_field:
+            - client
+            - net/eth0
+            - recv
+            - mean
+        - name: "Client recv second link"
+          file: "stats/dstat.json"
+          json_field:
+            - client
+            - net/eth1
+            - recv
+            - mean
