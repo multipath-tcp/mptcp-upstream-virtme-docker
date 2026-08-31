@@ -212,7 +212,7 @@ class Entrypoint:
             # easy to handle
             open(os.path.join(new_path, "skip"), "a").close()
 
-    def _validation(self, config):
+    def validation(self, config):
         if "validation" not in config:
             return True
         validation = config["validation"]
@@ -240,6 +240,9 @@ class Entrypoint:
 
             if cmd_file:
                 os.unlink(cmd_file)
+
+        if self.save_results:
+            self._save_results(name, err)
 
         return err
 
@@ -561,20 +564,13 @@ class Entrypoint:
         self.stop()
         self._stop_dstat_host()
 
-        if err:
-            logger.warning("error(s) found during the tests, no validation")
-        else:
-            err = self._validation(config)
-
-        if self.save_results:
-            self._save_results(name, err)
-
         return err
 
     def run_tests(self, config):
         global_config = config.get("global", {})
         tests = config["tests"]
         err = []
+        val = []
         reg = []
         success = []
         id = 1
@@ -583,11 +579,16 @@ class Entrypoint:
             test_config = global_config | test
             name = test_config["name"]
             if self.run_test(test_config, name, id, total):
+                logger.warning(f"{name}: error found, no validation")
                 err.append(name)
+            elif self.validation(test_config):
+                logger.warning(f"{name}: validation failed, no regression check")
+                val.append(name)
             elif self.regression(test_config, name):
+                logger.warning(f"{name}: regression found")
                 reg.append(name)
             else:
                 success.append(name)
             id += 1
 
-        return err, reg, success
+        return err, val, reg, success

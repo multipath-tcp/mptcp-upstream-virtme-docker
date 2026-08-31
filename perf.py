@@ -188,14 +188,15 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    err, reg, success = ep.run_tests(get_tests(args.config))
+    err, val, reg, success = ep.run_tests(get_tests(args.config))
 
     if args.json:
         json_output = {
             "date": time.now().strftime("%Y-%m-%d %H:%M:%S"),
             "git_sha": ep.get_git_sha(),
-            "regressions": reg,
             "errors": err,
+            "validation": val,
+            "regressions": reg,
             "success": success,
         }
 
@@ -212,6 +213,9 @@ def main():
         return
 
     exit = 0
+    if val:
+        logger.warning(f"Validation failed with tests: {val}")
+        exit = 42
     if reg:
         logger.warning(f"Regressions with tests: {reg}")
         exit = 42
