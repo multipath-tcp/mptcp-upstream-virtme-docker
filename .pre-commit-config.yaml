@@ -28,3 +28,9 @@ repos:
     rev: v3.13.1-1
     hooks:
       - id: shfmt
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.38.0
+    hooks:
+      - id: check-jsonschema
+        files: ^perf/.*\.yml$
+        args: ["--schemafile", "perf/perf.schema"]
