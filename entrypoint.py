@@ -93,9 +93,10 @@ class Entrypoint:
 
         return float(info)
 
-    def mark_reg(self, latest, name, check_name, msg):
+    def _mark_reg(self, latest, name, check_name, msg):
         open(os.path.join(latest, "skip"), "a").close()
         logger.warning(f"Regression in {name}, check '{check_name}': {msg}")
+        return True
 
     def regression(self, config, name):
         reg = False
@@ -117,7 +118,7 @@ class Entrypoint:
             latest_file = os.path.join(latest, file)
             if not os.path.isfile(latest_file):
                 msg = f"{file}' is not available in latest"
-                self.mark_reg(latest, name, check_name, msg)
+                reg = self._mark_reg(latest, name, check_name, msg)
                 continue
 
             json_field = check.get("json_field", None)
@@ -154,7 +155,7 @@ class Entrypoint:
             mean = statistics.mean(prev_results)
             if last_res < mean * (100 - var_pc) or last_res > mean * (100 + var_pc):
                 msg = f"got {last_res}, had {mean}"
-                self.mark_reg(latest, name, check_name, msg)
+                reg = self._mark_reg(latest, name, check_name, msg)
                 continue
 
             logger.info(f"{name}: {check_name}: no regression ({mean} vs {last_res})")
