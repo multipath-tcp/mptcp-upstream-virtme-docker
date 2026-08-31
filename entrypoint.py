@@ -40,8 +40,6 @@ class Entrypoint:
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
-    def get_git_sha(self):
-        return self.git_sha
 
     def build(self):
         cmd = f"{self.script} build {self.mode}"
@@ -570,34 +568,33 @@ class Entrypoint:
         global_name = config["name"]
         global_config = config.get("global", {})
         tests = config["tests"]
-        err = []
-        val = []
-        reg = []
-        success = []
+        results = {}
+        exit = 0
         id = 1
         total = len(tests)
         for test in tests:
             test_config = global_config | test
             name = test_config["name"]
+            results[global_name] = {
+                id: {
+                    "result": "fail",
+                    "name": name,
+                }
+            }
             if self.run_test(test_config, name, id, total):
                 logger.warning(f"{name}: error found, no validation")
-                err.append(name)
+                results[global_name][id]["comment"] = "test error"
+                exit = 1
             elif self.validation(test_config):
                 logger.warning(f"{name}: validation failed, no regression check")
-                val.append(name)
+                results[global_name][id]["comment"] = "validation error"
+                exit = 42 if exit == 0 else exit
             elif self.regression(test_config, name):
                 logger.warning(f"{name}: regression found")
-                reg.append(name)
+                results[global_name][id]["comment"] = "regression found"
+                exit = 42 if exit == 0 else exit
             else:
-                success.append(name)
+                results[global_name][id]["result"] = "pass"
             id += 1
 
-        if err or val or reg:
-            logger.warning(
-                f"Test summary for {global_name}: {len(err)} error(s), "
-                f"{len(val)} validation failure(s), "
-                f"{len(reg)} regression(s), "
-                f"{len(success)} success(es)"
-            )
-
-        return err, val, reg, success
+        return results, exit

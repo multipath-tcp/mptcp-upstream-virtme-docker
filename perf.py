@@ -12,7 +12,6 @@ import os
 import shutil
 import signal
 import sys
-from datetime import time
 
 import jsonschema
 import yaml
@@ -166,6 +165,15 @@ def get_tests(conf_file):
     return config
 
 
+def add_infos(results, infos):
+    for info in infos:
+        info = info.split(":", 1)
+        if len(info) != 2:
+            logger.warning("Skip info: " + info[0])
+            continue
+        results[info[0]] = info[1]
+
+
 def main():
     arg_parser = get_args_parser()
     args = arg_parser.parse_args()
@@ -197,42 +205,20 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    err, val, reg, success = ep.run_tests(get_tests(args.config))
+    results, exit = ep.run_tests(get_tests(args.config))
+
 
     if args.json:
-        json_output = {
-            "date": time.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "git_sha": ep.get_git_sha(),
-            "errors": err,
-            "validation": val,
-            "regressions": reg,
-            "success": success,
-        }
-
-        for info in args.info:
-            info = info.split(":", 1)
-            if len(info) != 2:
-                logger.warning("Skip info: " + info[0])
-                continue
-
-            json_output[info[0]] = info[1]
+        if args.info:
+            results = {"results": results}
+            add_infos(results, args.info)
 
         with open(args.json, "w") as f:
-            json.dump(json_output, f)
+            json.dump(results, f)
 
         # No exit with a specific code when emitting JSON here: output is parsed
         return
 
-    exit = 0
-    if val:
-        logger.warning(f"Validation failed with tests: {val}")
-        exit = 42
-    if reg:
-        logger.warning(f"Regressions with tests: {reg}")
-        exit = 42
-    if err:
-        logger.error(f"Error with tests: {err}")
-        exit = 1
     if exit:
         sys.exit(exit)
 
