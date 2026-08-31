@@ -14,6 +14,7 @@ import signal
 import sys
 from datetime import time
 
+import jsonschema
 import yaml
 
 import entrypoint
@@ -146,6 +147,12 @@ def get_args_parser():
 def get_tests(conf_file):
     with open(conf_file) as c:
         config = yaml.safe_load(c)
+
+    schema_file = os.path.join(os.path.dirname(__file__), "perf.schema")
+    with open(schema_file) as s:
+        schema = json.load(s)
+    jsonschema.validate(config, schema)
+
     return config
 
 

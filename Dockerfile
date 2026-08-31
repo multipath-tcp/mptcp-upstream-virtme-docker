@@ -11,7 +11,7 @@ RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
 		build-essential libncurses5-dev gcc libssl-dev bc bison byacc automake cmake \
 		libelf-dev flex git curl tar hashalot qemu-system-x86 sudo expect \
-		python3 python3-pip python3-pkg-resources python3-scipy file virtiofsd \
+		python3 python3-pip python3-pkg-resources file virtiofsd \
 		busybox-static coreutils python3-requests libvirt-clients udev \
 		iputils-ping ethtool klibc-utils kbd rsync ccache netcat-openbsd \
 		ca-certificates gnupg2 net-tools kmod \
@@ -33,7 +33,7 @@ RUN apt-get update && \
 		mptcpize iperf3 netperf \
 		bmon ifstat dstat \
 		stress-ng \
-		python3-pexpect \
+		python3-jsonschema python3-pexpect python3-scipy \
 		nvme-cli fio keyutils ktls-utils libnss-myhostname \
 		&& \
 	apt-get clean
@@ -125,6 +125,6 @@ ENV CCACHE_COMPRESS=true
 ENV KBUILD_BUILD_TIMESTAMP="0"
 ENV GCC_COLORS=error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01
 
-COPY entrypoint.sh *.py *.yml /
+COPY entrypoint.sh *.py *.yml *.schema /
 
 ENTRYPOINT ["/entrypoint.sh"]

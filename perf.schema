@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.mptcp.dev/schemas/perf.schema",
+  "title": "MPTCP performance test configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tests"],
+  "properties": {
+    "global": {
+      "description": "Settings shared by all tests; individual test settings take precedence.",
+      "anyOf": [
+        { "$ref": "#/$defs/testConfig" },
+        { "type": "null" }
+      ]
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/testConfig" },
+          { "required": ["name"] }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "testConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cpus": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ram": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "bridges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bridge" }
+        },
+        "bridges_hw_accel": {
+          "type": "boolean"
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pre": { "$ref": "#/$defs/stats" },
+            "post": { "$ref": "#/$defs/stats" },
+            "all": { "$ref": "#/$defs/stats" }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "validation": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/validation" }
+        },
+        "regression": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/regression" }
+        },
+        "dstat": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "offset_start": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offset_end": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "bridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rate_mbit": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "delay_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "loss_pc": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "stats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "run"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "run": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "enum": ["client", "server"]
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "all": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client": {
+          "type": "string",
+          "minLength": 1
+        },
+        "server": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ignore_err": {
+          "type": "boolean"
+        },
+        "dstat_only": {
+          "type": "string",
+          "enum": ["step", "start", "end"]
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "run"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "regression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "file"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "json_field": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "alpha": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "history_max_n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "history_since": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
