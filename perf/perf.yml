@@ -3,6 +3,8 @@
 # yamllint disable rule:line-length
 ---
 
+name: "mptcp-perf"
+
 global:
   timeout_s: 3600
   bridges:

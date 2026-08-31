@@ -4,8 +4,14 @@
   "title": "MPTCP performance test configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tests"],
+  "required": ["name", "tests"],
   "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[\\w,\\s-]+$",
+      "description": "The name of the performance test."
+    },
     "global": {
       "description": "Settings shared by all tests; individual test settings take precedence.",
       "anyOf": [

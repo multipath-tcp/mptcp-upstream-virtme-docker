@@ -567,6 +567,7 @@ class Entrypoint:
         return err
 
     def run_tests(self, config):
+        global_name = config["name"]
         global_config = config.get("global", {})
         tests = config["tests"]
         err = []
@@ -590,5 +591,13 @@ class Entrypoint:
             else:
                 success.append(name)
             id += 1
+
+        if err or val or reg:
+            logger.warning(
+                f"Test summary for {global_name}: {len(err)} error(s), "
+                f"{len(val)} validation failure(s), "
+                f"{len(reg)} regression(s), "
+                f"{len(success)} success(es)"
+            )
 
         return err, val, reg, success
