@@ -22,6 +22,12 @@ import logcmd
 logger = logging.getLogger("perf")
 
 
+def logger_color(level: int, color: str):
+    logging.addLevelName(
+        level, f"\033[1;{color}m{logging.getLevelName(level)}\033[1;0m"
+    )
+
+
 def check_dir_arg(path):
     if not os.path.isdir(path):
         raise argparse.ArgumentTypeError(f"'{path}' is not a valid directory.")
@@ -184,6 +190,11 @@ def main():
         format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    logger_color(logging.DEBUG, "30")
+    logger_color(logging.INFO, "34")
+    logger_color(logging.WARNING, "33")
+    logger_color(logging.ERROR, "31")
+    logger_color(logging.FATAL, "41")
 
     ep = entrypoint.Entrypoint(
         logcmd.CMD(args.dry_run, args.verbose, args.kernel_dir),
