@@ -188,7 +188,7 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    err, reg = ep.run_tests(get_tests(args.config))
+    err, reg, success = ep.run_tests(get_tests(args.config))
 
     if args.json:
         json_output = {
@@ -196,6 +196,7 @@ def main():
             "git_sha": ep.get_git_sha(),
             "regressions": reg,
             "errors": err,
+            "success": success,
         }
 
         for info in args.info:

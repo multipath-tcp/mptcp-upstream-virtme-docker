@@ -576,6 +576,7 @@ class Entrypoint:
         tests = config["tests"]
         err = []
         reg = []
+        success = []
         id = 1
         total = len(tests)
         for test in tests:
@@ -585,6 +586,8 @@ class Entrypoint:
                 err.append(name)
             elif self.regression(test_config, name):
                 reg.append(name)
+            else:
+                success.append(name)
             id += 1
 
-        return err, reg
+        return err, reg, success
