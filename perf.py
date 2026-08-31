@@ -71,7 +71,6 @@ def get_args_parser():
         "--config",
         "-c",
         action="append",
-        default=["/perf/perf.yml"],
         type=check_file_arg,
         help="YAML config file",
     )
@@ -215,6 +214,9 @@ def main():
         ep.stop()
 
     signal.signal(signal.SIGINT, handler)
+
+    if not args.config:
+        args.config = [os.path.join(os.path.dirname(__file__), "perf", "perf.yml")]
 
     results = {}
     id = 1
