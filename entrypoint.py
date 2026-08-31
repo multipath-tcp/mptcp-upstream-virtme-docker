@@ -580,6 +580,7 @@ class Entrypoint:
 
     def run_tests(self, tests_id, config):
         global_name = config["name"]
+        global_name_n = f"{tests_id:02d}-{global_name}"
         global_config = config.get("global", {})
         tests = config["tests"]
         results = {}
@@ -587,37 +588,40 @@ class Entrypoint:
         id = 1
         total = len(tests)
 
-        self._set_dirs(f"{tests_id:02d}-{global_name}")
-        logger.info(f"Starting tests {tests_id}: {global_name}")
+        self._set_dirs(global_name_n)
+        logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
             test_config = global_config | test
             name = test_config["name"]
-            results[global_name] = {
+            name_n = f"{global_name}: {name}"
+            results[global_name_n] = {
                 id: {
                     "result": "fail",
-                    "name": name,
+                    "name": name_n,
                 }
             }
             if self.run_test(test_config, name, id, total):
-                logger.warning(f"{name}: error found, no validation")
-                results[global_name][id]["comment"] = "test error"
+                logger.warning(f"{global_name}: {name}: error found, no validation")
+                results[global_name_n][id]["comment"] = "test error"
                 exit = 1
             elif self.validation(test_config, name, id, total):
-                logger.warning(f"{name}: validation failed, no regression check")
-                results[global_name][id]["comment"] = "validation error"
+                logger.warning(
+                    f"{global_name}: {name}: validation failed, no regression check"
+                )
+                results[global_name_n][id]["comment"] = "validation error"
                 exit = 42 if exit == 0 else exit
             elif self.regression(test_config, name, id, total):
-                logger.warning(f"{name}: regression found")
-                results[global_name][id]["comment"] = "regression found"
+                logger.warning(f"{global_name}: {name}: regression found")
+                results[global_name_n][id]["comment"] = "regression found"
                 exit = 42 if exit == 0 else exit
             else:
-                logger.info(f"{name}: success")
-                results[global_name][id]["result"] = "pass"
+                logger.info(f"{global_name}: {name}: success")
+                results[global_name_n][id]["result"] = "pass"
 
             logger.info(f"Ending test {id}/{total}: {name}")
 
             id += 1
 
-        logger.info(f"Ending tests {tests_id}: {global_name}")
+        logger.info(f"Ending tests: {global_name_n}")
         return results, exit
