@@ -2331,7 +2331,12 @@ exit_trap() {
 
 	echo -ne "\n${COLOR_BLUE}"
 	if [ "${EXPECT}" = 1 ]; then
-		print_conclusion ${rc} | tee "${CONCLUSION:-"conclusion.txt"}"
+		if [ ${rc} -eq 0 ]; then
+			err=${EXIT_STATUS}
+		else
+			err=${rc}
+		fi
+		print_conclusion ${err} | tee "${CONCLUSION:-"conclusion.txt"}"
 	fi
 	echo -e "${COLOR_RESET}"
 
