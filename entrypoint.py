@@ -217,8 +217,12 @@ class Entrypoint:
         )
 
         # copy stats and artifacts
-        shutil.copytree(os.path.join(self.log_dir, "stats"), new_path)
-        shutil.copytree(os.path.join(self.log_dir, "artifacts"), new_path)
+        shutil.copytree(
+            os.path.join(self.log_dir, "stats"), os.path.join(new_path, "stats")
+        )
+        shutil.copytree(
+            os.path.join(self.log_dir, "artifacts"), os.path.join(new_path, "artifacts")
+        )
 
         if err:
             # easy to handle
