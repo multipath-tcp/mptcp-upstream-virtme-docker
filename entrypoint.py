@@ -211,10 +211,10 @@ class Entrypoint:
         os.symlink(new_path, latest)
 
         # symlink to the log dir
-        os.symlink(
-            os.path.relpath(self.log_dir, dir_path),
-            os.path.join(self.reg_dir, "logs"),
-        )
+        logs = os.path.join(self.reg_dir, "logs")
+        if os.path.islink(logs):
+            os.remove(logs)
+        os.symlink(os.path.relpath(self.log_dir, self.reg_dir), logs)
 
         # copy stats and artifacts
         shutil.copytree(
