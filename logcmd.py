@@ -51,7 +51,7 @@ class CMD:
                 sys.exit(1)
             raise
 
-    def call(self, cmd, fatal=True, env=None, **kwargs):
+    def call(self, cmd, fatal=True, env=None, mute=False, **kwargs):
         self._log(cmd, env, "call")
         if self.dry_run:
             return 0
@@ -59,7 +59,7 @@ class CMD:
         env = self._get_env(env)
         if "cwd" not in kwargs:
             kwargs["cwd"] = self.cwd
-        if not self.verbose and "stdout" not in kwargs:
+        if not self.verbose and mute:
             kwargs["stdout"] = subprocess.DEVNULL
 
         try:
