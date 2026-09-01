@@ -588,7 +588,7 @@ class Entrypoint:
         id = 1
         total = len(tests)
 
-        self._set_dirs(global_name_n)
+        self._set_dirs(global_name)
         logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
