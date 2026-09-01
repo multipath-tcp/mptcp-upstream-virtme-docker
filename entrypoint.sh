@@ -2218,8 +2218,6 @@ go_perf() {
 		perf_params+=(-v)
 	fi
 	if is_ci; then
-		: "${INPUT_CI_RESULTS_DIR:=".virtme/perf"}"
-		: "${INPUT_GCOV:=0}"
 		perf_params+=(--reg-dir "${PERF_REG_DIR}")
 	fi
 	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
