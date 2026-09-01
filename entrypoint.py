@@ -208,7 +208,7 @@ class Entrypoint:
             new = "0"
         new_path = os.path.join(dir_path, new)
         os.makedirs(new_path, exist_ok=True)
-        os.symlink(new_path, latest)
+        os.symlink(new, latest)
 
         # symlink to the log dir
         logs = os.path.join(self.reg_dir, "logs")
