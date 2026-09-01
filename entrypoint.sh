@@ -2212,7 +2212,7 @@ go_perf() {
 	perf_params=(
 		-m "${mode}"
 		--log-dir "${RESULTS_DIR}"
-		"${INPUT_TRACE:+-v}"
+		${INPUT_TRACE:+-v}
 	)
 	if is_ci; then
 		: "${INPUT_CI_RESULTS_DIR:=".virtme/perf"}"
