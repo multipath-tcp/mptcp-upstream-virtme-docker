@@ -50,6 +50,7 @@ class Entrypoint:
             self.reg_dir = None
 
     def build(self):
+        logger.info(f"Building kernel ({self.mode})")
         cmd = f"{self.script} build {self.mode}"
         self.cmd.call(cmd)
 
@@ -79,6 +80,8 @@ class Entrypoint:
         if self.stopped:
             return
         self.stopped = True
+
+        logger.info("Stopping VMs")
 
         for name in self.hosts:
             host = self.hosts[name]
