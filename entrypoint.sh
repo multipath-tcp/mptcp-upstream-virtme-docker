@@ -104,6 +104,7 @@ VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
+VIRTME_SCRIPT_START="Starting the validation script"
 VIRTME_SCRIPT_END="__VIRTME_END__"
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
@@ -1680,7 +1681,7 @@ if {${VSOCK_OK} == 1} {
 	set console_id \$spawn_id
 }
 
-send_user "Starting the validation script (after \$csl sec, attempt: \$boot)\n"
+send_user "${VIRTME_SCRIPT_START} (after \$csl sec, attempt: \$boot)\n"
 set timeout "${VIRTME_EXPECT_TEST_TIMEOUT}"
 send -- "stdbuf -oL ${VIRTME_SCRIPT}\r"
 
@@ -1831,7 +1832,7 @@ _print_issues() {
 
 # $1: A: after, B: before
 _get_output_around_start() {
-	grep -a"${1}" 9999999 "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}"
+	grep -a"${1}" 9999999 "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"
 }
 
 _get_output_after_start() {
@@ -1839,7 +1840,7 @@ _get_output_after_start() {
 }
 
 _get_output_before_start() {
-	if grep -q "${VIRTME_SCRIPT}" "${OUTPUT_VIRTME}"; then
+	if grep -q "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"; then
 		_get_output_around_start B
 	else
 		cat "${OUTPUT_VIRTME}"
