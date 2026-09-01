@@ -242,7 +242,7 @@ class Entrypoint:
 
         err = False
         for step in validation:
-            name = step["name"]
+            sname = step["name"]
             cmd = step["run"]
             cmd_file = None
             if "\n" in cmd:
@@ -254,7 +254,7 @@ class Entrypoint:
                 cmd = f"bash -e{'x' if self.cmd.verbosity() else ''} '{cmd_file}'"
             rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
             if rc > 0:
-                logger.error(f"Validation {name} has failed ({rc})")
+                logger.error(f"Validation {sname} has failed ({rc})")
                 err = True
 
             if cmd_file:
