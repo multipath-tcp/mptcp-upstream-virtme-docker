@@ -38,6 +38,7 @@ class Entrypoint:
 
     def _set_dirs(self, name):
         self.log_dir = os.path.join(self.log_dir_parent, name)
+        shutil.rmtree(self.log_dir, ignore_errors=True)
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
@@ -49,6 +50,7 @@ class Entrypoint:
             self.reg_dir = None
 
     def build(self):
+        logger.info(f"Building kernel ({self.mode})")
         cmd = f"{self.script} build {self.mode}"
         self.cmd.call(cmd)
 
@@ -78,6 +80,8 @@ class Entrypoint:
         if self.stopped:
             return
         self.stopped = True
+
+        logger.info("Stopping VMs")
 
         for name in self.hosts:
             host = self.hosts[name]
@@ -204,17 +208,21 @@ class Entrypoint:
             new = "0"
         new_path = os.path.join(dir_path, new)
         os.makedirs(new_path, exist_ok=True)
-        os.symlink(new_path, latest)
+        os.symlink(new, latest)
 
         # symlink to the log dir
-        os.symlink(
-            os.path.relpath(self.log_dir, new_path),
-            os.path.join(self.reg_dir, "logs"),
-        )
+        logs = os.path.join(self.reg_dir, "logs")
+        if os.path.islink(logs):
+            os.remove(logs)
+        os.symlink(os.path.relpath(self.log_dir, self.reg_dir), logs)
 
         # copy stats and artifacts
-        shutil.copytree(os.path.join(self.log_dir, "stats"), new_path)
-        shutil.copytree(os.path.join(self.log_dir, "artifacts"), new_path)
+        shutil.copytree(
+            os.path.join(self.log_dir, "stats"), os.path.join(new_path, "stats")
+        )
+        shutil.copytree(
+            os.path.join(self.log_dir, "artifacts"), os.path.join(new_path, "artifacts")
+        )
 
         if err:
             # easy to handle
@@ -234,7 +242,7 @@ class Entrypoint:
 
         err = False
         for step in validation:
-            name = step["name"]
+            sname = step["name"]
             cmd = step["run"]
             cmd_file = None
             if "\n" in cmd:
@@ -246,7 +254,7 @@ class Entrypoint:
                 cmd = f"bash -e{'x' if self.cmd.verbosity() else ''} '{cmd_file}'"
             rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
             if rc > 0:
-                logger.error(f"Validation {name} has failed ({rc})")
+                logger.error(f"Validation {sname} has failed ({rc})")
                 err = True
 
             if cmd_file:

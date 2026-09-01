@@ -42,6 +42,7 @@ docker run \
 	"${envs[@]}" \
 	-e "VIRTME_ARCH" \
 	-e "COMPILER" \
+	-e "CI" \
 	"${ports[@]}" \
 	--privileged \
 	--rm \

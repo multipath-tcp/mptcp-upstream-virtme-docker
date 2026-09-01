@@ -67,13 +67,11 @@ tests:
           file: "stats/dstat.json"
           json_field:
             - client
-            - net/eth0
-            - recv
+            - net/eth0:recv
             - mean
         - name: "Client recv second link"
           file: "stats/dstat.json"
           json_field:
             - client
-            - net/eth1
-            - recv
+            - net/eth1:recv
             - mean
