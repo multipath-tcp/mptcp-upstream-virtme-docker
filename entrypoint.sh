@@ -2212,8 +2212,10 @@ go_perf() {
 	perf_params=(
 		-m "${mode}"
 		--log-dir "${RESULTS_DIR}"
-		${INPUT_TRACE:+-v}
 	)
+	if trace_needed; then
+		perf_params+=(-v)
+	fi
 	if is_ci; then
 		: "${INPUT_CI_RESULTS_DIR:=".virtme/perf"}"
 		: "${INPUT_GCOV:=0}"
