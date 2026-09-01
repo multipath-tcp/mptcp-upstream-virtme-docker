@@ -38,6 +38,7 @@ class Entrypoint:
 
     def _set_dirs(self, name):
         self.log_dir = os.path.join(self.log_dir_parent, name)
+        shutil.rmtree(self.log_dir, ignore_errors=True)
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
