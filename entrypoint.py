@@ -212,7 +212,7 @@ class Entrypoint:
 
         # symlink to the log dir
         os.symlink(
-            os.path.relpath(self.log_dir, new_path),
+            os.path.relpath(self.log_dir, dir_path),
             os.path.join(self.reg_dir, "logs"),
         )
 
