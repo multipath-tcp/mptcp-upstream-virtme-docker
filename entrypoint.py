@@ -164,9 +164,9 @@ class Entrypoint:
 
                 prev_results.append(self._get_info(file_path, json_field))
 
-            if len(prev_results) < 10:
+            if len(prev_results) < 20:
                 logger.info(
-                    f"{name}: {check_name}: need at least 10 previous measurements"
+                    f"{name}: {check_name}: need at least 20 previous measurements"
                 )
                 continue
 
