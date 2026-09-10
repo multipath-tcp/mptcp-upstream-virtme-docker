@@ -1407,7 +1407,7 @@ kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 }
 
 has_kmemleak() {
-	[ "${INPUT_KMEMLEAK_CHECK_EACH_LOOP}" = 1 ] || return 1
+	[ "${INPUT_KMEMLEAK_CHECK_EACH_LOOP}" != 1 ] && return 1  # no check
 	kmemleak_scan
 	[ -s "${KMEMLEAK}" ]
 }
@@ -1501,7 +1501,7 @@ fi
 
 cd "${KERNEL_SRC}"
 
-if [ "${KMEMLEAK_SCANNED}" != 1 ]; then
+if [ "${KMEMLEAK_SCANNED}" = 0 ]; then
 	rm -f "${KMEMLEAK}"
 	kmemleak_scan
 fi
