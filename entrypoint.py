@@ -104,8 +104,13 @@ class Entrypoint:
         return float(info)
 
     def _mark_reg(self, latest, name, check_name, msg):
-        open(os.path.join(latest, "skip"), "a").close()
         logger.warning(f"Regression in {name}, check '{check_name}': {msg}")
+
+        open(os.path.join(latest, "skip"), "a").close()
+
+        with open(os.path.join(self.log_dir, "regs.txt"), "a") as f:
+            print(f"{name}: {check_name}: {msg}", file=f)
+
         return True
 
     def regression(self, config, name, id, total):
