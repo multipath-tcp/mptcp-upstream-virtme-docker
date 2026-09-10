@@ -69,6 +69,7 @@ DEFAULT_HOSTNAME="mptcpdev"
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
 : "${INPUT_FULL_DUMP:=0}"
+: "${INPUT_KMEMLEAK_CHECK_EACH_LOOP:=0}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
@@ -154,6 +155,7 @@ OUTPUT_VIRTME=
 TESTS_SUMMARY=
 CONCLUSION=
 KMEMLEAK=
+KMEMLEAK_SCANNED=0
 LCOV_FILE=
 LCOV_TXT=
 LCOV_HTML=
@@ -1390,12 +1392,24 @@ has_call_trace() {
 
 kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 	if [ -e "\${p}" ]; then
+		echo "Starting KMemleak scan"
 		echo scan > "\${p}"
 		sleep 5 # grace period of 5 sec
 		# second scan often surfaces issues the first scan missed
 		echo scan > "\${p}"
 		cat "\${p}" >> "${KMEMLEAK}"
+		if [ -s "${KMEMLEAK}" ]; then
+			echo "Potential memory leak found:"
+			cat "${KMEMLEAK}"
+		fi
+		KMEMLEAK_SCANNED=1
 	fi
+}
+
+has_kmemleak() {
+	[ "${INPUT_KMEMLEAK_CHECK_EACH_LOOP}" = 1 ] || return 1
+	kmemleak_scan
+	[ -s "${KMEMLEAK}" ]
 }
 
 gcov_extract() {
@@ -1425,7 +1439,7 @@ run_loop_n() { local i tdir rc=0
 	while true; do
 		echo -e "\n\n\t=== ${COLOR_BLUE}Attempt: \${i} (\$(date -R))${COLOR_RESET} ===\n\n"
 
-		if ! "\${@}" || has_call_trace; then
+		if ! "\${@}" || has_call_trace || has_kmemleak; then
 			rc=1
 
 			echo -e "\n\n\t=== ${COLOR_RED}ERROR after \${i} attempts (\$(date -R))${COLOR_RESET} ===\n\n"
@@ -1487,8 +1501,10 @@ fi
 
 cd "${KERNEL_SRC}"
 
-rm -f "${KMEMLEAK}"
-kmemleak_scan
+if [ "${KMEMLEAK_SCANNED}" != 1 ]; then
+	rm -f "${KMEMLEAK}"
+	kmemleak_scan
+fi
 gcov_extract
 
 # To run commands after having executed the tests
