@@ -25,8 +25,8 @@ RUN apt-get update && \
 		gettext-base libevent-dev libtraceevent-dev libnewt0.52 libslang2 libutempter0 python3-newt tmux gawk \
 		libdwarf-dev libbfd-dev libnuma-dev libzstd-dev libunwind-dev libdw-dev libslang2-dev python3-dev python3-setuptools binutils-dev libiberty-dev libbabeltrace-dev systemtap-sdt-dev libperl-dev python3-docutils \
 		libtap-formatter-junit-perl lcov libjson-xs-perl \
-		zstd \
-		wget xz-utils lftp cpio u-boot-tools \
+		zstd pigz pbzip2 xz-utils \
+		wget lftp cpio u-boot-tools \
 		cscope \
 		bpftrace \
 		golang \
