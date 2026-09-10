@@ -574,7 +574,7 @@ check_source_exec_all() {
 }
 
 _make_j() {
-	make -j"$(nproc)" -l"$(nproc)" "${@}"
+	make KGZIP=pigz -j"$(nproc)" -l"$(nproc)" "${@}"
 }
 
 _make() {
