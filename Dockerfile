@@ -80,7 +80,7 @@ RUN cd /opt && \
 
 # Pahole
 ARG PAHOLE_GIT_URL="https://kernel.googlesource.com/pub/scm/devel/pahole/pahole.git"
-ARG PAHOLE_GIT_SHA="6fd0dacc9418b103af4245ab300b9c135bcdb383" # fix discarded-qualifiers
+ARG PAHOLE_GIT_SHA="v1.32" # include a fix for discarded-qualifiers
 RUN cd /opt && \
 	git clone "${PAHOLE_GIT_URL}" pahole && \
 	cd "pahole" && \
