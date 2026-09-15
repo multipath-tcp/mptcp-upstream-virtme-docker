@@ -1253,7 +1253,7 @@ _run_selftest_one_tap() {
 # \$1: script file; rest: command to launch
 run_selftest_one() { local sf tap rc=0
 	sf=\$(basename \${1})
-	tap=selftest_\${sf:0:-3}
+	tap=selftest_\${sf%.sh}
 	shift
 
 	_can_run "\${tap}" || return 0
