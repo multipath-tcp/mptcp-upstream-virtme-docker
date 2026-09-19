@@ -109,6 +109,10 @@ VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
 
+if is_parallel_run; then
+	VIRTME_SCRIPTS_DIR+="${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
+fi
+
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_START="Starting the validation script"
 VIRTME_SCRIPT_END="__VIRTME_END__"
@@ -2346,6 +2350,11 @@ print_summaries() {
 
 exit_trap() {
 	local rc=${?}
+
+	if is_parallel_run; then
+		rm -rf "${VIRTME_SCRIPTS_DIR}"
+	fi
+
 	set +x
 
 	echo -ne "\n${COLOR_BLUE}"
