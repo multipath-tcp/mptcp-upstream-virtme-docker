@@ -40,6 +40,11 @@ set_trace_on
 DEFAULT_VSOCK_CID="3"
 DEFAULT_HOSTNAME="mptcpdev"
 
+is_parallel_run() {
+	[ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
+		[ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]
+}
+
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=2G}"
 : "${INPUT_CCACHE_DIR:=""}"
@@ -103,6 +108,10 @@ BASH_PROFILE="/root/.bash_profile"
 VIRTME_WORKDIR="${KERNEL_SRC}/.virtme"
 VIRTME_SCRIPTS_DIR="${VIRTME_WORKDIR}/scripts"
 VIRTME_CURRENT_BUILD_DIR="${INPUT_CURRENT_BUILD:-"${VIRTME_WORKDIR}/current_build"}"
+
+if is_parallel_run; then
+	VIRTME_SCRIPTS_DIR+="${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
+fi
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_START="Starting the validation script"
@@ -240,8 +249,7 @@ is_mode_btf() {
 }
 
 _get_results_dir_suffix() {
-	if [ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
-		[ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+	if is_parallel_run; then
 		echo "/${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
 	fi
 }
@@ -1253,7 +1261,7 @@ _run_selftest_one_tap() {
 # \$1: script file; rest: command to launch
 run_selftest_one() { local sf tap rc=0
 	sf=\$(basename \${1})
-	tap=selftest_\${sf:0:-3}
+	tap=selftest_\${sf%.sh}
 	shift
 
 	_can_run "\${tap}" || return 0
@@ -2342,6 +2350,11 @@ print_summaries() {
 
 exit_trap() {
 	local rc=${?}
+
+	if is_parallel_run; then
+		rm -rf "${VIRTME_SCRIPTS_DIR}"
+	fi
+
 	set +x
 
 	echo -ne "\n${COLOR_BLUE}"
