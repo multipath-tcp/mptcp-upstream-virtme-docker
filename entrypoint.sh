@@ -40,6 +40,11 @@ set_trace_on
 DEFAULT_VSOCK_CID="3"
 DEFAULT_HOSTNAME="mptcpdev"
 
+is_parallel_run() {
+	[ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
+		[ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]
+}
+
 # The behaviour can be changed with 'input' env var
 : "${INPUT_CCACHE_MAXSIZE:=2G}"
 : "${INPUT_CCACHE_DIR:=""}"
@@ -240,8 +245,7 @@ is_mode_btf() {
 }
 
 _get_results_dir_suffix() {
-	if [ "${INPUT_HOSTNAME}" != "${DEFAULT_HOSTNAME}" ] ||
-		[ "${INPUT_VSOCK_CID}" != "${DEFAULT_VSOCK_CID}" ]; then
+	if is_parallel_run; then
 		echo "/${INPUT_HOSTNAME}_${INPUT_VSOCK_CID}"
 	fi
 }
