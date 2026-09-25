@@ -74,7 +74,7 @@ is_parallel_run() {
 : "${INPUT_EXPECT_TIMEOUT:="-1"}"
 : "${INPUT_BUILD_SKIP_PERF:=1}"
 : "${INPUT_FULL_DUMP:=0}"
-: "${INPUT_KMEMLEAK_CHECK_EACH_LOOP:=0}"
+: "${INPUT_KMEMLEAK_LOOPS_PER_CHECK:=0}"
 
 if [ -z "${INPUT_MODE}" ]; then
 	INPUT_MODE="${1}"
@@ -1414,8 +1414,10 @@ kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 	fi
 }
 
-has_kmemleak() {
-	[ "${INPUT_KMEMLEAK_CHECK_EACH_LOOP}" != 1 ] && return 1  # no check
+# \$1: current loop index
+has_kmemleak() { local n="${INPUT_KMEMLEAK_LOOPS_PER_CHECK}"
+	[ "\${n}" -lt 1 ] 2>/dev/null && return 1  # no check
+	[ \$(( \$1 % n )) -ne 0 ] && return 1     # check every N loops only
 	kmemleak_scan
 	[ -s "${KMEMLEAK}" ]
 }
@@ -1447,7 +1449,7 @@ run_loop_n() { local i tdir rc=0
 	while true; do
 		echo -e "\n\n\t=== ${COLOR_BLUE}Attempt: \${i} (\$(date -R))${COLOR_RESET} ===\n\n"
 
-		if ! "\${@}" || has_call_trace || has_kmemleak; then
+		if ! "\${@}" || has_call_trace || has_kmemleak "\${i}"; then
 			rc=1
 
 			echo -e "\n\n\t=== ${COLOR_RED}ERROR after \${i} attempts (\$(date -R))${COLOR_RESET} ===\n\n"
