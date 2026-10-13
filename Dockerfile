@@ -109,7 +109,7 @@ RUN cd /opt && \
 	rm -rf iproute2
 
 # Virtme NG
-ARG VIRTME_NG_VERSION="1.41"
+ARG VIRTME_NG_VERSION="1.42"
 RUN pip3 install --no-cache-dir --break-system-packages \
 	virtme-ng=="${VIRTME_NG_VERSION}"
 
