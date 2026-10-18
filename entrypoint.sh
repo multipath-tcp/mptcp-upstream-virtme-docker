@@ -1223,13 +1223,15 @@ run_kunit_core() {
 }
 
 # \$1: .ko path
-run_kunit_one() { local ko kunit kunit_path rc=0
+run_kunit_one() { local ko kunit kunit_path mod rc=0
 	ko="\${1}"
 
 	kunit="\${ko#${VIRTME_BUILD_DIR}/}" # remove abs dir
 	kunit="\${kunit:10:-8}" # remove net/mptcp (10) + _test.ko (8)
 	kunit="\${kunit//_/-}" # dash
 	kunit_path="/sys/kernel/debug/kunit/\${kunit}/results"
+	mod="\${ko##*/}" # module filename without path
+	mod="\${mod%.ko}" # remove .ko extension
 
 	log_section_start "KUnit Test: \${kunit}"
 
@@ -1237,6 +1239,9 @@ run_kunit_one() { local ko kunit kunit_path rc=0
 
 	insmod "\${ko}" || true # errors will also be visible below: no results
 	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap" || rc=\${?}
+	grep -q "^\s*not ok" "\${kunit_path}" && rc=1
+
+	rmmod "\${mod}" || true
 
 	log_section_end
 
