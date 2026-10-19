@@ -721,6 +721,9 @@ gen_kconfig() {
 		-d MISC_FILESYSTEMS -d SCSI -d AGP -d WLAN -d WIRELESS
 	)
 
+	# Disable uneeded tools depending on OpenSSL
+	kconfig+=(-d SYSTEM_TRUSTED_KEYRING)
+
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
 	kconfig+=(-d BLK_DEV_INITRD)
 
