@@ -31,7 +31,7 @@ RUN apt-get update && \
 		bpftrace \
 		golang \
 		mptcpize iperf3 netperf \
-		bmon ifstat dstat \
+		bmon ifstat pcp pcp-dstat \
 		stress-ng \
 		python3-jsonschema python3-pexpect python3-scipy \
 		nvme-cli fio keyutils ktls-utils libnss-myhostname \
