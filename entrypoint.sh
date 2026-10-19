@@ -718,7 +718,7 @@ gen_kconfig() {
 	kconfig+=(
 		-d PCCARD -d MACINTOSH_DRIVERS -d SOUND -d USB_SUPPORT
 		-d NEW_LEDS -d SURFACE_PLATFORMS -d DRM -d FB -d ATA
-		-d MISC_FILESYSTEMS -d SCSI -d AGP
+		-d MISC_FILESYSTEMS -d SCSI -d AGP -d WLAN -d WIRELESS
 	)
 
 	# initramfs is not needed, and there are issues with CoreUtils' 'date'
@@ -736,7 +736,7 @@ gen_kconfig() {
 
 		# Disable components present in syzbot and not needed here
 		kconfig+=(
-			-d WLAN -d WIRELESS -d HAMRADIO -d CAN -d BT -d CAIF -d NFC
+			-d HAMRADIO -d CAN -d BT -d CAIF -d NFC
 			-d MEDIA_SUPPORT -d INFINIBAND -d STAGING -d HID
 			-d X86_PLATFORM_DEVICES -d BATMAN_ADV -d OPENVSWITCH -d MPLS
 			-d QRTR -d IP_DCCP -d RDS -d DLM -d IP_SCTP
