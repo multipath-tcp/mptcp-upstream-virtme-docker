@@ -424,7 +424,6 @@ class Entrypoint:
         return stats
 
     def _start_dstat_host(self):
-        self.cmd.call("/etc/init.d/pmcd start")
         dirname = os.path.join(self.log_dir, "stats", "host")
         os.makedirs(dirname, exist_ok=True)
         out = os.path.join(dirname, "dstat.csv")
@@ -441,7 +440,6 @@ class Entrypoint:
         dirname = os.path.join(self.log_dir, "stats", hostname)
         os.makedirs(dirname, exist_ok=True)
         out = os.path.join(dirname, "dstat.csv")
-        host.cmd_wait("/etc/init.d/pmcd start")
         host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null &")
 
     def _stop_dstat(self, hostname):
