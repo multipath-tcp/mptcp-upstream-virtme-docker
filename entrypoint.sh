@@ -307,7 +307,7 @@ _add_bridge() {
 		if [ -n "${static}" ]; then
 			echo "${static}" >>"${conf}"
 			kill_wait "$(<"${pidfile}")"
-			busybox udhcpd "${conf}"
+			busybox-static udhcpd "${conf}"
 		fi
 
 		return 0
@@ -335,7 +335,7 @@ _add_bridge() {
 	EOF
 
 	touch "${leases}" # to avoid a warning
-	busybox udhcpd "${conf}"
+	busybox-static udhcpd "${conf}"
 }
 
 _setup_bridges() {
