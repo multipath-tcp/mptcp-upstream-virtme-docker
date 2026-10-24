@@ -35,6 +35,7 @@ RUN apt-get update && \
 		stress-ng \
 		python3-jsonschema python3-pexpect python3-scipy \
 		nvme-cli fio keyutils ktls-utils libnss-myhostname \
+		nbd-client nbd-server \
 		&& \
 	apt-get clean
 
