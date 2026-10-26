@@ -151,7 +151,7 @@ def get_args_parser():
     return parser
 
 
-def get_tests(conf_file):
+def validate_config(conf_file):
     with open(conf_file) as c:
         config = yaml.safe_load(c)
 
@@ -159,8 +159,6 @@ def get_tests(conf_file):
     with open(schema_file) as s:
         schema = json.load(s)
     jsonschema.validate(config, schema)
-
-    return config
 
 
 def add_infos(results, infos):
@@ -210,10 +208,15 @@ def main():
     if not args.config:
         args.config = [os.path.join(os.path.dirname(__file__), "perf", "perf.yml")]
 
+    for conf_file in args.config:
+        validate_config(conf_file)
+
     results = {}
     id = 1
     for conf_file in args.config:
-        result, exit = ep.run_tests(id, get_tests(conf_file))
+        with open(conf_file) as c:
+            config = yaml.safe_load(c)
+        result, exit = ep.run_tests(id, config)
         results.update(result)
         id += 1
 
