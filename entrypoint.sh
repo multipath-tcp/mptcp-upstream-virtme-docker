@@ -1867,21 +1867,24 @@ _print_issues() {
 	fi
 }
 
-# $1: A: after, B: before
-_get_output_around_start() {
-	grep -a"${1}" 9999999 "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"
+# if the pattern is found, print the lines after it, else nothing
+# $1: pattern ; $2: file
+_cat_after() {
+	sed -n "/${1}/,\$p" "${2}"
+}
+
+# if the pattern is found, print the lines before it, else everything
+# $1: pattern ; $2: file
+_cat_before() {
+	sed -n "1,/${1}/p" "${2}"
 }
 
 _get_output_after_start() {
-	_get_output_around_start A
+	_cat_after "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"
 }
 
 _get_output_before_start() {
-	if grep -q "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"; then
-		_get_output_around_start B
-	else
-		cat "${OUTPUT_VIRTME}"
-	fi
+	_cat_before "${VIRTME_SCRIPT_START}" "${OUTPUT_VIRTME}"
 }
 
 _get_output_around_stop() {
