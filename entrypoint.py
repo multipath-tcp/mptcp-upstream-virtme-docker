@@ -36,12 +36,18 @@ class Entrypoint:
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
-    def _set_dirs(self, name):
-        self.log_dir = os.path.join(self.log_dir_parent, name)
-        shutil.rmtree(self.log_dir, ignore_errors=True)
-        os.makedirs(self.log_dir, exist_ok=True)
+    # one dir per test, not to mix stats and artifacts from different tests
+    def _set_test_dirs(self, id, name):
+        slug = re.sub(r"\W", "_", name)
+        self.log_dir = os.path.join(self.suite_dir, f"{id:02d}-{slug}")
         os.makedirs(os.path.join(self.log_dir, "artifacts"), exist_ok=True)
         os.makedirs(os.path.join(self.log_dir, "stats"), exist_ok=True)
+
+    # one dir per suite
+    def _set_dirs(self, name):
+        self.suite_dir = os.path.join(self.log_dir_parent, name)
+        shutil.rmtree(self.suite_dir, ignore_errors=True)
+        os.makedirs(self.suite_dir, exist_ok=True)
 
         if self.reg_dir_parent is not None:
             self.reg_dir = os.path.join(self.reg_dir_parent, name)
@@ -605,13 +611,12 @@ class Entrypoint:
             test_config = global_config | test
             name = test_config["name"]
             name_n = f"{global_name}: {name}"
-            results[global_name_n] = {
-                id: {
-                    "result": "fail",
-                    "name": name_n,
-                }
+            results.setdefault(global_name_n, {})[id] = {
+                "result": "fail",
+                "name": name_n,
             }
             msgs = []
+            self._set_test_dirs(id, name)
             if self.run_test(test_config, name, id, total, msgs):
                 logger.warning(f"{global_name}: {name}: error found, no validation")
                 results[global_name_n][id]["comment"] = f"error: {'\n'.join(msgs)}"
