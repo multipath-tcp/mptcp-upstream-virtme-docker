@@ -455,7 +455,7 @@ class Entrypoint:
 
     def _stop_dstat(self, hostname):
         host = self.hosts[hostname]
-        host.cmd_wait("killall dstat; sync")
+        host.cmd_wait("pgrep -f /usr/bin/dstat | xargs -r kill; sync")
 
     def _get_stats(self, config, phase):
         if "stats" not in config:
