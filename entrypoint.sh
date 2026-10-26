@@ -2368,7 +2368,13 @@ exit_trap() {
 	local rc=${?}
 
 	if is_parallel_run; then
+		# Remove auto generated scripts, not need to keep many copies
 		rm -rf "${VIRTME_SCRIPTS_DIR}"
+
+		# Remove empty results dir, e.g. expected with the perf tests
+		if [ -d "${RESULTS_DIR}" ] && [ -z "$(ls -A "${RESULTS_DIR}")" ]; then
+			rm -rf "${RESULTS_DIR}"
+		fi
 	fi
 
 	set +x
