@@ -491,6 +491,9 @@ setup_env() {
 	if [ "${INPUT_FULL_DUMP}" = 1 ]; then
 		VIRTME_RUN_OPTS+=(--disable-microvm)
 		VIRTME_RUN_QEMU_OPTS+=(-device vmcoreinfo)
+	else
+		# don't produce a core dump when exiting with rc != 0
+		ulimit -c 0
 	fi
 
 	if [ -n "${INPUT_KOPTS}" ]; then
