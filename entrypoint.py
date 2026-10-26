@@ -440,6 +440,8 @@ class Entrypoint:
         self.dstat = self.cmd.open(cmd, cwd=self.log_dir, mute=True)
 
     def _stop_dstat_host(self):
+        if self.dstat is None:  # dry-run
+            return
         self.dstat.terminate()
         self.dstat.wait(timeout=5)
 
@@ -506,7 +508,11 @@ class Entrypoint:
                 continue
 
             vbr = f"vir{br['name']}"
-            ifaces = os.listdir(f"/sys/devices/virtual/net/{vbr}/brif/")
+            if self.cmd.dry_run:
+                # bridges are created when booting the VMs
+                ifaces = [f"<{vbr}-port>"]
+            else:
+                ifaces = os.listdir(f"/sys/devices/virtual/net/{vbr}/brif/")
             netem_cmd = "tc qdisc add dev '{}' root netem " + " ".join(tc_args)
 
             for iface in ifaces:
