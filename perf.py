@@ -76,6 +76,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--config-dir",
+        "-C",
+        action="store",
+        type=check_dir_arg,
+        help="YAML config files directory, take precedence over --config",
+    )
+
+    parser.add_argument(
         "--dry-run",
         "-n",
         action="store_true",
@@ -205,7 +213,13 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
-    if not args.config:
+    if args.config_dir:
+        args.config = [
+            os.path.join(args.config_dir, f)
+            for f in sorted(os.listdir(args.config_dir))
+            if f.endswith(".yml")
+        ]
+    elif not args.config:
         args.config = [os.path.join(os.path.dirname(__file__), "perf", "perf.yml")]
 
     for conf_file in args.config:
