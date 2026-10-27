@@ -34,3 +34,13 @@ repos:
       - id: check-jsonschema
         files: ^perf/.*\.yml$
         args: ["--schemafile", "perf/perf.schema"]
+  - repo: local
+    hooks:
+      - id: perf-gen-check
+        name: perf YAML files generated from Jsonnet
+        language: golang
+        additional_dependencies:
+          - github.com/google/go-jsonnet/cmd/jsonnet@v0.21.0
+        entry: perf/gen.sh --check
+        files: ^perf/
+        pass_filenames: false

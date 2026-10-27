@@ -96,6 +96,11 @@ RUN cd /opt && \
 		cd .. && \
 	rm -rf iproute2
 
+# Jsonnet, to generate perf tests: the Go version is a lot faster than the C++ one
+ARG GO_JSONNET_VERSION="v0.21.0"
+RUN GOBIN=/usr/local/bin go install "github.com/google/go-jsonnet/cmd/jsonnet@${GO_JSONNET_VERSION}" && \
+	rm -rf /root/go /root/.cache/go-build
+
 # Virtme NG
 ARG VIRTME_NG_VERSION="1.42"
 RUN pip3 install --no-cache-dir --break-system-packages \
