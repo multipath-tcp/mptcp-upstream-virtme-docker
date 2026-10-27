@@ -41,13 +41,16 @@ fi"""
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir, reg_dir, reg_min_history):
+    def __init__(
+        self, cmd, mode, script, log_dir, reg_dir, reg_min_history, reg_exclude
+    ):
         self.cmd = cmd
         self.mode = mode
         self.script = script
         self.log_dir_parent = os.path.realpath(log_dir)
         self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
         self.reg_min_history = reg_min_history
+        self.reg_exclude = reg_exclude
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -265,6 +268,8 @@ class Entrypoint:
 
         if err:
             self._mark_skip(new_path, "validation failed")
+        if self.reg_exclude:
+            self._mark_skip(new_path, "excluded")
 
     def validation(self, config, name, id, total, msgs):
         if "validation" not in config:

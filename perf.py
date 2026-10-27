@@ -160,6 +160,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-exclude",
+        action="store_true",
+        help="Keep the results, but exclude them from the next regression checks,"
+        " e.g. when validating WIP code",
+    )
+
+    parser.add_argument(
         "--reg-min-history",
         action="store",
         default=20,
@@ -220,6 +227,7 @@ def main():
         args.log_dir,
         args.reg_dir,
         args.reg_min_history,
+        args.reg_exclude,
     )
 
     if args.build:
