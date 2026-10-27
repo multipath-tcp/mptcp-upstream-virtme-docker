@@ -8,6 +8,9 @@ successful measurements against the latest measurement. A regression is reported
 when the p-value is below `alpha`. At least 20 prior measurements are required
 by default, see the `--reg-min-history` option.
 
+Results of each run are kept. The ones with a `skip` file are ignored by the
+next regression checks: the file contains the reason.
+
 ## Deployment
 
 Two modes are currently supported: virtual only, with physical network cards.

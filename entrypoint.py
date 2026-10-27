@@ -136,12 +136,17 @@ class Entrypoint:
 
         return float(info)
 
+    # results kept, but not used as reference for the next regression checks
+    def _mark_skip(self, path, reason):
+        with open(os.path.join(path, "skip"), "a") as f:
+            print(reason, file=f)
+
     def _mark_reg(self, latest, name, check_name, msg, msgs):
         output = f"{name}: {check_name}: {msg}"
         msgs.append(output)
         logger.warning(f"Regression: {output}")
 
-        open(os.path.join(latest, "skip"), "a").close()
+        self._mark_skip(latest, f"regression: {check_name}")
         with open(os.path.join(self.log_dir, "regs.txt"), "a") as f:
             print(output, file=f)
 
@@ -259,8 +264,7 @@ class Entrypoint:
         )
 
         if err:
-            # easy to handle
-            open(os.path.join(new_path, "skip"), "a").close()
+            self._mark_skip(new_path, "validation failed")
 
     def validation(self, config, name, id, total, msgs):
         if "validation" not in config:
