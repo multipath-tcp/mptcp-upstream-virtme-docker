@@ -2091,29 +2091,10 @@ _gen_results_files() {
 }
 
 # $1: mode, rest: args for kconfig
-analyze() {
-	# reduce log that could be wrongly interpreted
-	set_trace_off
-
-	local mode="${1}"
-	shift
-
+# Look at the serial output, in ${OUTPUT_VIRTME}, for crashes, timeouts, etc.
+# [ $1: name of the VM, printed with the issues ]
+_analyze_serial() {
 	local has_call_trace=0
-
-	printinfo "Analyze results"
-
-	echo -ne "\n${COLOR_GREEN}"
-	_print_summary_header "${mode}" "${@}" | tee "${TESTS_SUMMARY}"
-	_print_tests_result | tee -a "${TESTS_SUMMARY}"
-
-	echo -ne "${COLOR_RESET}\n${COLOR_RED}"
-
-	if _has_failed_tests; then
-		# no tee, it can be long and less important than critical err
-		_print_failed_tests >>"${TESTS_SUMMARY}"
-		_register_issue "Unstable" "$(_get_failed_tests_status)"
-		EXIT_STATUS=42
-	fi
 
 	# look for crashes/warnings
 	if _has_call_trace; then
@@ -2167,6 +2148,36 @@ analyze() {
 		_register_issue "Notice" "Call Traces at shutdown time, ignored and continued"
 		EXIT_STATUS=2
 	fi
+}
+
+# $1: mode, rest: args for kconfig
+_analyze_start() {
+	# reduce log that could be wrongly interpreted
+	set_trace_off
+
+	printinfo "Analyze results"
+
+	echo -ne "\n${COLOR_GREEN}"
+	_print_summary_header "${@}" | tee "${TESTS_SUMMARY}"
+}
+
+_analyze_failed_tests() {
+	echo -ne "${COLOR_RESET}\n${COLOR_RED}"
+
+	if _has_failed_tests; then
+		# no tee, it can be long and less important than critical err
+		_print_failed_tests >>"${TESTS_SUMMARY}"
+		_register_issue "Unstable" "$(_get_failed_tests_status)"
+		EXIT_STATUS=42
+	fi
+}
+
+_analyze_end() {
+	if _has_kmemleak; then
+		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "KMemLeak"
+		EXIT_STATUS=1
+	fi
 
 	if [ -s "${LCOV_FILE}" ]; then
 		lcov --branch-coverage --function-coverage --keep-going \
@@ -2186,6 +2197,15 @@ analyze() {
 	fi
 
 	set_trace_on
+}
+
+# $1: mode, rest: args for kconfig
+analyze() {
+	_analyze_start "${@}"
+	_print_tests_result | tee -a "${TESTS_SUMMARY}"
+	_analyze_failed_tests
+	_analyze_serial
+	_analyze_end
 }
 
 # $1: type ; $2: mode ; [ $@:3: args for kconfig ]
