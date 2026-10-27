@@ -117,6 +117,14 @@
           "type": "number",
           "minimum": 0,
           "maximum": 100
+        },
+        "max_latency_ms": {
+          "type": "number",
+          "minimum": 0,
+        },
+        "limit_pkts": {
+          "type": "integer",
+          "minimum": 1,
         }
       }
     },

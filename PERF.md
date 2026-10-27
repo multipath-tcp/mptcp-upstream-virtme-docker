@@ -62,6 +62,17 @@ behaviour on the kernel side.
  ---------------------------
 ```
 
+## Network conditions
+
+Each bridge described in the YAML file is shaped with `netem` on all its ports,
+so in both directions: `delay_ms` is then half of the added RTT.
+
+When `rate_mbit` is set, the queue size is computed from `max_latency_ms`: the
+one-way delay, including the maximum queuing delay. By default, it is set to
+twice `delay_ms`, meaning the queue can hold up to `delay_ms` of traffic. The
+queue size, including the packets in the delay line, is limited to a minimum of
+10 packets. It can be forced with `limit_pkts`.
+
 ## Run
 
 The Docker image described in [README.md](README.md) can be used. To get more

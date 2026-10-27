@@ -6,6 +6,7 @@ Class for the entrypoint.sh script
 
 import json
 import logging
+import math
 import os
 import re
 import shlex
@@ -485,6 +486,22 @@ class Entrypoint:
             for host in self.hosts:
                 self._start_dstat(host)
 
+    # The queue can hold up to (max_latency - delay) of traffic, + what is in
+    # the delay line
+    def _netem_limit(self, br, hw_accel):
+        if "limit_pkts" in br:
+            return br["limit_pkts"]
+
+        rate = br["rate_mbit"]
+        delay = br.get("delay_ms", 0)
+        max_lat = br.get("max_latency_ms", 2 * delay)
+        bytes_per_ms = rate * 1000 / 8
+        mtu = 12000 if hw_accel else 1500
+
+        queue_bytes = bytes_per_ms * (max_lat - delay) if max_lat > delay else mtu
+
+        return max(math.ceil((bytes_per_ms * delay + queue_bytes) / mtu), 10)
+
     def _setup_net(self, config):
         if "bridges" not in config:
             return
@@ -503,6 +520,9 @@ class Entrypoint:
                     tc_args += ["delay", f"{br[key]}ms"]
                 elif key == "loss_pc":
                     tc_args += ["loss", f"{br[key]}%"]
+
+            if br.get("rate_mbit"):
+                tc_args += ["limit", str(self._netem_limit(br, hw_accel))]
 
             if not tc_args:
                 continue
