@@ -596,6 +596,7 @@ class Entrypoint:
         env_client, env_server = self._get_envs(config)
         timeout = config.get("timeout_s", 3600)
 
+        self.stopped = False
         self._new_vm("client", env_client, timeout)
         self._new_vm("server", env_server, timeout)
 
