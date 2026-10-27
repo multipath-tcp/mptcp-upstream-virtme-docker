@@ -234,6 +234,10 @@ def main():
         results.update(result)
         id += 1
 
+    # always next to the logs, e.g. for 'analyze' in entrypoint.sh
+    with open(os.path.join(args.log_dir, "perf.json"), "w") as f:
+        json.dump(results, f)
+
     if args.json:
         if args.info:
             results = {"results": results}
