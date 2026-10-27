@@ -79,6 +79,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--build-only",
+        "-B",
+        action="store_true",
+        help="Only build the kernel, without running the tests",
+    )
+
+    parser.add_argument(
         "--config",
         "-c",
         action="append",
@@ -230,8 +237,11 @@ def main():
         args.reg_exclude,
     )
 
-    if args.build:
+    if args.build or args.build_only:
         ep.build()
+
+        if args.build_only:
+            return
     else:
         logger.info("Skip build")
 

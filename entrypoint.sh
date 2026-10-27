@@ -2344,8 +2344,14 @@ go_vm_auto() {
 }
 
 go_perf() {
-	local mode="${1}" perf_params
+	local mode="${1}" perf_params arg build_only=0
 	shift
+
+	for arg in "${@}"; do
+		if [ "${arg}" = "--build-only" ] || [ "${arg}" = "-B" ]; then
+			build_only=1
+		fi
+	done
 
 	EXPECT=1
 	setup_env "${mode}"
@@ -2363,6 +2369,11 @@ go_perf() {
 	# python env var to avoid creating __pycache__ in kernel src dir
 	TERM="" PYTHONDONTWRITEBYTECODE=1 \
 		/perf.py "${perf_params[@]}" "${@}" || EXIT_STATUS=$?
+
+	# nothing to analyse
+	if [ "${build_only}" = 1 ]; then
+		return
+	fi
 
 	# printed by hosts.py
 	VIRTME_SCRIPT_START="Starting the perf tests"
