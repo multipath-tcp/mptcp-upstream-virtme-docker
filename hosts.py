@@ -12,6 +12,12 @@ import pexpect
 logger = logging.getLogger(__name__)
 CID = 3
 
+# Markers used by 'analyze' in entrypoint.sh to separate the boot, the tests,
+# and the shutdown in the VMs output: see VIRTME_SCRIPT_START (overridden in
+# go_perf) and VIRTME_SCRIPT_END there.
+MARKER_START = "Starting the perf tests"
+MARKER_END = "__VIRTME_END__"
+
 
 class PExpectStub:
     def __init__(self, cmd, args, env, loglvl, dry_run, host, **kwargs):
@@ -171,13 +177,16 @@ class Host:
         self.p.send("\003")
         self.p.sendline()
 
-    def cmd_send(self, cmd):
-        # empty buffer
+    # read what is pending: it will be in the log
+    def _read_pending(self, p):
         while True:
             try:
-                self.p.read_nonblocking(1024, 0)
-            except pexpect.TIMEOUT:
+                p.read_nonblocking(1024, 0)
+            except (pexpect.TIMEOUT, pexpect.EOF):
                 break
+
+    def cmd_send(self, cmd):
+        self._read_pending(self.p)
         self.p.sendline(cmd)
 
     # timeout: time without output in the serial
@@ -256,6 +265,7 @@ class VM(Host):
         logger.info(f"{hostname}: VM: boot")
         self.serial, self.p = self._boot()
         logger.info(f"{hostname}: VM: ready")
+        self._mark(MARKER_START)
 
     def _boot(self):
         args = ["vm-manual", self.mode]
@@ -280,6 +290,11 @@ class VM(Host):
 
         return serial, vsock
 
+    # the kernel messages are on the serial console: print them before
+    def _mark(self, marker):
+        self._read_pending(self.serial)
+        self.log.write(f"\n{marker}\n")
+
     def get_ifaces(self):
         n = self.env.get("INPUT_NET_BRIDGES", "").count(",") + 1
         return [f"eth{x}" for x in range(n)]
@@ -287,6 +302,8 @@ class VM(Host):
     def stop(self):
         if not self.serial:
             return
+
+        self._mark(MARKER_END)
 
         serial = self.serial
         self.serial = None
