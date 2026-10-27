@@ -22,6 +22,23 @@ import hosts
 
 logger = logging.getLogger(__name__)
 
+# Same as kmemleak_scan() in entrypoint.sh
+KMEMLEAK_SCAN = """p=/sys/kernel/debug/kmemleak; f={file}
+if [ -e "${{p}}" ]; then
+    echo "Starting KMemleak scan"
+    echo scan > "${{p}}"
+    sleep 5 # grace period of 5 sec
+    # second scan often surfaces issues the first scan missed
+    echo scan > "${{p}}"
+    cat "${{p}}" > "${{f}}"
+    if [ -s "${{f}}" ]; then
+        echo "Potential memory leak found:"
+        cat "${{f}}"
+    else
+        rm -f "${{f}}"
+    fi
+fi"""
+
 
 class Entrypoint:
     def __init__(self, cmd, mode, script, log_dir, reg_dir):
@@ -83,7 +100,13 @@ class Entrypoint:
 
         return vm
 
-    def stop(self):
+    def _kmemleak_scan(self, name, host):
+        file = os.path.join(self.log_dir, f"{name}_kmemleak.txt")
+        cmd = KMEMLEAK_SCAN.format(file=shlex.quote(file))
+        host.cmd_wait(f"{{\n{cmd}\n}}", ignore_timeout=True, timeout=600)
+
+    # kmemleak: not to wait for the scan, e.g. when interrupted
+    def stop(self, kmemleak=True):
         if self.stopped:
             return
         self.stopped = True
@@ -92,6 +115,8 @@ class Entrypoint:
 
         for name in self.hosts:
             host = self.hosts[name]
+            if kmemleak:
+                self._kmemleak_scan(name, host)
             host.stop()
 
     def _get_reg_dir(self, name):

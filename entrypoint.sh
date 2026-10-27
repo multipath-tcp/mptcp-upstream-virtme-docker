@@ -1409,6 +1409,7 @@ has_call_trace() {
 	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
+# also done in entrypoint.py for the perf tests
 kmemleak_scan() { local p="/sys/kernel/debug/kmemleak"
 	if [ -e "\${p}" ]; then
 		echo "Starting KMemleak scan"
@@ -2143,7 +2144,8 @@ _set_exit_status_notice() {
 }
 
 # $1: mode, rest: args for kconfig
-# Look at the serial output, in ${OUTPUT_VIRTME}, for crashes, timeouts, etc.
+# Look at the serial output, in ${OUTPUT_VIRTME}, for crashes, timeouts, etc.,
+# and at ${KMEMLEAK} for memory leaks.
 # [ $1: name of the VM, printed with the issues ]
 _analyze_serial() {
 	local name="${1}"
@@ -2173,6 +2175,12 @@ _analyze_serial() {
 	elif _has_timed_out; then
 		_print_timed_out | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${name}Global Timeout"
+		EXIT_STATUS=1
+	fi
+
+	if _has_kmemleak; then
+		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
+		_register_issue "Critical" "${name}KMemLeak"
 		EXIT_STATUS=1
 	fi
 
@@ -2224,12 +2232,6 @@ _analyze_failed_tests() {
 }
 
 _analyze_end() {
-	if _has_kmemleak; then
-		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "KMemLeak"
-		EXIT_STATUS=1
-	fi
-
 	if [ -s "${LCOV_FILE}" ]; then
 		lcov --branch-coverage --function-coverage --keep-going \
 			--summary "${LCOV_FILE}" | tee "${LCOV_TXT}" || true
@@ -2274,7 +2276,8 @@ analyze_perf() {
 
 		# skip the setup done on the host
 		_cat_after "^+ ${VIRTME_RUN} " "${log}" >"${OUTPUT_VIRTME}"
-		_analyze_serial "${log#"${RESULTS_DIR}/"}"
+		KMEMLEAK="${log%.log}_kmemleak.txt" \
+			_analyze_serial "${log#"${RESULTS_DIR}/"}"
 	done
 	rm -f "${OUTPUT_VIRTME}"
 
