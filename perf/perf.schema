@@ -27,7 +27,8 @@
           { "$ref": "#/$defs/testConfig" },
           { "required": ["name"] }
         ]
-      }
+      },
+      "description": "Tests executed in this order, each one with two new VMs: 'client' and 'server'."
     }
   },
   "$defs": {
@@ -37,48 +38,67 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Name of the test, unique in the file: used for the results and regression directories."
         },
         "timeout_s": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Max time in seconds without output from a VM when waiting for a command. Default: 3600."
         },
         "cpus": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of CPUs for each VM. Default: half of the CPUs of the host."
         },
         "ram": {
           "oneOf": [
             { "type": "integer", "minimum": 1 },
             { "type": "string", "minLength": 1 }
-          ]
+          ],
+          "description": "Memory for each VM, in MB if it is an integer, or with a unit, e.g. '2G'. Default: a third of the available memory of the host."
         },
         "bridges": {
           "type": "array",
-          "items": { "$ref": "#/$defs/bridge" }
+          "items": { "$ref": "#/$defs/bridge" },
+          "description": "Bridges connecting the VMs, each one adding an interface to both VMs, in order: eth0, eth1, etc."
         },
         "bridges_hw_accel": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When false, disable the offloads (GRO, GSO, TSO, checksum, SG) on the bridges and their ports. Default: true."
         },
         "stats": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "pre": { "$ref": "#/$defs/stats" },
-            "post": { "$ref": "#/$defs/stats" },
-            "all": { "$ref": "#/$defs/stats" }
-          }
+            "pre": {
+              "$ref": "#/$defs/stats",
+              "description": "Commands executed before the steps, before starting dstat."
+            },
+            "post": {
+              "$ref": "#/$defs/stats",
+              "description": "Commands executed after the steps, after having stopped dstat."
+            },
+            "all": {
+              "$ref": "#/$defs/stats",
+              "description": "Commands executed both before and after the steps."
+            }
+          },
+          "description": "Commands executed in the VMs, with outputs saved in 'stats/<VM>/<pre|post>/<name>'."
         },
         "steps": {
           "type": "array",
-          "items": { "$ref": "#/$defs/step" }
+          "items": { "$ref": "#/$defs/step" },
+          "description": "Steps executed in this order, the next one starting when the commands of the previous one are done in all VMs. The test stops at the first error."
         },
         "validation": {
           "type": "array",
-          "items": { "$ref": "#/$defs/validation" }
+          "items": { "$ref": "#/$defs/validation" },
+          "description": "Checks executed on the host after the steps, if no errors. The test fails if one of them fails."
         },
         "regression": {
-          "$ref": "#/$defs/regression"
+          "$ref": "#/$defs/regression",
+          "description": "Comparisons with the previous results, after a successful validation. Only done when a regression directory is given, e.g. in the CI."
         },
         "dstat": {
           "type": "object",
@@ -86,13 +106,16 @@
           "properties": {
             "offset_start": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "Number of samples to ignore at the beginning. Default: 1."
             },
             "offset_end": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "Number of samples to ignore at the end. Default: 1."
             }
-          }
+          },
+          "description": "Filtering of the dstat samples, one per second, used to generate 'stats/dstat.json'."
         }
       }
     },
@@ -103,28 +126,34 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Name of the bridge, prefixed by 'vir' on the host. Its number gives the subnet, e.g. 'br1' uses 10.0.1.0/24, with .2 for the client and .3 for the server."
         },
         "rate_mbit": {
           "type": "number",
-          "exclusiveMinimum": 0
+          "exclusiveMinimum": 0,
+          "description": "Rate limit in Mbit/s, set with netem in both directions."
         },
         "delay_ms": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Delay in ms, set with netem in both directions: the RTT is increased by twice this value."
         },
         "loss_pc": {
           "type": "number",
           "minimum": 0,
-          "maximum": 100
+          "maximum": 100,
+          "description": "Random packet losses in percent, set with netem in both directions."
         },
         "max_latency_ms": {
           "type": "number",
           "minimum": 0,
+          "description": "One-way delay + max queuing delay, used to compute the queue size. Default: 2 x delay_ms."
         },
         "limit_pkts": {
           "type": "integer",
           "minimum": 1,
+          "description": "Netem queue size in packets, overriding the one computed from max_latency_ms."
         }
       }
     },
@@ -137,15 +166,18 @@
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Name of the file where the output is saved."
           },
           "run": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Command executed in the VM(s)."
           },
           "target": {
             "type": "string",
-            "enum": ["client", "server"]
+            "enum": ["client", "server"],
+            "description": "Only execute the command in this VM. Default: in all VMs."
           }
         }
       }
@@ -157,30 +189,37 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Name of the step, also printed in the VMs output."
         },
         "all": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Commands executed in all VMs. Multiple lines are executed in one block."
         },
         "client": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Commands executed in the client VM, in parallel to the other VMs. Multiple lines are executed in one block."
         },
         "server": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Commands executed in the server VM, in parallel to the other VMs. Multiple lines are executed in one block."
         },
         "timeout_s": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Max time in seconds without output from a VM when waiting for this step. Default: the timeout_s of the test."
         },
         "ignore_err": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, a non-zero exit status or a timeout does not stop the test. Default: false."
         },
         "dstat_only": {
           "type": "string",
-          "enum": ["step", "start", "end"]
+          "enum": ["step", "start", "end"],
+          "description": "Only keep the dstat samples during this step ('step'), after its start ('start'), or before its end ('end')."
         }
       }
     },
@@ -191,11 +230,13 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Name of the check."
         },
         "run": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Commands executed on the host, from the results directory of the test. Multiple lines are executed in one script with 'bash -e'."
         }
       }
     },
@@ -206,11 +247,13 @@
       "properties": {
         "global": {
           "$ref": "#/$defs/regressionConfig",
-          "default": {}
+          "default": {},
+          "description": "Settings shared by all regression steps; individual step settings take precedence."
         },
         "steps": {
           "type": "array",
-          "items": { "$ref": "#/$defs/regressionStep" }
+          "items": { "$ref": "#/$defs/regressionStep" },
+          "description": "Values to compare with the previous results."
         }
       }
     },
@@ -220,31 +263,37 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Name of the regression check."
         },
         "file": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "File containing the value, relative to the results directory of the test, e.g. 'stats/dstat.json'."
         },
         "json_field": {
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "description": "Keys to access the value in the JSON file, numbers being used as list indexes. Default: the first line of the file is used."
         },
         "alpha": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "exclusiveMaximum": 1
+          "exclusiveMaximum": 1,
+          "description": "Significance level: a regression is reported when the p-value of the Student's t-test is below it. Default: 0.05."
         },
         "history_max_n": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Max number of previous results to compare with, 0 for no limit. Default: 0."
         },
         "history_since": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Ignore the previous results with an index lower than this one, e.g. after an expected change. Default: 0."
         }
       }
     },
