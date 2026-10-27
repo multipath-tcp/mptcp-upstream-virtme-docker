@@ -2090,6 +2090,13 @@ _gen_results_files() {
 		"${RESULTS_DIR}"/*.tap
 }
 
+# not to hide more important issues
+_set_exit_status_notice() {
+	if [ "${EXIT_STATUS}" = 0 ]; then
+		EXIT_STATUS=2
+	fi
+}
+
 # $1: mode, rest: args for kconfig
 # Look at the serial output, in ${OUTPUT_VIRTME}, for crashes, timeouts, etc.
 # [ $1: name of the VM, printed with the issues ]
@@ -2132,11 +2139,11 @@ _analyze_serial() {
 			has_call_trace=1
 		fi
 		_register_issue "Notice" "Call Traces at boot time, rebooted and continued"
-		EXIT_STATUS=2
+		_set_exit_status_notice
 	elif _has_boot_failure; then
 		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Notice" "Boot failures, rebooted and continued"
-		EXIT_STATUS=2
+		_set_exit_status_notice
 	fi
 
 	if _has_call_trace_at_shutdown; then
@@ -2146,7 +2153,7 @@ _analyze_serial() {
 			has_call_trace=1
 		fi
 		_register_issue "Notice" "Call Traces at shutdown time, ignored and continued"
-		EXIT_STATUS=2
+		_set_exit_status_notice
 	fi
 }
 
