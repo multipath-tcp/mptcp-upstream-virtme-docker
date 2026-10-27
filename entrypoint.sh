@@ -714,6 +714,9 @@ gen_kconfig() {
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF -e BRIDGE)
 
+	# For the perf tests
+	kconfig+=(-e TCP_CONG_ADVANCED -e TCP_CONG_BBR -e NET_SCH_FQ)
+
 	# Disable retpoline to accelerate tests
 	kconfig+=(-d RETPOLINE)
 

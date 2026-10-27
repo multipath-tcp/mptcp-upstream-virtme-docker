@@ -30,7 +30,7 @@ RUN apt-get update && \
 		cscope \
 		bpftrace \
 		golang \
-		mptcpize iperf3 netperf \
+		mptcpize iperf3 netperf pv \
 		bmon ifstat pcp pcp-dstat \
 		stress-ng \
 		python3-jsonschema python3-pexpect python3-scipy \

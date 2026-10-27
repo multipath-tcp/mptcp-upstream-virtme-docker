@@ -1,0 +1,1055 @@
+# Generated from sched-rmem.jsonnet by gen.sh: do not edit
+# yaml-language-server: $schema=./perf.schema
+# yamllint disable rule:line-length
+---
+
+global:
+  bridges_hw_accel: false
+  dstat:
+    offset_end: 1
+    offset_start: 2
+  stats:
+    post:
+      - name: "nstat"
+        run: "nstat"
+      - name: "mptcp"
+        run: "ip mptcp endpoint show; ip mptcp limits show"
+    pre:
+      - name: "nstat"
+        run: "nstat -n"
+  timeout_s: 900
+name: "sched-rmem"
+tests:
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary rmem=200"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 200000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 5000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced rmem=200"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 200000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 6666666 ]
+  - bridges:
+      - delay_ms: 60
+        max_latency_ms: 540
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "huge_lat_primary rmem=200"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 200000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 166666 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 490
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_primary rmem=200"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 200000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 200000 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary rmem=800"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 800000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 20000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced rmem=800"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 800000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 26666666 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 60
+        max_latency_ms: 540
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "huge_lat_primary rmem=800"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 800000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 666666 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 490
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_primary rmem=800"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 800000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 800000 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary rmem=2000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 2000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced rmem=2000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 2000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 60
+        max_latency_ms: 540
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "huge_lat_primary rmem=2000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 2000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 1666666 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 490
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_primary rmem=2000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 2000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 2000000 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary rmem=6000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 6000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced rmem=6000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 6000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 60
+        max_latency_ms: 540
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "huge_lat_primary rmem=6000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 6000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 5000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 490
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_primary rmem=6000"
+    regression:
+      global:
+        history_max_n: 50
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_rmem="4096 131072 6000000"
+        name: "sysctls"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 6000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
