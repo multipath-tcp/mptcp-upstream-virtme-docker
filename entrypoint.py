@@ -41,12 +41,13 @@ fi"""
 
 
 class Entrypoint:
-    def __init__(self, cmd, mode, script, log_dir, reg_dir):
+    def __init__(self, cmd, mode, script, log_dir, reg_dir, reg_min_history):
         self.cmd = cmd
         self.mode = mode
         self.script = script
         self.log_dir_parent = os.path.realpath(log_dir)
         self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
+        self.reg_min_history = reg_min_history
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -202,9 +203,10 @@ class Entrypoint:
 
                 prev_results.append(self._get_info(file_path, json_field))
 
-            if len(prev_results) < 20:
+            if len(prev_results) < self.reg_min_history:
                 logger.info(
-                    f"{name}: {check_name}: need at least 20 previous measurements"
+                    f"{name}: {check_name}: need at least "
+                    f"{self.reg_min_history} previous measurements"
                 )
                 continue
 

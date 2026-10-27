@@ -46,6 +46,17 @@ def check_script_arg(path):
     return path
 
 
+def check_min_history_arg(value):
+    try:
+        n = int(value)
+    except ValueError:
+        n = 0
+    # at least 2 values are needed to compute the standard deviation
+    if n < 2:
+        raise argparse.ArgumentTypeError(f"'{value}' is not an integer >= 2.")
+    return n
+
+
 def check_output_file_arg(path):
     try:
         with open(path, "w"):
@@ -149,6 +160,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-min-history",
+        action="store",
+        default=20,
+        type=check_min_history_arg,
+        help="Minimum number of prior measurements to check regressions",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="count",
@@ -200,6 +219,7 @@ def main():
         args.entrypoint,
         args.log_dir,
         args.reg_dir,
+        args.reg_min_history,
     )
 
     if args.build:

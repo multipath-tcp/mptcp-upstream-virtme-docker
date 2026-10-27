@@ -5,7 +5,8 @@ parameters, and compare some specific aspects with a tolerance.
 
 Each regression check uses Student's t-test to compare the mean of prior
 successful measurements against the latest measurement. A regression is reported
-when the p-value is below `alpha`. At least 20 prior measurements are required.
+when the p-value is below `alpha`. At least 20 prior measurements are required
+by default, see the `--reg-min-history` option.
 
 ## Deployment
 
