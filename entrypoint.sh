@@ -115,7 +115,7 @@ fi
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
 VIRTME_SCRIPT_START="Starting the validation script"
-VIRTME_SCRIPT_END="__VIRTME_END__"
+VIRTME_SCRIPT_END="__VIRTME_END__" # also used in hosts.py
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
 VIRTME_SCRIPT_TIMEOUT="${VIRTME_SCRIPTS_DIR}/tests.timeout"
 VIRTME_SCRIPT_TIMEOUT_END="__VIRTME_TIMEOUT_END__"
@@ -2006,6 +2006,42 @@ _print_summary_header() {
 	echo
 }
 
+_print_perf_tests() {
+	local json="${RESULTS_DIR}/perf.json" errors
+
+	# written by perf.py
+	if [ -s "${json}" ]; then
+		echo "ok has results"
+	else
+		echo "not ok no results"
+	fi
+
+	# tests stopped before the validation
+	errors="$(jq -r '.[][] | select(.result == "fail" and ((.comment // "") | startswith("error: "))) |
+		"not ok 1 test: error: \(.name): \(.comment | ltrimstr("error: ") | gsub("\n"; " / "))"' "${json}" 2>/dev/null || true)"
+	if [ -n "${errors}" ]; then
+		echo "not ok has major errors before the validation"
+		echo "${errors}"
+	else
+		echo "ok no major errors before the validation"
+	fi
+
+	# one dir per suite and per test
+	if ls "${RESULTS_DIR}"/*/*/validations.txt &>/dev/null; then
+		echo "not ok has validations errors"
+		cat "${RESULTS_DIR}"/*/*/validations.txt | sed 's/^/not ok 1 test: validation: /g'
+	else
+		echo "ok no validations errors"
+	fi
+
+	if ls "${RESULTS_DIR}"/*/*/regs.txt &>/dev/null; then
+		echo "not ok has regressions"
+		cat "${RESULTS_DIR}"/*/*/regs.txt | sed 's/^/not ok 1 test: regression: /g'
+	else
+		echo "ok no regressions"
+	fi
+}
+
 # [ $1: .tap file, summary file by default]
 _has_failed_tests() {
 	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
@@ -2043,6 +2079,10 @@ _print_tests_result() {
 
 _print_failed_tests() {
 	local t
+
+	# e.g. with the perf tests: the failed ones are in the summary
+	ls "${RESULTS_DIR}"/*.tap &>/dev/null || return 0
+
 	echo
 	_print_line
 	echo "Failed tests:"
@@ -2076,6 +2116,11 @@ _get_failed_tests_status() {
 }
 
 _gen_results_files() {
+	# e.g. with the perf tests
+	if ! ls "${RESULTS_DIR}"/*.tap &>/dev/null; then
+		return 0
+	fi
+
 	LANG=C tap2junit "${RESULTS_DIR}"/*.tap
 
 	# remove prefix id (unique test) and comments (status, time)
@@ -2101,16 +2146,21 @@ _set_exit_status_notice() {
 # Look at the serial output, in ${OUTPUT_VIRTME}, for crashes, timeouts, etc.
 # [ $1: name of the VM, printed with the issues ]
 _analyze_serial() {
+	local name="${1}"
 	local has_call_trace=0
+
+	if [ -n "${name}" ]; then
+		name="${name}: "
+	fi
 
 	# look for crashes/warnings
 	if _has_call_trace; then
 		has_call_trace=1
 		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "$(_get_call_trace_status)"
+		_register_issue "Critical" "${name}$(_get_call_trace_status)"
 		EXIT_STATUS=1
 
-		if is_ci; then
+		if is_ci && [ ! -f "${RESULTS_DIR}/vmlinux.zstd" ]; then
 			zstd -19 -T0 "${VIRTME_BUILD_DIR}/vmlinux" \
 				-o "${RESULTS_DIR}/vmlinux.zstd"
 		fi
@@ -2118,17 +2168,11 @@ _analyze_serial() {
 
 	if _has_unexpected_stop; then
 		_print_unexpected_stop | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "${VIRTME_SCRIPT_UNEXPECTED_STOP}"
+		_register_issue "Critical" "${name}${VIRTME_SCRIPT_UNEXPECTED_STOP}"
 		EXIT_STATUS=1
 	elif _has_timed_out; then
 		_print_timed_out | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "Global Timeout"
-		EXIT_STATUS=1
-	fi
-
-	if _has_kmemleak; then
-		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Critical" "KMemLeak"
+		_register_issue "Critical" "${name}Global Timeout"
 		EXIT_STATUS=1
 	fi
 
@@ -2138,11 +2182,11 @@ _analyze_serial() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Notice" "Call Traces at boot time, rebooted and continued"
+		_register_issue "Notice" "${name}Call Traces at boot time, rebooted and continued"
 		_set_exit_status_notice
 	elif _has_boot_failure; then
 		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
-		_register_issue "Notice" "Boot failures, rebooted and continued"
+		_register_issue "Notice" "${name}Boot failures, rebooted and continued"
 		_set_exit_status_notice
 	fi
 
@@ -2152,7 +2196,7 @@ _analyze_serial() {
 			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
-		_register_issue "Notice" "Call Traces at shutdown time, ignored and continued"
+		_register_issue "Notice" "${name}Call Traces at shutdown time, ignored and continued"
 		_set_exit_status_notice
 	fi
 }
@@ -2212,6 +2256,28 @@ analyze() {
 	_print_tests_result | tee -a "${TESTS_SUMMARY}"
 	_analyze_failed_tests
 	_analyze_serial
+	_analyze_end
+}
+
+# $1: mode
+analyze_perf() {
+	local log
+
+	_analyze_start "${1}"
+	_print_perf_tests | tee -a "${TESTS_SUMMARY}"
+	_analyze_failed_tests
+
+	# the output of each VM is analysed separately, with ${OUTPUT_VIRTME}
+	# being re-used, then removed.
+	for log in "${RESULTS_DIR}"/*/*/*.log; do
+		[ ! -f "${log}" ] && continue
+
+		# skip the setup done on the host
+		_cat_after "^+ ${VIRTME_RUN} " "${log}" >"${OUTPUT_VIRTME}"
+		_analyze_serial "${log#"${RESULTS_DIR}/"}"
+	done
+	rm -f "${OUTPUT_VIRTME}"
+
 	_analyze_end
 }
 
@@ -2291,6 +2357,11 @@ go_perf() {
 	# python env var to avoid creating __pycache__ in kernel src dir
 	TERM="" PYTHONDONTWRITEBYTECODE=1 \
 		/perf.py "${perf_params[@]}" "${@}" || EXIT_STATUS=$?
+
+	# printed by hosts.py
+	VIRTME_SCRIPT_START="Starting the perf tests"
+
+	analyze_perf "${mode}"
 }
 
 static_analysis() {
