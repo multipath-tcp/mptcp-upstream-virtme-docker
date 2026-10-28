@@ -288,7 +288,7 @@
         "direction": {
           "type": "string",
           "enum": ["lower", "higher", "different"],
-          "description": "Which significant changes are regressions: 'lower' (e.g. for a throughput) or 'higher' (e.g. for a transfer time) values, or both with 'different'. Default: different."
+          "description": "Which significant changes are regressions: 'lower' (e.g. for a throughput) or 'higher' (e.g. for a transfer time) values, or both with 'different'. Changes in the other direction are reported as improvements. Default: different."
         },
         "history_max_n": {
           "type": "integer",

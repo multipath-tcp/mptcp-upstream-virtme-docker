@@ -2044,6 +2044,12 @@ _print_perf_tests() {
 	else
 		echo "ok no regressions"
 	fi
+
+	# not errors, but worth showing
+	if ls "${RESULTS_DIR}"/*/*/improvement.txt &>/dev/null; then
+		echo "ok has improvements"
+		cat "${RESULTS_DIR}"/*/*/improvement.txt | sed 's/^/ok 1 test: improvement: /g'
+	fi
 }
 
 # [ $1: .tap file, summary file by default]

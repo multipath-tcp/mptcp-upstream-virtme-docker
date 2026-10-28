@@ -157,7 +157,8 @@ kernel config, same tests).
   is small.
 
 Regressions are reported in the summary, and in the `regs.txt` file of each
-test.
+test. Improvements are in the `improvement.txt` file of each test, and in the
+comment of the JSON results.
 
 **Note**: more runs in the history -- e.g. 20 by default -- give more reliable
 comparisons, fewer false positives.

@@ -164,7 +164,15 @@ class Entrypoint:
 
         return True
 
-    def regression(self, config, global_name, name, id, total, msgs):
+    def _mark_improv(self, global_name, name, check_name, msg, improvs):
+        output = f"{check_name}: {msg}"
+        improvs.append(output)
+        logger.info(f"Improvement: {output}")
+
+        with open(os.path.join(self.log_dir, "improvement.txt"), "a") as f:
+            print(f"{global_name}: {name}: {output}", file=f)
+
+    def regression(self, config, global_name, name, id, total, msgs, improvs):
         reg = False
         if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
             return reg
@@ -251,6 +259,8 @@ class Entrypoint:
                     reg = self._mark_reg(
                         latest, global_name, name, check_name, msg, msgs
                     )
+                else:
+                    self._mark_improv(global_name, name, check_name, msg, improvs)
                 continue
 
             logger.info(
@@ -700,6 +710,7 @@ class Entrypoint:
                 "name": name_n,
             }
             msgs = []
+            improvs = []
             self._set_test_dirs(id, name)
             if self.run_test(test_config, name, id, total, msgs):
                 logger.warning(f"{global_name}: {name}: error found, no validation")
@@ -711,13 +722,22 @@ class Entrypoint:
                 )
                 results[global_name_n][id]["comment"] = f"validation: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
-            elif self.regression(test_config, global_name, name, id, total, msgs):
+            elif self.regression(
+                test_config, global_name, name, id, total, msgs, improvs
+            ):
                 logger.warning(f"{global_name}: {name}: regression found")
                 results[global_name_n][id]["comment"] = f"regres: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
             else:
                 logger.info(f"{global_name}: {name}: success")
                 results[global_name_n][id]["result"] = "pass"
+
+            if improvs:
+                result = results[global_name_n][id]
+                comment = f"improv: {'\n'.join(improvs)}"
+                if "comment" in result:
+                    comment = f"{result['comment']}\n{comment}"
+                result["comment"] = comment
 
             logger.info(f"Ending test {id}/{total}: {name}")
 
