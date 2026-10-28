@@ -303,8 +303,8 @@ local regression(c) =
           { name: 'nstat', run: 'nstat -n' },
         ],
         post: [
-          { name: 'nstat', run: 'nstat' },
-          { name: 'mptcp', run: 'ip mptcp endpoint show; ip mptcp limits show' },
+          { name: 'nstat', run: 'nstat -j' },
+          { name: 'mptcp', run: 'ip -j mptcp endpoint show' },
         ],
       },
     },

@@ -23,7 +23,7 @@ global:
         run: "nstat"
     post:
       - name: "nstat"
-        run: "nstat"
+        run: "nstat -j"
     all:
       - name: "proc_net_dev"
         run: "cat /proc/net/dev"
