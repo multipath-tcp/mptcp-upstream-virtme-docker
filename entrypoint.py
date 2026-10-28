@@ -217,7 +217,7 @@ class Entrypoint:
 
             latest_file = os.path.join(latest, file)
             if not os.path.isfile(latest_file):
-                msg = f"{file}' is not available in latest"
+                msg = f"{file} is not available in latest"
                 reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
                 continue
 
