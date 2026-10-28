@@ -119,7 +119,7 @@ kernel config, same tests).
 - Switch to a version without the modifications, build the kernel once with
   `--build-only`, then execute the tests multiple times, e.g. 5 times:
 
-  ```console
+  ```shell
   git switch --detach <base>
 
   # to start a new history
@@ -131,8 +131,9 @@ kernel config, same tests).
       perf_run -C /perf  # the test suite is long: check that before submission
                          # for dev, use -c, e.g. -c /perf/sched-baseline.yml
   done
-  # note: run more if there were errors
   ```
+
+  **Note**: run more if there were errors
 
 - Switch to the version with the modifications, build the kernel again, and
   execute the same tests with:
@@ -144,7 +145,7 @@ kernel config, same tests).
     checks. These tests can then be executed again after new modifications,
     still compared with the same history.
 
-  ```console
+  ```shell
   git switch <branch>
   perf_run --build-only
   perf_run -C /perf --reg-min-history 5 --reg-alpha 0.01 --reg-exclude
@@ -158,5 +159,5 @@ kernel config, same tests).
 Regressions are reported in the summary, and in the `regs.txt` file of each
 test.
 
-Note: more runs in the history -- e.g. 20 by default -- give more reliable
+**Note**: more runs in the history -- e.g. 20 by default -- give more reliable
 comparisons, fewer false positives.
