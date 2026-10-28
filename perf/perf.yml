@@ -33,7 +33,8 @@ tests:
     steps:
       - name: "tcpdump"
         all: |-
-          tcpdump -i any -s 100 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
+          tcpdump -i any -s 100 --immediate-mode --packet-buffered -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
+          while [ ! -s "${RESULTS_DIR}/${HOSTNAME}.pcap" ]; do sleep 0.1; done
       - name: "mptcp endpoints"
         server: |-
           ip mptcp endpoint add 10.0.1.3 dev eth1 signal
