@@ -298,7 +298,8 @@ class Entrypoint:
             rc = self.cmd.call(cmd, fatal=False, cwd=self.log_dir)
             if rc > 0:
                 logger.error(f"Validation {sname} has failed ({rc})")
-                output = f"{sname}: {cmd}: failed ({rc})"
+                cmd = step["run"].rstrip().replace("\n", " ; ")
+                output = f"{sname}: '{cmd}': failed ({rc})"
                 msgs.append(output)
                 with open(os.path.join(self.log_dir, "validations.txt"), "a") as f:
                     print(f"{global_name}: {name}: {output}", file=f)
