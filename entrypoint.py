@@ -4,6 +4,7 @@
 Class for the entrypoint.sh script
 """
 
+import copy
 import filecmp
 import json
 import logging
@@ -793,7 +794,8 @@ class Entrypoint:
         logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
-            test_config = global_config | test
+            # deep copy: the config is modified during the test, e.g. 'dstat'
+            test_config = copy.deepcopy(global_config | test)
             name = test_config["name"]
             name_n = f"{global_name}: {name}"
             results.setdefault(global_name_n, {})[id] = {
