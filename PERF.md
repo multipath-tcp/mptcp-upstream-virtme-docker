@@ -166,6 +166,15 @@ Regressions are reported in the summary, and in the `regs.txt` file of each
 test. Improvements are in the `improvement.txt` file of each test, and in the
 comment of the JSON results.
 
+Odd values still used as reference in the history -- e.g. a previous
+improvement, or a run that was not significant enough to be marked as a
+regression -- are reported as "outliers" in the `outliers.txt` file of each test
+and a few other places. They are detected with a modified "z-score", based
+on the median and the median absolute deviation, above 5. They are not excluded
+automatically: after a manual review, a run can be excluded from the next
+regression checks by adding a `skip` file in its directory, **with the reason**,
+e.g. `<reg dir>/<suite>/<test>/<run>/skip`.
+
 **Note**: more runs in the history -- e.g. 20 by default -- give more reliable
 comparisons, fewer false positives.
 

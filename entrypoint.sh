@@ -2055,6 +2055,14 @@ _print_perf_tests() {
 		echo "ok has improvements"
 		cat "${RESULTS_DIR}"/*/*/improvement.txt | sed 's/^/ok 1 test: improvement: /g'
 	fi
+
+	# still used as reference: to be reviewed, and maybe skipped
+	if ls "${RESULTS_DIR}"/*/*/outliers.txt &>/dev/null; then
+		echo
+		echo "Outliers have been found in the history: check them with this command:"
+		echo "    cat '${RESULTS_DIR}'/*/*/outliers.txt"
+		echo "If they are valid, add a skip file in <reg dir>/<suite>/<test>/<run>/skip"
+	fi
 }
 
 # [ $1: .tap file, summary file by default]

@@ -42,6 +42,20 @@ if [ -e "${{p}}" ]; then
 fi"""
 
 
+# z-score (or standard score) is the number of standard deviations from the mean
+OUTLIER_Z = 5
+
+
+def outliers(values):
+    median = statistics.median(values)
+    mad = statistics.median(abs(v - median) for v in values)
+    if mad == 0:
+        return median, []
+
+    z_scores = [0.6745 * (v - median) / mad for v in values]
+    return median, [(i, z) for i, z in enumerate(z_scores) if abs(z) > OUTLIER_Z]
+
+
 # Holm-Bonferroni: adjusted p-values, to compare with alpha when checking
 # multiple values at once, not to increase the risk of false positives
 def holm(p_values):
@@ -80,10 +94,9 @@ class Entrypoint:
         self.reg_only = reg_only
         self.reg_reset = reg_reset
         self.validation_only = validation_only
-        # re-use the results from the previous run, without running the tests
-        self.reuse = reg_only or validation_only
 
-        # results from the previous run, e.g. to only check the regressions
+        self.outliers = []
+        self.reuse = reg_only or validation_only
         self.prev_results = {}
         if self.reuse:
             with open(os.path.join(self.log_dir_parent, "perf.json")) as f:
@@ -211,7 +224,16 @@ class Entrypoint:
         with open(os.path.join(self.log_dir, "improvement.txt"), "a") as f:
             print(f"{global_name}: {name}: {output}", file=f)
 
-    def regression(self, config, global_name, name, id, total, msgs, improvs):
+    def _mark_outlier(self, global_name, name, check_name, msg, outs):
+        output = f"{check_name}: {msg}"
+        outs.append(output)
+        self.outliers.append(f"{global_name}: {name}: {output}")
+        logger.warning(f"Outlier in the history: {output}")
+
+        with open(os.path.join(self.log_dir, "outliers.txt"), "a") as f:
+            print(f"{global_name}: {name}: {output}", file=f)
+
+    def regression(self, config, global_name, name, id, total, msgs, improvs, outs):
         reg = False
         if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
             return reg
@@ -266,6 +288,7 @@ class Entrypoint:
 
             prev = last
             prev_results = []
+            prev_runs = []
             while prev > history_since and (
                 history_max_n == 0 or len(prev_results) < history_max_n
             ):
@@ -284,6 +307,7 @@ class Entrypoint:
                 prev_res = self._get_info(file_path, json_field)
                 if prev_res is not None:
                     prev_results.append(prev_res)
+                    prev_runs.append(prev)
 
             if len(prev_results) < self.reg_min_history:
                 logger.info(
@@ -313,6 +337,14 @@ class Entrypoint:
                 p_reg = p_higher
             else:
                 p_reg = p_value
+
+            median, odd = outliers(prev_results)
+            for i, z in odd:
+                msg = (
+                    f"run {prev_runs[i]}: got {prev_results[i]}, median {median}; "
+                    f"modified z-score {z:.3g}"
+                )
+                self._mark_outlier(global_name, name, check_name, msg, outs)
 
             tested.append(
                 {
@@ -702,8 +734,19 @@ class Entrypoint:
         return stats
 
     def _parse_dstats(self, config):
+        names = [*self.hosts.keys(), "host"]
+        # e.g. with --validation-only: no VMs, but their stats are on disk
+        if not self.hosts:
+            stats_dir = os.path.join(self.log_dir, "stats")
+            names = [
+                d
+                for d in sorted(os.listdir(stats_dir))
+                if d != "host"
+                and os.path.isfile(os.path.join(stats_dir, d, "dstat.csv"))
+            ] + ["host"]
+
         stats = {}
-        for name in (*self.hosts.keys(), "host"):
+        for name in names:
             fpath = os.path.join(self.log_dir, "stats", name, "dstat.csv")
             stats[name] = self._parse_dstat(config, fpath)
 
@@ -942,6 +985,7 @@ class Entrypoint:
             }
             msgs = []
             improvs = []
+            outs = []
             self._set_test_dirs(id, name)
             err, val_err, reg = False, False, False
             # one bad test should not stop the others
@@ -970,7 +1014,7 @@ class Entrypoint:
                     if self.reg_reset:
                         self._reset_history(name)
                     reg = self.regression(
-                        test_config, global_name, name, id, total, msgs, improvs
+                        test_config, global_name, name, id, total, msgs, improvs, outs
                     )
             except Exception as e:
                 if self.interrupted:
@@ -997,9 +1041,11 @@ class Entrypoint:
                 logger.info(f"{global_name}: {name}: success")
                 results[global_name_n][id]["result"] = "pass"
 
-            if improvs:
+            for prefix, extra in (("improv", improvs), ("outliers", outs)):
+                if not extra:
+                    continue
                 result = results[global_name_n][id]
-                comment = f"improv: {'\n'.join(improvs)}"
+                comment = f"{prefix}: {'\n'.join(extra)}"
                 if "comment" in result:
                     comment = f"{result['comment']}\n{comment}"
                 result["comment"] = comment

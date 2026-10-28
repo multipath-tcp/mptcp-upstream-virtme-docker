@@ -367,9 +367,13 @@ def main():
         if args.json_only_fails:
             results = only_fails(results)
 
-        if args.info:
+        if args.info or ep.outliers:
             results = {"results": results}
-            add_infos(results, args.info)
+            if args.info:
+                add_infos(results, args.info)
+            # also when filtering: to be reviewed, e.g. for passing tests
+            if ep.outliers:
+                results["outliers"] = "\n".join(ep.outliers)
 
         with open(args.json, "w") as f:
             json.dump(results, f)
