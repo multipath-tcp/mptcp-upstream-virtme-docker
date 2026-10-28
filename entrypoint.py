@@ -458,9 +458,7 @@ class Entrypoint:
                     self.hosts[host].cmd_send(cmd)
 
             if dstat_only == "step" or dstat_only == "start":
-                if "dstat" not in config:
-                    config["dstat"] = {}
-                config["dstat"]["start"] = time.localtime(time.time())
+                config.setdefault("dstat", {})["start"] = time.localtime(time.time())
 
             # then check status
             for host in self.hosts:
@@ -484,7 +482,7 @@ class Entrypoint:
                     err = True
 
             if dstat_only == "step" or dstat_only == "end":
-                config["dstat"]["end"] = time.localtime(time.time())
+                config.setdefault("dstat", {})["end"] = time.localtime(time.time())
 
             if err:
                 break
@@ -530,14 +528,14 @@ class Entrypoint:
         times = stats["time"]["raw"]
         start, end = 0, len(times)
 
-        # remove extremes points, before and after the tests if specified
-        if "start" in dstat and "end" in dstat:
-            dstart = dstat["start"]
-            dend = dstat["end"]
+        # remove extremes points, before and/or after the tests if specified
+        dstart = dstat.get("start")
+        dend = dstat.get("end")
+        if dstart or dend:
             for i in range(len(times)):
-                if times[i] < dstart:
+                if dstart and times[i] < dstart:
                     start = i + 1
-                elif times[i] >= dend:
+                elif dend and times[i] >= dend:
                     end = i - 1
                     break
         else:
