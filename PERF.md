@@ -5,8 +5,9 @@ parameters, and compare some specific aspects with a tolerance.
 
 Each regression check uses Student's t-test to compare the mean of prior
 successful measurements against the latest measurement. A regression is reported
-when the p-value is below `alpha`. At least 20 prior measurements are required
-by default, see the `--reg-min-history` option.
+when the p-value is below `alpha` (0.05 by default, see the `--reg-alpha` option
+to override it). At least 20 prior measurements are required by default, see the
+`--reg-min-history` option.
 
 Results of each run are kept. The ones with a `skip` file are ignored by the
 next regression checks: the file contains the reason.
@@ -137,6 +138,8 @@ kernel config, same tests).
   execute the same tests with:
   - `--reg-min-history 5`: compare with the 5 previous runs, instead of 20 by
     default.
+  - `--reg-alpha 0.01`: use a lower significance level to only report the most
+    obvious regressions, or a higher one to be stricter. Default: 0.05.
   - `--reg-exclude`: keep the results, but not use them for the next regression
     checks. These tests can then be executed again after new modifications,
     still compared with the same history.
@@ -144,7 +147,8 @@ kernel config, same tests).
   ```console
   git switch <branch>
   perf_run --build-only
-  perf_run --reg-min-history 5 --reg-exclude -C /perf  # or with -c /perf/<test>
+  perf_run -C /perf --reg-min-history 5 --reg-alpha 0.01 --reg-exclude
+           # or with -c /perf/<test>
   ```
 
 Regressions are reported in the summary, and in the `regs.txt` file of each

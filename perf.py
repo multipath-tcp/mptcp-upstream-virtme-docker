@@ -57,6 +57,16 @@ def check_min_history_arg(value):
     return n
 
 
+def check_alpha_arg(value):
+    try:
+        alpha = float(value)
+    except ValueError:
+        alpha = 0
+    if not 0 < alpha < 1:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a number in ]0, 1[.")
+    return alpha
+
+
 def check_output_file_arg(path):
     try:
         with open(path, "w"):
@@ -159,6 +169,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-alpha",
+        action="store",
+        type=check_alpha_arg,
+        help="Significance level for the regression checks, overriding the"
+        " 'alpha' values from the config files (default: 0.05)",
+    )
+
+    parser.add_argument(
         "--reg-dir",
         "-r",
         action="store",
@@ -234,6 +252,7 @@ def main():
         args.log_dir,
         args.reg_dir,
         args.reg_min_history,
+        args.reg_alpha,
         args.reg_exclude,
     )
 

@@ -42,7 +42,15 @@ fi"""
 
 class Entrypoint:
     def __init__(
-        self, cmd, mode, script, log_dir, reg_dir, reg_min_history, reg_exclude
+        self,
+        cmd,
+        mode,
+        script,
+        log_dir,
+        reg_dir,
+        reg_min_history,
+        reg_alpha,
+        reg_exclude,
     ):
         self.cmd = cmd
         self.mode = mode
@@ -50,6 +58,7 @@ class Entrypoint:
         self.log_dir_parent = os.path.realpath(log_dir)
         self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
         self.reg_min_history = reg_min_history
+        self.reg_alpha = reg_alpha
         self.reg_exclude = reg_exclude
 
         self.hosts = {}
@@ -186,7 +195,10 @@ class Entrypoint:
             json_field = check.get("json_field", None)
             last_res = self._get_info(latest_file, json_field)
 
-            alpha = float(check.get("alpha", 0.05))
+            if self.reg_alpha is not None:
+                alpha = self.reg_alpha
+            else:
+                alpha = float(check.get("alpha", 0.05))
             if not 0 < alpha < 1:
                 raise ValueError(f"{name}: {check_name}: alpha must be between 0 and 1")
             history_max_n = int(check.get("history_max_n", 0))
