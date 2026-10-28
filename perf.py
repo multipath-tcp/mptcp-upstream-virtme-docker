@@ -220,6 +220,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--validation-only",
+        action="store_true",
+        help="Only validate the results, and check the regressions, re-using the"
+        " results from the previous run in the log directory, e.g. after"
+        " modifying the validation checks or the dstat offsets",
+    )
+
+    parser.add_argument(
         "--verbose",
         "-v",
         action="count",
@@ -262,11 +270,19 @@ def main():
     arg_parser = get_args_parser()
     args = arg_parser.parse_args()
 
-    if args.reg_only:
+    for opt, enabled in (
+        ("--reg-only", args.reg_only),
+        ("--validation-only", args.validation_only),
+    ):
+        if not enabled:
+            continue
         if not args.reg_dir:
-            arg_parser.error("--reg-only requires --reg-dir")
+            arg_parser.error(f"{opt} requires --reg-dir")
         if not os.path.isfile(os.path.join(args.log_dir, "perf.json")):
-            arg_parser.error(f"--reg-only: no previous results in {args.log_dir}")
+            arg_parser.error(f"{opt}: no previous results in {args.log_dir}")
+
+    if args.reg_only and args.validation_only:
+        arg_parser.error("--validation-only also checks the regressions")
 
     if args.reg_reset:
         if not args.reg_dir:
@@ -297,6 +313,7 @@ def main():
         args.reg_exclude,
         args.reg_only,
         args.reg_reset,
+        args.validation_only,
     )
 
     if args.build or args.build_only:
@@ -339,7 +356,7 @@ def main():
         id += 1
 
     # keep the results of the suites that have not been checked again
-    if args.reg_only:
+    if args.reg_only or args.validation_only:
         results = ep.prev_results | results
 
     # always next to the logs, e.g. for 'analyze' in entrypoint.sh

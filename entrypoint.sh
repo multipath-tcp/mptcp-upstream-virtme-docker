@@ -2357,7 +2357,7 @@ go_perf() {
 	for arg in "${@}"; do
 		if [ "${arg}" = "--build-only" ] || [ "${arg}" = "-B" ]; then
 			build_only=1
-		elif [ "${arg}" = "--reg-only" ]; then
+		elif [ "${arg}" = "--reg-only" ] || [ "${arg}" = "--validation-only" ]; then
 			KEEP_RESULTS=1
 		fi
 	done

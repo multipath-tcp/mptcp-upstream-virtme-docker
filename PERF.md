@@ -184,6 +184,13 @@ the previous results are kept.
 perf_run -C /perf --reg-min-history 5 --reg-alpha 0.01 --reg-only
 ```
 
+Similarly, to also validate the results again, e.g. after modifying the
+validation checks or the dstat offsets, use `--validation-only` instead: the
+dstat files are parsed again, the validation scripts are executed on the
+previous results, then the regressions are checked. Note that the results from
+the history are not modified, e.g. with the new dstat offsets. This needs the
+dstat time window saved by recent runs: older ones need a full run.
+
 After an accepted change in behaviour, the new results would always be marked
 as regressions, and then excluded from the history. To restart the history from
 the latest results of each checked test, add `--reg-reset`, alone or with

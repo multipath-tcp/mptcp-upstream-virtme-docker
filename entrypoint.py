@@ -67,6 +67,7 @@ class Entrypoint:
         reg_exclude,
         reg_only,
         reg_reset,
+        validation_only,
     ):
         self.cmd = cmd
         self.mode = mode
@@ -78,10 +79,13 @@ class Entrypoint:
         self.reg_exclude = reg_exclude
         self.reg_only = reg_only
         self.reg_reset = reg_reset
+        self.validation_only = validation_only
+        # re-use the results from the previous run, without running the tests
+        self.reuse = reg_only or validation_only
 
-        # results from the previous run, to only check the regressions
+        # results from the previous run, e.g. to only check the regressions
         self.prev_results = {}
-        if reg_only:
+        if self.reuse:
             with open(os.path.join(self.log_dir_parent, "perf.json")) as f:
                 self.prev_results = json.load(f)
 
@@ -102,7 +106,7 @@ class Entrypoint:
     # one dir per suite
     def _set_dirs(self, name):
         self.suite_dir = os.path.join(self.log_dir_parent, name)
-        if not self.reg_only:
+        if not self.reuse:
             shutil.rmtree(self.suite_dir, ignore_errors=True)
         os.makedirs(self.suite_dir, exist_ok=True)
 
@@ -399,23 +403,66 @@ class Entrypoint:
             msgs.append(f"{latest}: not the results from the previous run")
             return True
 
-        for f in ("regs.txt", "improvement.txt"):
+        for f in ("regs.txt", "improvement.txt", "outliers.txt"):
             path = os.path.join(self.log_dir, f)
             if os.path.isfile(path):
                 os.remove(path)
 
-        skip = os.path.join(latest, "skip")
-        if os.path.isfile(skip):
-            # only keep the non-regression reasons
-            with open(skip) as f:
-                reasons = [r for r in f if not r.startswith("regression: ")]
-            if reasons:
-                with open(skip, "w") as f:
-                    f.writelines(reasons)
-            else:
-                os.remove(skip)
+        self._remove_skip_reasons(latest, "regression: ")
 
         return False
+
+    # e.g. to check again: the other reasons are kept
+    def _remove_skip_reasons(self, path, prefix):
+        skip = os.path.join(path, "skip")
+        if not os.path.isfile(skip):
+            return
+
+        with open(skip) as f:
+            reasons = [r for r in f if not r.startswith(prefix)]
+        if reasons:
+            with open(skip, "w") as f:
+                f.writelines(reasons)
+        else:
+            os.remove(skip)
+
+    def _dstat_window_file(self):
+        return os.path.join(self.log_dir, "stats", "dstat_window.json")
+
+    # the dstat window is set while running the steps: needed to re-validate
+    def _save_dstat_window(self, config):
+        dstat = config.get("dstat", {})
+        window = {k: time.mktime(dstat[k]) for k in ("start", "end") if k in dstat}
+        with open(self._dstat_window_file(), "w") as f:
+            json.dump(window, f)
+
+    def _load_dstat_window(self, config, msgs):
+        try:
+            with open(self._dstat_window_file()) as f:
+                window = json.load(f)
+        except FileNotFoundError:
+            msgs.append("no saved dstat window (older run?): a full run is needed")
+            return True
+        except (OSError, ValueError) as e:
+            msgs.append(f"cannot read the saved dstat window: {e!r}")
+            return True
+
+        dstat = config.setdefault("dstat", {})
+        for k, v in window.items():
+            dstat[k] = time.localtime(v)
+
+        return False
+
+    # with --validation-only: update the latest results, not adding new ones
+    def _update_results(self, name, err):
+        latest = os.path.join(self._get_reg_dir(name), "latest")
+        stats = os.path.join(latest, "stats")
+        shutil.rmtree(stats)
+        shutil.copytree(os.path.join(self.log_dir, "stats"), stats)
+
+        self._remove_skip_reasons(latest, "validation failed")
+        if err:
+            self._mark_skip(latest, "validation failed")
 
     def _save_results(self, name, err):
         if self.reg_dir is None or self.cmd.dry_run:
@@ -454,6 +501,13 @@ class Entrypoint:
         # optional: the results are still saved, e.g. for the regressions
         validation = config.get("validation", [])
 
+        if self.validation_only:
+            path = os.path.join(self.log_dir, "validations.txt")
+            if os.path.isfile(path):
+                os.remove(path)
+        else:
+            self._save_dstat_window(config)
+
         dstats = self._parse_dstats(config)
         with open(os.path.join(self.log_dir, "stats", "dstat.json"), "w") as f:
             print(json.dumps(dstats), file=f)
@@ -483,7 +537,10 @@ class Entrypoint:
             if cmd_file:
                 os.unlink(cmd_file)
 
-        self._save_results(name, err)
+        if self.validation_only:
+            self._update_results(name, err)
+        else:
+            self._save_results(name, err)
 
         return err
 
@@ -856,7 +913,7 @@ class Entrypoint:
 
     def run_tests(self, tests_id, config):
         global_name = config["name"]
-        if self.reg_only:
+        if self.reuse:
             global_name_n = self._prev_suite_id(global_name, tests_id)
         else:
             global_name_n = f"{tests_id:02d}-{global_name}"
@@ -889,10 +946,20 @@ class Entrypoint:
             err, val_err, reg = False, False, False
             # one bad test should not stop the others
             try:
-                if self.reg_only:
+                if self.reuse:
                     err, val_err = self._prev_result(global_name_n, name_n, msgs)
+                    # previous validation errors are checked again
+                    if self.validation_only and val_err:
+                        msgs.clear()
+                        val_err = False
                     if not err and not val_err:
                         err = self._reset_regression(name, msgs)
+                    if self.validation_only and not err:
+                        err = self._load_dstat_window(test_config, msgs)
+                    if self.validation_only and not err:
+                        val_err = self.validation(
+                            test_config, global_name, name, id, total, msgs
+                        )
                 else:
                     err = self.run_test(test_config, name, id, total, msgs)
                     val_err = not err and self.validation(
