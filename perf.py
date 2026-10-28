@@ -198,6 +198,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-only",
+        action="store_true",
+        help="Only check the regressions, re-using the results from the previous"
+        " run in the log directory, e.g. after modifying the regression checks",
+    )
+
+    parser.add_argument(
         "--reg-min-history",
         action="store",
         default=20,
@@ -248,6 +255,12 @@ def main():
     arg_parser = get_args_parser()
     args = arg_parser.parse_args()
 
+    if args.reg_only:
+        if not args.reg_dir:
+            arg_parser.error("--reg-only requires --reg-dir")
+        if not os.path.isfile(os.path.join(args.log_dir, "perf.json")):
+            arg_parser.error(f"--reg-only: no previous results in {args.log_dir}")
+
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=level,
@@ -269,6 +282,7 @@ def main():
         args.reg_min_history,
         args.reg_alpha,
         args.reg_exclude,
+        args.reg_only,
     )
 
     if args.build or args.build_only:
@@ -305,6 +319,10 @@ def main():
         result, exit = ep.run_tests(id, config)
         results.update(result)
         id += 1
+
+    # keep the results of the suites that have not been checked again
+    if args.reg_only:
+        results = ep.prev_results | results
 
     # always next to the logs, e.g. for 'analyze' in entrypoint.sh
     with open(os.path.join(args.log_dir, "perf.json"), "w") as f:

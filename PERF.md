@@ -163,3 +163,18 @@ comment of the JSON results.
 
 **Note**: more runs in the history -- e.g. 20 by default -- give more reliable
 comparisons, fewer false positives.
+
+## Adapting the regressions
+
+Changing the regression parameters can be needed, but can also have an impact on
+the results. When the behaviour has changed, it might be required to skip old
+ones.
+
+To only check the regressions again, re-using the results of the previous run,
+e.g. after modifying the regression checks or their parameters, add
+`--reg-only` with the same options as before: the tests are not executed, and
+the previous results are kept.
+
+```shell
+perf_run -C /perf --reg-min-history 5 --reg-alpha 0.01 --reg-only
+```

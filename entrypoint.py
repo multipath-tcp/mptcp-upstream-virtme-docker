@@ -4,6 +4,7 @@
 Class for the entrypoint.sh script
 """
 
+import filecmp
 import json
 import logging
 import math
@@ -51,6 +52,7 @@ class Entrypoint:
         reg_min_history,
         reg_alpha,
         reg_exclude,
+        reg_only,
     ):
         self.cmd = cmd
         self.mode = mode
@@ -60,6 +62,13 @@ class Entrypoint:
         self.reg_min_history = reg_min_history
         self.reg_alpha = reg_alpha
         self.reg_exclude = reg_exclude
+        self.reg_only = reg_only
+
+        # results from the previous run, to only check the regressions
+        self.prev_results = {}
+        if reg_only:
+            with open(os.path.join(self.log_dir_parent, "perf.json")) as f:
+                self.prev_results = json.load(f)
 
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
@@ -77,7 +86,8 @@ class Entrypoint:
     # one dir per suite
     def _set_dirs(self, name):
         self.suite_dir = os.path.join(self.log_dir_parent, name)
-        shutil.rmtree(self.suite_dir, ignore_errors=True)
+        if not self.reg_only:
+            shutil.rmtree(self.suite_dir, ignore_errors=True)
         os.makedirs(self.suite_dir, exist_ok=True)
 
         if self.reg_dir_parent is not None:
@@ -274,6 +284,69 @@ class Entrypoint:
             )
 
         return reg
+
+    # same ID as before, just in case it changes
+    def _prev_suite_id(self, global_name, tests_id):
+        for suite_id in self.prev_results:
+            # e.g. 01-name
+            if suite_id.split("-", 1)[-1] == global_name:
+                return suite_id
+
+        return f"{tests_id:02d}-{global_name}"
+
+    # detect previous errors: not to check something invalid
+    def _prev_result(self, global_name_n, name_n, msgs):
+        for result in self.prev_results.get(global_name_n, {}).values():
+            if result["name"] != name_n:
+                continue
+
+            comment = result.get("comment", "")
+            for prefix, status in (
+                ("error: ", (True, False)),
+                ("validation: ", (False, True)),
+            ):
+                if comment.startswith(prefix):
+                    msgs.append(comment.removeprefix(prefix))
+                    return status
+            return False, False
+
+        msgs.append("no previous results")
+        return True, False
+
+    # remove what was produced by the previous regression check
+    def _reset_regression(self, name, msgs):
+        latest = os.path.join(self._get_reg_dir(name), "latest")
+        dstat = os.path.join("stats", "dstat.json")
+        try:
+            same = filecmp.cmp(
+                os.path.join(latest, dstat),
+                os.path.join(self.log_dir, dstat),
+                shallow=False,
+            )
+        except OSError:
+            same = False
+        # safety check looking at dstat.json
+        if not same:
+            msgs.append(f"{latest}: not the results from the previous run")
+            return True
+
+        for f in ("regs.txt", "improvement.txt"):
+            path = os.path.join(self.log_dir, f)
+            if os.path.isfile(path):
+                os.remove(path)
+
+        skip = os.path.join(latest, "skip")
+        if os.path.isfile(skip):
+            # only keep the non-regression reasons
+            with open(skip) as f:
+                reasons = [r for r in f if not r.startswith("regression: ")]
+            if reasons:
+                with open(skip, "w") as f:
+                    f.writelines(reasons)
+            else:
+                os.remove(skip)
+
+        return False
 
     def _save_results(self, name, err):
         if self.reg_dir is None or self.cmd.dry_run:
@@ -695,7 +768,10 @@ class Entrypoint:
 
     def run_tests(self, tests_id, config):
         global_name = config["name"]
-        global_name_n = f"{tests_id:02d}-{global_name}"
+        if self.reg_only:
+            global_name_n = self._prev_suite_id(global_name, tests_id)
+        else:
+            global_name_n = f"{tests_id:02d}-{global_name}"
         global_config = config.get("global", {})
         tests = config["tests"]
         results = {}
@@ -717,11 +793,21 @@ class Entrypoint:
             msgs = []
             improvs = []
             self._set_test_dirs(id, name)
-            if self.run_test(test_config, name, id, total, msgs):
+            if self.reg_only:
+                err, val_err = self._prev_result(global_name_n, name_n, msgs)
+                if not err and not val_err:
+                    err = self._reset_regression(name, msgs)
+            else:
+                err = self.run_test(test_config, name, id, total, msgs)
+                val_err = not err and self.validation(
+                    test_config, global_name, name, id, total, msgs
+                )
+
+            if err:
                 logger.warning(f"{global_name}: {name}: error found, no validation")
                 results[global_name_n][id]["comment"] = f"error: {'\n'.join(msgs)}"
                 exit = 1
-            elif self.validation(test_config, global_name, name, id, total, msgs):
+            elif val_err:
                 logger.warning(
                     f"{global_name}: {name}: validation failed, no regression check"
                 )

@@ -175,6 +175,7 @@ CRITICAL_ERRORS=()
 OTHER_ERRORS=()
 EXIT_TITLE="KVM Validation"
 EXPECT=0
+KEEP_RESULTS=0 # e.g. to re-use the previous perf results
 VIRTME_EXEC_RUN="${INPUT_VIRTME_EXEC_RUN:-"${KERNEL_SRC}/.virtme-exec-run"}"
 VIRTME_EXEC_PRE="${KERNEL_SRC}/.virtme-exec-pre"
 VIRTME_EXEC_POST="${KERNEL_SRC}/.virtme-exec-post"
@@ -451,7 +452,7 @@ setup_env() {
 	else
 		# avoid override
 		RESULTS_DIR="$(_get_results_dir "${mode}")"
-		if [ "${EXPECT}" != 0 ]; then
+		if [ "${EXPECT}" != 0 ] && [ "${KEEP_RESULTS}" = 0 ]; then
 			rm -rf "${RESULTS_DIR}"
 		fi
 
@@ -2356,6 +2357,8 @@ go_perf() {
 	for arg in "${@}"; do
 		if [ "${arg}" = "--build-only" ] || [ "${arg}" = "-B" ]; then
 			build_only=1
+		elif [ "${arg}" = "--reg-only" ]; then
+			KEEP_RESULTS=1
 		fi
 	done
 
