@@ -144,18 +144,18 @@ class Entrypoint:
         with open(os.path.join(path, "skip"), "a") as f:
             print(reason, file=f)
 
-    def _mark_reg(self, latest, name, check_name, msg, msgs):
-        output = f"{name}: {check_name}: {msg}"
+    def _mark_reg(self, latest, global_name, name, check_name, msg, msgs):
+        output = f"{check_name}: {msg}"
         msgs.append(output)
         logger.warning(f"Regression: {output}")
 
         self._mark_skip(latest, f"regression: {check_name}")
         with open(os.path.join(self.log_dir, "regs.txt"), "a") as f:
-            print(output, file=f)
+            print(f"{global_name}: {name}: {output}", file=f)
 
         return True
 
-    def regression(self, config, name, id, total, msgs):
+    def regression(self, config, global_name, name, id, total, msgs):
         reg = False
         if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
             return reg
@@ -180,7 +180,7 @@ class Entrypoint:
             latest_file = os.path.join(latest, file)
             if not os.path.isfile(latest_file):
                 msg = f"{file}' is not available in latest"
-                reg = self._mark_reg(latest, name, check_name, msg, msgs)
+                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
                 continue
 
             json_field = check.get("json_field", None)
@@ -230,7 +230,7 @@ class Entrypoint:
                     f"got {last_res}, had {mean}; "
                     f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
                 )
-                reg = self._mark_reg(latest, name, check_name, msg, msgs)
+                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
                 continue
 
             logger.info(
@@ -271,7 +271,7 @@ class Entrypoint:
         if self.reg_exclude:
             self._mark_skip(new_path, "excluded")
 
-    def validation(self, config, name, id, total, msgs):
+    def validation(self, config, global_name, name, id, total, msgs):
         if "validation" not in config:
             return True
 
@@ -301,7 +301,7 @@ class Entrypoint:
                 output = f"{sname}: {cmd}: failed ({rc})"
                 msgs.append(output)
                 with open(os.path.join(self.log_dir, "validations.txt"), "a") as f:
-                    print(f"{name}: {output}", file=f)
+                    print(f"{global_name}: {name}: {output}", file=f)
                 err = True
 
             if cmd_file:
@@ -684,13 +684,13 @@ class Entrypoint:
                 logger.warning(f"{global_name}: {name}: error found, no validation")
                 results[global_name_n][id]["comment"] = f"error: {'\n'.join(msgs)}"
                 exit = 1
-            elif self.validation(test_config, name, id, total, msgs):
+            elif self.validation(test_config, global_name, name, id, total, msgs):
                 logger.warning(
                     f"{global_name}: {name}: validation failed, no regression check"
                 )
                 results[global_name_n][id]["comment"] = f"validation: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
-            elif self.regression(test_config, name, id, total, msgs):
+            elif self.regression(test_config, global_name, name, id, total, msgs):
                 logger.warning(f"{global_name}: {name}: regression found")
                 results[global_name_n][id]["comment"] = f"regres: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
