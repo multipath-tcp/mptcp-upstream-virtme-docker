@@ -2021,6 +2021,7 @@ _print_perf_tests() {
 		echo "not ok no results"
 	fi
 
+	echo
 	# tests stopped before the validation
 	errors="$(jq -r '.[][] | select(.result == "fail" and ((.comment // "") | startswith("error: "))) |
 		"not ok 1 test: error: \(.name): \(.comment | ltrimstr("error: ") | gsub("\n"; " / "))"' "${json}" 2>/dev/null || true)"
@@ -2031,6 +2032,7 @@ _print_perf_tests() {
 		echo "ok no major errors before the validation"
 	fi
 
+	echo
 	# one dir per suite and per test
 	if ls "${RESULTS_DIR}"/*/*/validations.txt &>/dev/null; then
 		echo "not ok has validations errors"
@@ -2039,6 +2041,7 @@ _print_perf_tests() {
 		echo "ok no validations errors"
 	fi
 
+	echo
 	if ls "${RESULTS_DIR}"/*/*/regs.txt &>/dev/null; then
 		echo "not ok has regressions"
 		cat "${RESULTS_DIR}"/*/*/regs.txt | sed 's/^/not ok 1 test: regression: /g'
@@ -2048,6 +2051,7 @@ _print_perf_tests() {
 
 	# not errors, but worth showing
 	if ls "${RESULTS_DIR}"/*/*/improvement.txt &>/dev/null; then
+		echo
 		echo "ok has improvements"
 		cat "${RESULTS_DIR}"/*/*/improvement.txt | sed 's/^/ok 1 test: improvement: /g'
 	fi
