@@ -460,6 +460,7 @@ class Entrypoint:
             for host in self.hosts:
                 self.hosts[host].cmd_send(f"## step: {time.asctime()}: {name}")
 
+            cmds = {}
             for who in (*self.hosts.keys(), "all"):
                 if who not in step:
                     continue
@@ -472,6 +473,7 @@ class Entrypoint:
                 # run commands of the same step in parallel
                 for host in hosts:
                     self.hosts[host].cmd_send(cmd)
+                    cmds.setdefault(host, []).append(cmd)
 
             if dstat_only == "step" or dstat_only == "start":
                 config.setdefault("dstat", {})["start"] = time.localtime(time.time())
@@ -482,6 +484,7 @@ class Entrypoint:
                 if "timeout_s" in step:
                     kwargs["timeout"] = int(step["timeout_s"])
                 ignore_err = step.get("ignore_err", False)
+                cmd = " ; ".join(cmds.get(host, [])) or f"step {name}"
                 try:
                     self.hosts[host].wait_for_prompt(**kwargs)
                 except TIMEOUT:
