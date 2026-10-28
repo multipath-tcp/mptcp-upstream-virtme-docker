@@ -151,6 +151,10 @@ kernel config, same tests).
            # or with -c /perf/<test>
   ```
 
+  **Note**: it might be interesting to launch the last command on the base
+  to find out which tests produce unstable results, especially when the sample
+  is small.
+
 Regressions are reported in the summary, and in the `regs.txt` file of each
 test.
 
