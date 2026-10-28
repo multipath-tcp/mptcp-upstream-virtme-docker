@@ -142,6 +142,12 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--json-only-fails",
+        action="store_true",
+        help="Only keep failed tests in the file from --json",
+    )
+
+    parser.add_argument(
         "--kernel-dir",
         "-k",
         action="store",
@@ -229,6 +235,15 @@ def add_infos(results, infos):
         results[info[0]] = info[1]
 
 
+def only_fails(results):
+    fails = {}
+    for group, tests in results.items():
+        tests = {id: t for id, t in tests.items() if t["result"] != "pass"}
+        if tests:
+            fails[group] = tests
+    return fails
+
+
 def main():
     arg_parser = get_args_parser()
     args = arg_parser.parse_args()
@@ -296,6 +311,9 @@ def main():
         json.dump(results, f)
 
     if args.json:
+        if args.json_only_fails:
+            results = only_fails(results)
+
         if args.info:
             results = {"results": results}
             add_infos(results, args.info)
