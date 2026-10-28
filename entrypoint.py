@@ -251,36 +251,46 @@ class Entrypoint:
 
             mean = statistics.mean(prev_results)
             stdev = statistics.stdev(prev_results, mean)
+            n = len(prev_results)
             if stdev == 0:
-                p_value = 1 if last_res == mean else 0
+                t = 0 if last_res == mean else math.copysign(math.inf, last_res - mean)
             else:
                 # prediction interval: does this new value belong to the
                 # history? Not ttest_1samp(): it checks the mean of the history
                 # instead, with a margin getting narrower with more history.
-                n = len(prev_results)
                 t = (last_res - mean) / (stdev * math.sqrt(1 + 1 / n))
-                p_value = 2 * stats.t.sf(abs(t), n - 1)
+            p_lower = stats.t.cdf(t, n - 1)
+            p_higher = stats.t.sf(t, n - 1)
+            p_value = 2 * min(p_lower, p_higher)
 
+            # one-sided test when only one way is a regression: more power
+            if direction == "lower":
+                p_reg = p_lower
+            elif direction == "higher":
+                p_reg = p_higher
+            else:
+                p_reg = p_value
+
+            if p_reg < alpha:
+                msg = (
+                    f"got {last_res}, had {mean}; "
+                    f"p-value {p_reg:.6g} is below alpha {alpha:.6g}"
+                )
+                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
+                continue
+
+            # the other way, with a two-sided test not to report small changes
             if p_value < alpha:
                 msg = (
                     f"got {last_res}, had {mean}; "
                     f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
                 )
-                if (
-                    direction == "different"
-                    or (direction == "lower" and last_res < mean)
-                    or (direction == "higher" and last_res > mean)
-                ):
-                    reg = self._mark_reg(
-                        latest, global_name, name, check_name, msg, msgs
-                    )
-                else:
-                    self._mark_improv(global_name, name, check_name, msg, improvs)
+                self._mark_improv(global_name, name, check_name, msg, improvs)
                 continue
 
             logger.info(
                 f"{name}: {check_name}: no regression "
-                f"({mean} vs {last_res}, p-value {p_value:.6g})"
+                f"({mean} vs {last_res}, p-value {p_reg:.6g})"
             )
 
         return reg
