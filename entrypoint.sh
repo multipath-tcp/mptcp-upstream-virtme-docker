@@ -2063,6 +2063,12 @@ _print_perf_tests() {
 		echo "Outliers have been found in the history: check them with this command:"
 		echo "    cat '${RESULTS_DIR}'/*/*/outliers.txt"
 		echo "If they are valid, add a skip file in <reg dir>/<suite>/<test>/<run>/skip"
+
+		if ls "${RESULTS_DIR}"/*/*/outliers_new.txt &>/dev/null; then
+			echo
+			echo "New outliers:"
+			cat "${RESULTS_DIR}"/*/*/outliers_new.txt | sed 's/^/# /g'
+		fi
 	fi
 }
 
@@ -2296,6 +2302,12 @@ analyze_perf() {
 	improvs="$(cat "${RESULTS_DIR}"/*/*/improvement.txt 2>/dev/null | wc -l)"
 	if [ "${improvs}" -gt 0 ]; then
 		EXIT_NOTES+=("${improvs} improvements")
+	fi
+
+	local outliers
+	outliers="$(cat "${RESULTS_DIR}"/*/*/outliers_new.txt 2>/dev/null | wc -l)"
+	if [ "${outliers}" -gt 0 ]; then
+		EXIT_NOTES+=("${outliers} new outliers to review")
 	fi
 
 	# the output of each VM is analysed separately, with ${OUTPUT_VIRTME}

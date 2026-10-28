@@ -233,6 +233,28 @@ class Entrypoint:
         with open(os.path.join(self.log_dir, "outliers.txt"), "a") as f:
             print(f"{global_name}: {name}: {output}", file=f)
 
+        return output
+
+    def _new_outliers(self, dir_path, last, global_name, name, odd):
+        prev_keys = None  # all new if never checked before
+        for prev in range(last - 1, -1, -1):
+            path = os.path.join(dir_path, str(prev), "outliers")
+            if os.path.isfile(path):
+                with open(path) as f:
+                    prev_keys = {line.rstrip("\n") for line in f}
+                break
+
+        # even if empty: for the next run
+        with open(os.path.join(dir_path, str(last), "outliers"), "w") as f:
+            for key in odd:
+                print(key, file=f)
+
+        new = [key for key in odd if prev_keys is None or key not in prev_keys]
+        if new:
+            with open(os.path.join(self.log_dir, "outliers_new.txt"), "w") as f:
+                for key in new:
+                    print(f"{global_name}: {name}: {odd[key]}", file=f)
+
     def regression(self, config, global_name, name, id, total, msgs, improvs, outs):
         reg = False
         if self.reg_dir is None or self.cmd.dry_run or "regression" not in config:
@@ -258,6 +280,7 @@ class Entrypoint:
                 reset_since = int(f.readline())
 
         tested = []
+        odd_outputs = {}  # '<check>: run <N>': the rest changes with the history
         for step in regression["steps"]:
             check = global_config | step
             check_name = check["name"]
@@ -344,7 +367,8 @@ class Entrypoint:
                     f"run {prev_runs[i]}: got {prev_results[i]}, median {median}; "
                     f"modified z-score {z:.3g}"
                 )
-                self._mark_outlier(global_name, name, check_name, msg, outs)
+                output = self._mark_outlier(global_name, name, check_name, msg, outs)
+                odd_outputs[f"{check_name}: run {prev_runs[i]}"] = output
 
             tested.append(
                 {
@@ -387,6 +411,8 @@ class Entrypoint:
                 f"{name}: {check_name}: no regression ({c['msg']}, "
                 f"p-value {c['p_reg']:.6g}, adjusted {c['p_reg_adj']:.6g})"
             )
+
+        self._new_outliers(dir_path, last, global_name, name, odd_outputs)
 
         return reg
 
@@ -435,7 +461,7 @@ class Entrypoint:
             msgs.append(f"{latest}: not the results from the previous run")
             return True
 
-        for f in ("regs.txt", "improvement.txt", "outliers.txt"):
+        for f in ("regs.txt", "improvement.txt", "outliers.txt", "outliers_new.txt"):
             path = os.path.join(self.log_dir, f)
             if os.path.isfile(path):
                 os.remove(path)
