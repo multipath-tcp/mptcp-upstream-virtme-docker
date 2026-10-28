@@ -74,6 +74,7 @@ class Entrypoint:
         self.hosts = {}
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
         self.stopped = False
+        self.interrupted = False
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
@@ -128,6 +129,10 @@ class Entrypoint:
         file = os.path.join(self.log_dir, f"{name}_kmemleak.txt")
         cmd = KMEMLEAK_SCAN.format(file=shlex.quote(file))
         host.cmd_wait(f"{{\n{cmd}\n}}", ignore_timeout=True, timeout=600)
+
+    def interrupt(self):
+        self.interrupted = True
+        self.stop(kmemleak=False)
 
     # kmemleak: not to wait for the scan, e.g. when interrupted
     def stop(self, kmemleak=True):
@@ -792,6 +797,10 @@ class Entrypoint:
         logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
+            if self.interrupted:
+                logger.warning("Interrupted: skipping the next tests")
+                break
+
             # deep copy: the config is modified during the test, e.g. 'dstat'
             test_config = copy.deepcopy(global_config | test)
             name = test_config["name"]

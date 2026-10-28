@@ -295,7 +295,7 @@ def main():
 
     def handler(signum, frame):
         logger.info(f"Signal handler called with signal: {signum}")
-        ep.stop(kmemleak=False)
+        ep.interrupt()
 
     signal.signal(signal.SIGINT, handler)
 
