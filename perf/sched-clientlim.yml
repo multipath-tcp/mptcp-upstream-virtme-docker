@@ -59,7 +59,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -121,7 +121,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -183,7 +183,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -245,7 +245,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -307,7 +307,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -370,7 +370,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -432,7 +432,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -495,7 +495,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -557,7 +557,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -620,7 +620,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -683,7 +683,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10
@@ -746,7 +746,7 @@ tests:
       - name: "nc server"
         server: |
           for i in $(seq 1 1); do
-            mptcpize run nc -l $((12345 + i)) </dev/zero >/dev/null & disown
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
           done
           port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
         timeout_s: 10

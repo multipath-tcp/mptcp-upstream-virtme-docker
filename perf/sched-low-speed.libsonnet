@@ -166,7 +166,7 @@ local serverStep(c) =
     server: lines([
       'for i in $(seq 1 ' + c.parallel + '); do',
       // all addresses: the secondary one is used by the additional subflow
-      '  mptcpize run nc -l $((' + nc_port + ' + i)) </dev/zero >/dev/null & disown',
+      '  mptcpize run nc -kl $((' + nc_port + ' + i)) </dev/zero >/dev/null & disown',
       'done',
       waitListen('$((' + nc_port + ' + ' + c.parallel + '))'),
     ]),
