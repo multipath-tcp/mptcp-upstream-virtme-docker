@@ -42,6 +42,18 @@ if [ -e "${{p}}" ]; then
 fi"""
 
 
+# Holm-Bonferroni: adjusted p-values, to compare with alpha when checking
+# multiple values at once, not to increase the risk of false positives
+def holm(p_values):
+    m = len(p_values)
+    adjusted = [0.0] * m
+    running = 0.0
+    for rank, i in enumerate(sorted(range(m), key=lambda i: p_values[i])):
+        running = max(running, min(1.0, (m - rank) * p_values[i]))
+        adjusted[i] = running
+    return adjusted
+
+
 class Entrypoint:
     def __init__(
         self,
@@ -210,6 +222,7 @@ class Entrypoint:
         if last == 0:
             logger.info("Nothing to compare: first time")
 
+        tested = []
         for step in regression["steps"]:
             check = global_config | step
             check_name = check["name"]
@@ -288,26 +301,43 @@ class Entrypoint:
             else:
                 p_reg = p_value
 
-            if p_reg < alpha:
+            tested.append(
+                {
+                    "name": check_name,
+                    "alpha": alpha,
+                    "msg": f"got {last_res}, had {mean}",
+                    "p_reg": p_reg,
+                    "p_value": p_value,
+                }
+            )
+
+        # multiple checks per test: the more checks, the more false positives
+        for key in ("p_reg", "p_value"):
+            for c, adj in zip(tested, holm([c[key] for c in tested]), strict=True):
+                c[f"{key}_adj"] = adj
+
+        for c in tested:
+            check_name, alpha = c["name"], c["alpha"]
+            if c["p_reg_adj"] < alpha:
                 msg = (
-                    f"got {last_res}, had {mean}; "
-                    f"p-value {p_reg:.6g} is below alpha {alpha:.6g}"
+                    f"{c['msg']}; p-value {c['p_reg']:.6g}, "
+                    f"adjusted {c['p_reg_adj']:.6g} is below alpha {alpha:.6g}"
                 )
                 reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
                 continue
 
             # the other way, with a two-sided test not to report small changes
-            if p_value < alpha:
+            if c["p_value_adj"] < alpha:
                 msg = (
-                    f"got {last_res}, had {mean}; "
-                    f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
+                    f"{c['msg']}; p-value {c['p_value']:.6g}, "
+                    f"adjusted {c['p_value_adj']:.6g} is below alpha {alpha:.6g}"
                 )
                 self._mark_improv(global_name, name, check_name, msg, improvs)
                 continue
 
             logger.info(
-                f"{name}: {check_name}: no regression "
-                f"({mean} vs {last_res}, p-value {p_reg:.6g})"
+                f"{name}: {check_name}: no regression ({c['msg']}, "
+                f"p-value {c['p_reg']:.6g}, adjusted {c['p_reg_adj']:.6g})"
             )
 
         return reg

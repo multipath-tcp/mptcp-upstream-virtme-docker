@@ -10,6 +10,10 @@ when the p-value is below `alpha` (0.05 by default, see the `--reg-alpha` option
 to override it). At least 20 prior measurements are required by default, see the
 `--reg-min-history` option.
 
+When a test has multiple checks, their p-values are adjusted with the
+Holm-Bonferroni method before being compared with `alpha`: without that, the more
+checks, the more false positives.
+
 Results of each run are kept. The ones with a `skip` file are ignored by the
 next regression checks: the file contains the reason.
 
