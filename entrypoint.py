@@ -775,19 +775,25 @@ class Entrypoint:
 
         self._start_dstat_host()
 
-        self._start_vms(config)
+        try:
+            self._start_vms(config)
 
-        self._setup_hosts()
+            self._setup_hosts()
 
-        self._setup_net(config)
+            self._setup_net(config)
 
-        self._get_stats(config, "pre")
+            self._get_stats(config, "pre")
 
-        err = self._run_steps(config, msgs)
+            err = self._run_steps(config, msgs)
 
-        self._get_stats(config, "post")
-        self.stop()
-        self._stop_dstat_host()
+            self._get_stats(config, "post")
+        except Exception:
+            # e.g. VM not booting: no need to wait for the kmemleak scan
+            self.stop(kmemleak=False)
+            raise
+        finally:
+            self.stop()
+            self._stop_dstat_host()
 
         return err
 
@@ -823,15 +829,29 @@ class Entrypoint:
             msgs = []
             improvs = []
             self._set_test_dirs(id, name)
-            if self.reg_only:
-                err, val_err = self._prev_result(global_name_n, name_n, msgs)
+            err, val_err, reg = False, False, False
+            # one bad test should not stop the others
+            try:
+                if self.reg_only:
+                    err, val_err = self._prev_result(global_name_n, name_n, msgs)
+                    if not err and not val_err:
+                        err = self._reset_regression(name, msgs)
+                else:
+                    err = self.run_test(test_config, name, id, total, msgs)
+                    val_err = not err and self.validation(
+                        test_config, global_name, name, id, total, msgs
+                    )
+
                 if not err and not val_err:
-                    err = self._reset_regression(name, msgs)
-            else:
-                err = self.run_test(test_config, name, id, total, msgs)
-                val_err = not err and self.validation(
-                    test_config, global_name, name, id, total, msgs
-                )
+                    reg = self.regression(
+                        test_config, global_name, name, id, total, msgs, improvs
+                    )
+            except Exception as e:
+                if self.interrupted:
+                    raise
+                logger.exception(f"{global_name}: {name}: unexpected error")
+                msgs.append(f"unexpected error: {e!r}")
+                err = True
 
             if err:
                 logger.warning(f"{global_name}: {name}: error found, no validation")
@@ -843,9 +863,7 @@ class Entrypoint:
                 )
                 results[global_name_n][id]["comment"] = f"validation: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
-            elif self.regression(
-                test_config, global_name, name, id, total, msgs, improvs
-            ):
+            elif reg:
                 logger.warning(f"{global_name}: {name}: regression found")
                 results[global_name_n][id]["comment"] = f"regres: {'\n'.join(msgs)}"
                 exit = 42 if exit == 0 else exit
