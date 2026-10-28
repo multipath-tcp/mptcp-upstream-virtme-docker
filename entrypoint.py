@@ -244,7 +244,12 @@ class Entrypoint:
             if stdev == 0:
                 p_value = 1 if last_res == mean else 0
             else:
-                p_value = stats.ttest_1samp(prev_results, last_res).pvalue
+                # prediction interval: does this new value belong to the
+                # history? Not ttest_1samp(): it checks the mean of the history
+                # instead, with a margin getting narrower with more history.
+                n = len(prev_results)
+                t = (last_res - mean) / (stdev * math.sqrt(1 + 1 / n))
+                p_value = 2 * stats.t.sf(abs(t), n - 1)
 
             if p_value < alpha:
                 msg = (

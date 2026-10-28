@@ -283,7 +283,7 @@
           "type": "number",
           "exclusiveMinimum": 0,
           "exclusiveMaximum": 1,
-          "description": "Significance level: a regression is reported when the p-value of the Student's t-test is below it. Default: 0.05."
+          "description": "Significance level: a regression is reported when the p-value of the Student's t prediction interval is below it. Default: 0.05."
         },
         "direction": {
           "type": "string",

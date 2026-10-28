@@ -3,8 +3,9 @@
 Performance regressions is a tricky topic: the idea is to control most
 parameters, and compare some specific aspects with a tolerance.
 
-Each regression check uses Student's t-test to compare the mean of prior
-successful measurements against the latest measurement. A regression is reported
+Each regression check uses a Student's t prediction interval, to check if the
+latest measurement belongs to the distribution of the prior successful ones,
+taking into account the uncertainty on their mean. A regression is reported
 when the p-value is below `alpha` (0.05 by default, see the `--reg-alpha` option
 to override it). At least 20 prior measurements are required by default, see the
 `--reg-min-history` option.
