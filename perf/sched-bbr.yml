@@ -32,6 +32,7 @@ tests:
     name: "slow_primary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -100,6 +101,7 @@ tests:
     name: "balanced bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -168,6 +170,7 @@ tests:
     name: "slow_near_primary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -236,6 +239,7 @@ tests:
     name: "high_lat_primary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -304,6 +308,7 @@ tests:
     name: "huge_lat_primary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -372,6 +377,7 @@ tests:
     name: "high_lat_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -440,6 +446,7 @@ tests:
     name: "huge_lat_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -508,6 +515,7 @@ tests:
     name: "slow_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -576,6 +584,7 @@ tests:
     name: "very_fast bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -644,6 +653,7 @@ tests:
     name: "bloated_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -712,6 +722,7 @@ tests:
     name: "bloated_slow_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -780,6 +791,7 @@ tests:
     name: "very_bloated_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -848,6 +860,7 @@ tests:
     name: "bad_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -915,6 +928,7 @@ tests:
     name: "far_secondary bbr"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"

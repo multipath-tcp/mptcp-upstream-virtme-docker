@@ -33,6 +33,7 @@ tests:
     name: "shallow_primary"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -97,6 +98,7 @@ tests:
     name: "shallow_primary cpu_hog"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"

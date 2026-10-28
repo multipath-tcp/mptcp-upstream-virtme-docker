@@ -32,6 +32,7 @@ tests:
     name: "bloated_slow_secondary receiver_tcp_mem parallel=1"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -98,6 +99,7 @@ tests:
     name: "bloated_slow_secondary receiver_tcp_mem parallel=16"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -164,6 +166,7 @@ tests:
     name: "bloated_slow_secondary receiver_tcp_mem parallel=99"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -230,6 +233,7 @@ tests:
     name: "very_bloated_primary both_tcp_mem parallel=1"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -299,6 +303,7 @@ tests:
     name: "slow_primary both_tcp_mem parallel=1"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -369,6 +374,7 @@ tests:
     name: "balanced both_tcp_mem parallel=1"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -439,6 +445,7 @@ tests:
     name: "very_bloated_primary both_tcp_mem parallel=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -508,6 +515,7 @@ tests:
     name: "slow_primary both_tcp_mem parallel=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -578,6 +586,7 @@ tests:
     name: "balanced both_tcp_mem parallel=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"

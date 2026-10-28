@@ -70,6 +70,7 @@ tests:
         alpha: 0.05
         history_max_n: 10
         history_since: 0
+        direction: "lower"
       steps:
         - name: "Client recv primary link"
           file: "stats/dstat.json"

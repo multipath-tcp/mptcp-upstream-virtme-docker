@@ -203,6 +203,7 @@ class Entrypoint:
                 raise ValueError(f"{name}: {check_name}: alpha must be between 0 and 1")
             history_max_n = int(check.get("history_max_n", 0))
             history_since = int(check.get("history_since", 0))
+            direction = check.get("direction", "different")
 
             prev = last
             prev_results = []
@@ -242,7 +243,14 @@ class Entrypoint:
                     f"got {last_res}, had {mean}; "
                     f"p-value {p_value:.6g} is below alpha {alpha:.6g}"
                 )
-                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
+                if (
+                    direction == "different"
+                    or (direction == "lower" and last_res < mean)
+                    or (direction == "higher" and last_res > mean)
+                ):
+                    reg = self._mark_reg(
+                        latest, global_name, name, check_name, msg, msgs
+                    )
                 continue
 
             logger.info(

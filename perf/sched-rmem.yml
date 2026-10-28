@@ -32,6 +32,7 @@ tests:
     name: "slow_primary rmem=200"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -98,6 +99,7 @@ tests:
     name: "balanced rmem=200"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -163,6 +165,7 @@ tests:
     name: "huge_lat_primary rmem=200"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -228,6 +231,7 @@ tests:
     name: "bloated_primary rmem=200"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -293,6 +297,7 @@ tests:
     name: "slow_primary rmem=800"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -359,6 +364,7 @@ tests:
     name: "balanced rmem=800"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -425,6 +431,7 @@ tests:
     name: "huge_lat_primary rmem=800"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -490,6 +497,7 @@ tests:
     name: "bloated_primary rmem=800"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -555,6 +563,7 @@ tests:
     name: "slow_primary rmem=2000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -621,6 +630,7 @@ tests:
     name: "balanced rmem=2000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -687,6 +697,7 @@ tests:
     name: "huge_lat_primary rmem=2000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -752,6 +763,7 @@ tests:
     name: "bloated_primary rmem=2000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -817,6 +829,7 @@ tests:
     name: "slow_primary rmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -883,6 +896,7 @@ tests:
     name: "balanced rmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -949,6 +963,7 @@ tests:
     name: "huge_lat_primary rmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1015,6 +1030,7 @@ tests:
     name: "bloated_primary rmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"

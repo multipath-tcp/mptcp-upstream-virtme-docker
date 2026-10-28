@@ -32,6 +32,7 @@ tests:
     name: "slow_primary bw=5 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -94,6 +95,7 @@ tests:
     name: "balanced bw=5 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -156,6 +158,7 @@ tests:
     name: "huge_lat_primary bw=5 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -218,6 +221,7 @@ tests:
     name: "slow_secondary bw=5 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -280,6 +284,7 @@ tests:
     name: "slow_primary bw=5 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -342,6 +347,7 @@ tests:
     name: "balanced bw=5 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -404,6 +410,7 @@ tests:
     name: "huge_lat_primary bw=5 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -466,6 +473,7 @@ tests:
     name: "slow_secondary bw=5 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -528,6 +536,7 @@ tests:
     name: "slow_primary bw=10 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -591,6 +600,7 @@ tests:
     name: "balanced bw=10 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -653,6 +663,7 @@ tests:
     name: "huge_lat_primary bw=10 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -716,6 +727,7 @@ tests:
     name: "slow_secondary bw=10 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -778,6 +790,7 @@ tests:
     name: "slow_primary bw=10 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -841,6 +854,7 @@ tests:
     name: "balanced bw=10 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -903,6 +917,7 @@ tests:
     name: "huge_lat_primary bw=10 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -966,6 +981,7 @@ tests:
     name: "slow_secondary bw=10 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1028,6 +1044,7 @@ tests:
     name: "slow_primary bw=50 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1091,6 +1108,7 @@ tests:
     name: "balanced bw=50 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1154,6 +1172,7 @@ tests:
     name: "huge_lat_primary bw=50 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1217,6 +1236,7 @@ tests:
     name: "slow_secondary bw=50 burst=10"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1279,6 +1299,7 @@ tests:
     name: "slow_primary bw=50 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1342,6 +1363,7 @@ tests:
     name: "balanced bw=50 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1405,6 +1427,7 @@ tests:
     name: "huge_lat_primary bw=50 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1468,6 +1491,7 @@ tests:
     name: "slow_secondary bw=50 burst=250"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1530,6 +1554,7 @@ tests:
     name: "slow_primary bw=10 burst=10 wmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1596,6 +1621,7 @@ tests:
     name: "balanced bw=10 burst=10 wmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1661,6 +1687,7 @@ tests:
     name: "slow_primary bw=50 burst=10 wmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"
@@ -1727,6 +1754,7 @@ tests:
     name: "balanced bw=50 burst=10 wmem=6000"
     regression:
       global:
+        direction: "lower"
         history_max_n: 50
       steps:
         - file: "stats/dstat.json"

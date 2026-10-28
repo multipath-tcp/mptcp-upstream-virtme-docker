@@ -261,10 +261,14 @@ local regression(c) =
     // default alpha: 0.05
     global: {
       history_max_n: 50,
+      // throughputs: lower values are marked as regressions
+      direction: 'lower',
     },
     steps: [
       reg('Receiver primary path', 'eth0'),
-      reg('Receiver secondary path', 'eth1'),
+      // a backup path should stay idle
+      reg('Receiver secondary path', 'eth1') +
+      (if c.backup then { direction: 'higher' } else {}),
       reg('Receiver total', 'total'),
     ] + (if c.limit_mode != 'client' then [{
            name: 'iperf3 received',
