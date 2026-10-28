@@ -566,6 +566,11 @@ class Entrypoint:
 
             s["filtered"] = filtered = s["raw"][start:end]
 
+            # not enough samples, e.g. short test: no stats, the validation fails
+            if len(filtered) < 2:
+                logger.warning(f"{fpath}: {key}: only {len(filtered)} sample(s)")
+                continue
+
             if key == "time":
                 s["raw_str"] = [time.asctime(x) for x in s["raw"]]
                 s["str"] = [time.asctime(x) for x in filtered]
