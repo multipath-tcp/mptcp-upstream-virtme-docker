@@ -151,18 +151,23 @@ class Entrypoint:
     def _get_reg_dir(self, name):
         return os.path.join(self.reg_dir, re.sub(r"\W", "_", name))
 
+    # None if the value cannot be read, e.g. missing JSON field after an error
     def _get_info(self, file_path, json_field):
-        with open(file_path) as f:
-            if json_field:
-                info = json.load(f)
-                for field in json_field:
-                    if field.isdigit():
-                        field = int(field)
-                    info = info[field]
-            else:
-                info = f.readline().strip("\n")
+        try:
+            with open(file_path) as f:
+                if json_field:
+                    info = json.load(f)
+                    for field in json_field:
+                        if field.isdigit():
+                            field = int(field)
+                        info = info[field]
+                else:
+                    info = f.readline().strip("\n")
 
-        return float(info)
+            return float(info)
+        except (OSError, ValueError, LookupError, TypeError) as e:
+            logger.warning(f"{file_path}: {json_field}: cannot get the value: {e!r}")
+            return None
 
     # results kept, but not used as reference for the next regression checks
     def _mark_skip(self, path, reason):
@@ -218,6 +223,10 @@ class Entrypoint:
 
             json_field = check.get("json_field", None)
             last_res = self._get_info(latest_file, json_field)
+            if last_res is None:
+                msg = f"{file}: cannot get the value from latest"
+                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
+                continue
 
             if self.reg_alpha is not None:
                 alpha = self.reg_alpha
@@ -246,7 +255,9 @@ class Entrypoint:
                     logger.debug(f"skip: {prev_dir}")
                     continue
 
-                prev_results.append(self._get_info(file_path, json_field))
+                prev_res = self._get_info(file_path, json_field)
+                if prev_res is not None:
+                    prev_results.append(prev_res)
 
             if len(prev_results) < self.reg_min_history:
                 logger.info(
