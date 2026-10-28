@@ -205,6 +205,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-reset",
+        action="store_true",
+        help="Restart the regression history from the latest results, e.g. after"
+        " an accepted change in behaviour",
+    )
+
+    parser.add_argument(
         "--reg-min-history",
         action="store",
         default=20,
@@ -261,6 +268,12 @@ def main():
         if not os.path.isfile(os.path.join(args.log_dir, "perf.json")):
             arg_parser.error(f"--reg-only: no previous results in {args.log_dir}")
 
+    if args.reg_reset:
+        if not args.reg_dir:
+            arg_parser.error("--reg-reset requires --reg-dir")
+        if args.reg_exclude:
+            arg_parser.error("--reg-reset cannot be used with --reg-exclude")
+
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=level,
@@ -283,6 +296,7 @@ def main():
         args.reg_alpha,
         args.reg_exclude,
         args.reg_only,
+        args.reg_reset,
     )
 
     if args.build or args.build_only:

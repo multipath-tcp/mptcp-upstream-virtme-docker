@@ -66,6 +66,7 @@ class Entrypoint:
         reg_alpha,
         reg_exclude,
         reg_only,
+        reg_reset,
     ):
         self.cmd = cmd
         self.mode = mode
@@ -76,6 +77,7 @@ class Entrypoint:
         self.reg_alpha = reg_alpha
         self.reg_exclude = reg_exclude
         self.reg_only = reg_only
+        self.reg_reset = reg_reset
 
         # results from the previous run, to only check the regressions
         self.prev_results = {}
@@ -222,6 +224,13 @@ class Entrypoint:
         if last == 0:
             logger.info("Nothing to compare: first time")
 
+        # set by --reg-reset, e.g. after an accepted change in behaviour
+        reset_since = 0
+        reset_file = os.path.join(dir_path, "history_since")
+        if os.path.isfile(reset_file):
+            with open(reset_file) as f:
+                reset_since = int(f.readline())
+
         tested = []
         for step in regression["steps"]:
             check = global_config | step
@@ -248,7 +257,7 @@ class Entrypoint:
             if not 0 < alpha < 1:
                 raise ValueError(f"{name}: {check_name}: alpha must be between 0 and 1")
             history_max_n = int(check.get("history_max_n", 0))
-            history_since = int(check.get("history_since", 0))
+            history_since = max(int(check.get("history_since", 0)), reset_since)
             direction = check.get("direction", "different")
 
             prev = last
@@ -838,6 +847,14 @@ class Entrypoint:
 
         return err
 
+    # the latest results are the first ones of the new history
+    def _reset_history(self, name):
+        dir_path = self._get_reg_dir(name)
+        last = os.path.basename(os.path.realpath(os.path.join(dir_path, "latest")))
+        with open(os.path.join(dir_path, "history_since"), "w") as f:
+            print(last, file=f)
+        logger.info(f"{name}: regression history reset, starting from {last}")
+
     def run_tests(self, tests_id, config):
         global_name = config["name"]
         if self.reg_only:
@@ -884,6 +901,8 @@ class Entrypoint:
                     )
 
                 if not err and not val_err:
+                    if self.reg_reset:
+                        self._reset_history(name)
                     reg = self.regression(
                         test_config, global_name, name, id, total, msgs, improvs
                     )

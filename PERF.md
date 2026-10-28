@@ -183,3 +183,10 @@ the previous results are kept.
 ```shell
 perf_run -C /perf --reg-min-history 5 --reg-alpha 0.01 --reg-only
 ```
+
+After an accepted change in behaviour, the new results would always be marked
+as regressions, and then excluded from the history. To restart the history from
+the latest results of each checked test, add `--reg-reset`, alone or with
+`--reg-only` to use the results from the previous run. The regression checks
+will then be done again once enough new measurements are available, see
+`--reg-min-history`.
