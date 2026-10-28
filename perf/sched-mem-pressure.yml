@@ -80,6 +80,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 36 ]
@@ -145,6 +146,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 36 ]
@@ -210,6 +212,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 36 ]
@@ -278,6 +281,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
@@ -346,6 +350,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
@@ -415,6 +420,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
@@ -484,6 +490,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
@@ -552,6 +559,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
@@ -621,6 +629,7 @@ tests:
     validation:
       - name: "transfer"
         run: |
+          set -x
           [ -s artifacts/iperf_cli.json ]
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]

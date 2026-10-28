@@ -229,6 +229,7 @@ local validation(c) =
   [{
     name: 'transfer',
     run: lines(std.prune([
+      'set -x',
       if iperf then '[ -s artifacts/iperf_cli.json ]',
       'cd stats',
       '[ "$(jq -r \'.host.time.diff\' dstat.json || echo 0)" -ge ' + fmtInt(c.duration_s * 0.6) + ' ]',
