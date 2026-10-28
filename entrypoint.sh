@@ -171,6 +171,7 @@ LCOV_HTML=
 
 EXIT_STATUS=0
 EXIT_REASONS=()
+EXIT_NOTES=() # not issues, but worth mentioning in the conclusion
 CRITICAL_ERRORS=()
 OTHER_ERRORS=()
 EXIT_TITLE="KVM Validation"
@@ -1866,9 +1867,9 @@ _register_issue() {
 _print_issues() {
 	echo -n "${EXIT_REASONS[*]} "
 	if _had_critical_issues; then
-		echo "${1}"
+		echo -n "${1}"
 	else
-		echo "${2}"
+		echo -n "${2}"
 	fi
 }
 
@@ -2454,16 +2455,22 @@ _lcov2html() {
 }
 
 print_conclusion() {
-	local rc=${1}
+	local rc=${1} notes=""
+	if [ "${#EXIT_NOTES[@]}" -gt 0 ]; then
+		notes=" ($(printf '%s, ' "${EXIT_NOTES[@]}" | sed 's/, $//'))"
+	fi
+
 	echo -n "${EXIT_TITLE}: "
 
 	if _had_issues; then
 		_print_issues "❌" "⚠️ "
 	elif [ "${rc}" != "0" ]; then
-		echo "Script error! ❓"
+		echo -n "Script error! ❓"
 	else
-		echo "Success! ✅"
+		echo -n "Success! ✅"
 	fi
+
+	echo "${notes}"
 }
 
 # $@: result paths
