@@ -2292,6 +2292,12 @@ analyze_perf() {
 	_print_perf_tests | tee -a "${TESTS_SUMMARY}"
 	_analyze_failed_tests
 
+	local improvs
+	improvs="$(cat "${RESULTS_DIR}"/*/*/improvement.txt 2>/dev/null | wc -l)"
+	if [ "${improvs}" -gt 0 ]; then
+		EXIT_NOTES+=("${improvs} improvements")
+	fi
+
 	# the output of each VM is analysed separately, with ${OUTPUT_VIRTME}
 	# being re-used, then removed.
 	for log in "${RESULTS_DIR}"/*/*/*.log; do
