@@ -225,7 +225,7 @@ class Host:
             return 0
 
         try:
-            return int(self.cmd_output("echo $?", timeout=1))
+            return int(self.cmd_output("echo $?", timeout=10))
         except pexpect.TIMEOUT:
             return 128
 
