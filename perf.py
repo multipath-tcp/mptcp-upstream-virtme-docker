@@ -312,12 +312,16 @@ def main():
         validate_config(conf_file)
 
     results = {}
+    exit = 0
     id = 1
     for conf_file in args.config:
         with open(conf_file) as c:
             config = yaml.safe_load(c)
-        result, exit = ep.run_tests(id, config)
+        result, rc = ep.run_tests(id, config)
         results.update(result)
+        # keep the lowest error code, e.g. errors (1) before fails (42)
+        if rc > 0 and (exit == 0 or rc < exit):
+            exit = rc
         id += 1
 
     # keep the results of the suites that have not been checked again
