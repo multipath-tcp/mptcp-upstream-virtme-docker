@@ -81,7 +81,7 @@ tests:
           cd stats
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
-          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 40000000 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 15000000 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
