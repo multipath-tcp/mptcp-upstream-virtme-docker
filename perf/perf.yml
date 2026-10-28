@@ -33,7 +33,7 @@ tests:
     steps:
       - name: "tcpdump"
         all: |-
-          tcpdump -i any -s 150 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
+          tcpdump -i any -s 100 -w "${RESULTS_DIR}/${HOSTNAME}.pcap" 2>/dev/null &
       - name: "mptcp endpoints"
         server: |-
           ip mptcp endpoint add 10.0.1.3 dev eth1 signal
@@ -48,6 +48,12 @@ tests:
         client: |-
           iperf3 -c 10.0.0.3 --mptcp --json -R -Z -t 10 -P 1 --get-server-output > "${RESULTS_DIR}/artifacts/iperf_cli.json"
         dstat_only: "step"
+      - name: "tcpdump stop"
+        all: |-
+          pid=$(pgrep tcpdump)
+          kill $pid
+          while kill -0 $pid 2>/dev/null; do sleep 0.1; done
+          gzip -9 -f "${RESULTS_DIR}/${HOSTNAME}.pcap"
     validation:
       - name: "iperf"
         run: |-
