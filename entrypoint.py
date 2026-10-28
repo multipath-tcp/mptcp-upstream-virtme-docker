@@ -465,8 +465,8 @@ class Entrypoint:
             cmd_file = None
             if "\n" in cmd:
                 # in one block to allow more advanced bash
-                _, cmd_file = tempfile.mkstemp()
-                with open(cmd_file, "w") as f:
+                fd, cmd_file = tempfile.mkstemp()
+                with os.fdopen(fd, "w") as f:
                     print(cmd, file=f)
 
                 cmd = f"bash -e{'x' if self.cmd.verbosity() else ''} '{cmd_file}'"
