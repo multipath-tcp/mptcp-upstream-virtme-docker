@@ -449,12 +449,10 @@ class Entrypoint:
             self._mark_skip(new_path, "excluded")
 
     def validation(self, config, global_name, name, id, total, msgs):
-        if "validation" not in config:
-            return True
-
         logger.info(f"Starting validation {id}/{total}: {name}")
 
-        validation = config["validation"]
+        # optional: the results are still saved, e.g. for the regressions
+        validation = config.get("validation", [])
 
         dstats = self._parse_dstats(config)
         with open(os.path.join(self.log_dir, "stats", "dstat.json"), "w") as f:
@@ -491,6 +489,7 @@ class Entrypoint:
 
     def _run_steps(self, config, msgs):
         if "steps" not in config:
+            msgs.append("no steps to run")
             return True
         steps = config["steps"]
         err = False
