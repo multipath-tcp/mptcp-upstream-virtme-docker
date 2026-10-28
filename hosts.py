@@ -251,8 +251,8 @@ class Host:
 
 
 class VM(Host):
-    def __init__(self, mode, script, log, user, lvl, dry_run, hostname, env, timeout):
-        super().__init__(mode, script, log, user, lvl, dry_run, hostname, env, timeout)
+    def __init__(self, mode, script, log, lvl, dry_run, user, hostname, env, timeout):
+        super().__init__(mode, script, log, lvl, dry_run, user, hostname, env, timeout)
         global CID
 
         self.cid = CID
