@@ -254,6 +254,10 @@
           "type": "array",
           "items": { "$ref": "#/$defs/regressionStep" },
           "description": "Values to compare with the previous results."
+        },
+        "holm_bonferroni": {
+          "type": "boolean",
+          "description": "Adjust the p-values of the different steps with the Holm-Bonferroni method, not to increase the risk of false positives with the number of steps. Can be disabled, e.g. when the steps are independent, and each one needs to be as sensitive as possible. Default: true."
         }
       }
     },

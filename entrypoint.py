@@ -312,8 +312,11 @@ class Entrypoint:
             )
 
         # multiple checks per test: the more checks, the more false positives
+        use_holm = regression.get("holm_bonferroni", True)
         for key in ("p_reg", "p_value"):
-            for c, adj in zip(tested, holm([c[key] for c in tested]), strict=True):
+            p_values = [c[key] for c in tested]
+            adjusted = holm(p_values) if use_holm else p_values
+            for c, adj in zip(tested, adjusted, strict=True):
                 c[f"{key}_adj"] = adj
 
         for c in tested:
