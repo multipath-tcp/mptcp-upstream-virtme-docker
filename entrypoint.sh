@@ -2133,8 +2133,10 @@ _get_failed_tests() {
 	# we just want the main results, not the detailed ones for the moment
 	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" |
 		awk '{ print $5 }' |
-		sort -u |
-		sed "s/\.tap$//g; s/:$//g"
+		sed "s/\.tap$//g; s/:$//g" |
+		sort |
+		uniq -c |
+		awk '{ print $2 ($1 > 1 ? "(" $1 ")" : "") }'
 }
 
 _get_failed_tests_status() {
