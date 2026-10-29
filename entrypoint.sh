@@ -2315,7 +2315,8 @@ analyze_perf() {
 	for log in "${RESULTS_DIR}"/*/*/*.log; do
 		[ ! -f "${log}" ] && continue
 
-		# skip the setup done on the host
+		# remove ^M and skip the setup done on the host
+		sed -i 's/\r$//' "${log}"
 		_cat_after "^+ ${VIRTME_RUN} " "${log}" >"${OUTPUT_VIRTME}"
 		KMEMLEAK="${log%.log}_kmemleak.txt" \
 			_analyze_serial "${log#"${RESULTS_DIR}/"}"
