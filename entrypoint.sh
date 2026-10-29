@@ -1942,11 +1942,11 @@ decode_stacktrace() {
 _print_call_trace_info() {
 	echo
 	_print_line
-	echo "Call Trace:"
+	echo "${1}Call Trace:"
 	_print_line
 	grep -aC 80 "Call Trace:" "${OUTPUT_VIRTME}" | decode_stacktrace
 	_print_line
-	echo "Call Trace found"
+	echo "${1}Call Trace found"
 }
 
 _get_call_trace_status() {
@@ -1960,7 +1960,7 @@ _has_unexpected_stop() {
 _print_unexpected_stop() {
 	echo
 	_print_line
-	echo "${VIRTME_SCRIPT_UNEXPECTED_STOP}: see above"
+	echo "${1}${VIRTME_SCRIPT_UNEXPECTED_STOP}: see above"
 }
 
 _has_timed_out() {
@@ -1970,11 +1970,11 @@ _has_timed_out() {
 _print_timed_out() {
 	echo
 	_print_line
-	echo "Timeout:"
+	echo "${1}Timeout:"
 	_print_line
 	tail -n 20 "${OUTPUT_VIRTME}"
 	_print_line
-	echo "Global Timeout"
+	echo "${1}Global Timeout"
 }
 
 _has_kmemleak() {
@@ -1984,11 +1984,11 @@ _has_kmemleak() {
 _print_kmemleak() {
 	echo
 	_print_line
-	echo "KMemLeak:"
+	echo "${1}KMemLeak:"
 	_print_line
 	decode_stacktrace <"${KMEMLEAK}"
 	_print_line
-	echo "KMemLeak detected"
+	echo "${1}KMemLeak detected"
 }
 
 _has_boot_failure() {
@@ -1996,7 +1996,7 @@ _has_boot_failure() {
 }
 
 _print_boot_failure() {
-	echo "Had $(grep -ac "Boot VM " "${OUTPUT_VIRTME}") boot attempts"
+	echo "${1}Had $(grep -ac "Boot VM " "${OUTPUT_VIRTME}") boot attempts"
 }
 
 # $1: mode, rest: args for kconfig
@@ -2187,7 +2187,7 @@ _analyze_serial() {
 	# look for crashes/warnings
 	if _has_call_trace; then
 		has_call_trace=1
-		_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+		_print_call_trace_info "${name}" | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${name}$(_get_call_trace_status)"
 		EXIT_STATUS=1
 
@@ -2198,17 +2198,17 @@ _analyze_serial() {
 	fi
 
 	if _has_unexpected_stop; then
-		_print_unexpected_stop | tee -a "${TESTS_SUMMARY}"
+		_print_unexpected_stop "${name}" | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${name}${VIRTME_SCRIPT_UNEXPECTED_STOP}"
 		EXIT_STATUS=1
 	elif _has_timed_out; then
-		_print_timed_out | tee -a "${TESTS_SUMMARY}"
+		_print_timed_out "${name}" | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${name}Global Timeout"
 		EXIT_STATUS=1
 	fi
 
 	if _has_kmemleak; then
-		_print_kmemleak | tee -a "${TESTS_SUMMARY}"
+		_print_kmemleak "${name}" | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Critical" "${name}KMemLeak"
 		EXIT_STATUS=1
 	fi
@@ -2216,13 +2216,13 @@ _analyze_serial() {
 	if _has_call_trace_at_boot; then
 		# not to print errors twice
 		if [ "${has_call_trace}" = 0 ]; then
-			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+			_print_call_trace_info "${name}" | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
 		_register_issue "Notice" "${name}Call Traces at boot time, rebooted and continued"
 		_set_exit_status_notice
 	elif _has_boot_failure; then
-		_print_boot_failure | tee -a "${TESTS_SUMMARY}"
+		_print_boot_failure "${name}" | tee -a "${TESTS_SUMMARY}"
 		_register_issue "Notice" "${name}Boot failures, rebooted and continued"
 		_set_exit_status_notice
 	fi
@@ -2230,7 +2230,7 @@ _analyze_serial() {
 	if _has_call_trace_at_shutdown; then
 		# not to print errors twice
 		if [ "${has_call_trace}" = 0 ]; then
-			_print_call_trace_info | tee -a "${TESTS_SUMMARY}"
+			_print_call_trace_info "${name}" | tee -a "${TESTS_SUMMARY}"
 			has_call_trace=1
 		fi
 		_register_issue "Notice" "${name}Call Traces at shutdown time, ignored and continued"
