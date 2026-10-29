@@ -114,6 +114,7 @@ if is_parallel_run; then
 fi
 
 VIRTME_SCRIPT="${VIRTME_SCRIPTS_DIR}/tests.sh"
+VIRTME_SCRIPT_RUN="Run the virtme script"
 VIRTME_SCRIPT_START="Starting the validation script"
 VIRTME_SCRIPT_END="__VIRTME_END__" # also used in hosts.py
 VIRTME_SCRIPT_UNEXPECTED_STOP="Unexpected stop of the VM"
@@ -1036,7 +1037,7 @@ EOF
 }
 
 run() {
-	printinfo "Run the virtme script: manual"
+	printinfo "${VIRTME_SCRIPT_RUN}: manual"
 
 	"${VIRTME_RUN}" "${VIRTME_RUN_OPTS[@]}" ${VIRTME_RUN_QEMU_OPTS:+--qemu-opts "${VIRTME_RUN_QEMU_OPTS[@]}"}
 }
@@ -1060,7 +1061,7 @@ run_expect() {
 	VIRTME_RUN_OPTS+=(--kopt panic=-1 --kopt oops=panic)
 	VIRTME_RUN_QEMU_OPTS+=(-no-reboot)
 
-	printinfo "Run the virtme script: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
+	printinfo "${VIRTME_SCRIPT_RUN}: expect (timeout: ${VIRTME_EXPECT_TEST_TIMEOUT})"
 
 	cat <<EOF >"${VIRTME_SCRIPT}"
 #! /bin/bash
@@ -2317,7 +2318,7 @@ analyze_perf() {
 
 		# remove ^M and skip the setup done on the host
 		sed -i 's/\r$//' "${log}"
-		_cat_after "^+ ${VIRTME_RUN} " "${log}" >"${OUTPUT_VIRTME}"
+		_cat_after "${VIRTME_SCRIPT_RUN}: " "${log}" >"${OUTPUT_VIRTME}"
 		KMEMLEAK="${log%.log}_kmemleak.txt" \
 			_analyze_serial "${log#"${RESULTS_DIR}/"}"
 	done
