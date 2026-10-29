@@ -273,7 +273,7 @@ class VM(Host):
         try:
             serial.expect(self.prompt, timeout=60)
         except (pexpect.EOF, pexpect.TIMEOUT):
-            logger.fatal("Unable to get VSOCK access")
+            logger.fatal("Unable to boot the VM")
             self._terminate(serial)
             raise
 
