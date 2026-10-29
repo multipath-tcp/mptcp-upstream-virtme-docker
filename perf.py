@@ -230,6 +230,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--test-only",
+        "-T",
+        action="store",
+        metavar="NAME",
+        help="Only run the test with this name, from the only config file",
+    )
+
+    parser.add_argument(
         "--timeout-minutes",
         "-t",
         action="store",
@@ -369,6 +377,9 @@ def main():
     for conf_file in args.config:
         validate_config(conf_file)
 
+    if args.test_only and len(args.config) != 1:
+        arg_parser.error("--test-only requires exactly one config file")
+
     results = {}
     exit = 0
     id = 1
@@ -379,7 +390,7 @@ def main():
             continue
         with open(conf_file) as c:
             config = yaml.safe_load(c)
-        result, rc = ep.run_tests(id, config)
+        result, rc = ep.run_tests(id, config, args.test_only)
         results.update(result)
         # keep the lowest error code, e.g. errors (1) before fails (42)
         if rc > 0 and (exit == 0 or rc < exit):
@@ -390,7 +401,12 @@ def main():
 
     # keep the results of the suites that have not been checked again
     if args.reg_only or args.validation_only:
-        results = ep.prev_results | results
+        prev = ep.prev_results
+        # just in case --test-only is used: keep the other tests
+        for suite, tests in results.items():
+            tests = {str(id): t for id, t in tests.items()}
+            prev[suite] = prev.get(suite, {}) | tests
+        results = prev
 
     # always next to the logs, e.g. for 'analyze' in entrypoint.sh
     with open(os.path.join(args.log_dir, "perf.json"), "w") as f:
