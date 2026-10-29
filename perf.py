@@ -57,6 +57,16 @@ def check_min_history_arg(value):
     return n
 
 
+def check_uint_arg(value):
+    try:
+        value = int(value)
+        if value < 0:
+            raise ValueError
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not an integer >= 0.")
+    return value
+
+
 def check_alpha_arg(value):
     try:
         alpha = float(value)
@@ -220,6 +230,16 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--timeout-minutes",
+        "-t",
+        action="store",
+        default=150,
+        type=check_uint_arg,
+        help="Global timeout for all the tests, 0 to disable: when"
+        " reached, the current test is completed, and the next ones are skipped",
+    )
+
+    parser.add_argument(
         "--validation-only",
         action="store_true",
         help="Only validate the results, and check the regressions, re-using the"
@@ -330,6 +350,13 @@ def main():
 
     signal.signal(signal.SIGINT, handler)
 
+    def timeout_handler(signum, frame):
+        logger.warning(f"Global timeout of {args.timeout_minutes} minutes reached")
+        ep.interrupt(graceful=True)
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(args.timeout_minutes * 60)
+
     if args.config_dir:
         args.config = [
             os.path.join(args.config_dir, f)
@@ -346,6 +373,10 @@ def main():
     exit = 0
     id = 1
     for conf_file in args.config:
+        # with a timeout, the next tests are still reported
+        if ep.interrupted and not ep.graceful:
+            logger.warning(f"Interrupted: skipping {conf_file}")
+            continue
         with open(conf_file) as c:
             config = yaml.safe_load(c)
         result, rc = ep.run_tests(id, config)
@@ -354,6 +385,8 @@ def main():
         if rc > 0 and (exit == 0 or rc < exit):
             exit = rc
         id += 1
+
+    signal.alarm(0)
 
     # keep the results of the suites that have not been checked again
     if args.reg_only or args.validation_only:

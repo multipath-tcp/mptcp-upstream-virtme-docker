@@ -106,6 +106,7 @@ class Entrypoint:
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
         self.stopped = False
         self.interrupted = False
+        self.graceful = False
 
         logger.info(f"Env ({self.git_sha}) in {self.mode} mode")
 
@@ -161,9 +162,14 @@ class Entrypoint:
         cmd = KMEMLEAK_SCAN.format(file=shlex.quote(file))
         host.cmd_wait(f"{{\n{cmd}\n}}", ignore_timeout=True, timeout=600)
 
-    def interrupt(self):
+    # graceful: the current test is completed, not the next ones
+    def interrupt(self, graceful=False):
+        if graceful and self.interrupted:
+            return
         self.interrupted = True
-        self.stop(kmemleak=False)
+        self.graceful = graceful
+        if not graceful:
+            self.stop(kmemleak=False)
 
     # kmemleak: not to wait for the scan, e.g. when interrupted
     def stop(self, kmemleak=True):
@@ -997,7 +1003,7 @@ class Entrypoint:
         logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
-            if self.interrupted:
+            if self.interrupted and not self.graceful:
                 logger.warning("Interrupted: skipping the next tests")
                 break
 
@@ -1009,6 +1015,15 @@ class Entrypoint:
                 "result": "fail",
                 "name": name_n,
             }
+
+            # reported as errors, not to hide them
+            if self.interrupted:
+                logger.warning(f"{global_name}: {name}: timeout, skipped")
+                results[global_name_n][id]["comment"] = "error: global timeout reached"
+                exit = 1
+                id += 1
+                continue
+
             msgs = []
             improvs = []
             outs = []
@@ -1043,7 +1058,7 @@ class Entrypoint:
                         test_config, global_name, name, id, total, msgs, improvs, outs
                     )
             except Exception as e:
-                if self.interrupted:
+                if self.interrupted and not self.graceful:
                     raise
                 logger.exception(f"{global_name}: {name}: unexpected error")
                 msgs.append(f"unexpected error: {e}")
