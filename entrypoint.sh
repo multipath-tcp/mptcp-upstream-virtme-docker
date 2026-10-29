@@ -1212,7 +1212,7 @@ _tap() { local out out_subtests tmp fname rc ok nok msg cmt ts_s_start ts_s_stop
 
 # \$1: kunit path ; \$2: kunit test
 _kunit_result() {
-	if ! grep -q "^KTAP" "\${1}" 2>/dev/null; then
+	if ! grep -aq "^KTAP" "\${1}" 2>/dev/null; then
 		echo "TAP version 14"
 		echo "1..1"
 	fi
@@ -1247,7 +1247,7 @@ run_kunit_one() { local ko kunit kunit_path mod rc=0
 
 	insmod "\${ko}" || true # errors will also be visible below: no results
 	_kunit_result "\${kunit_path}" "\${kunit}" | tee "${RESULTS_DIR}/kunit_\${kunit}.tap" || rc=\${?}
-	grep -q "^\s*not ok" "\${kunit_path}" && rc=1
+	grep -aq "^\s*not ok" "\${kunit_path}" && rc=1
 
 	rmmod "\${mod}" || true
 
@@ -1309,7 +1309,7 @@ run_selftest_all() { local sf rc=0
 
 # \$1: packetdrill TAP file, \$2: TAP prefix
 _packetdrill_result() { local ign
-	if grep -q "^TAP version 13" "\${1}" 2>/dev/null; then
+	if grep -aq "^TAP version 13" "\${1}" 2>/dev/null; then
 		sed -i "s#\${PWD}/#packetdrill: #g" "\${1}" # remove long path + prefix
 
 		# ignore errors in debug mode, only look for critical issues.
@@ -1411,7 +1411,7 @@ run_all() {
 }
 
 has_call_trace() {
-	grep -q "[C]all Trace:" "${OUTPUT_VIRTME}"
+	grep -aq "[C]all Trace:" "${OUTPUT_VIRTME}"
 }
 
 # also done in entrypoint.py for the perf tests
@@ -1912,7 +1912,7 @@ _get_output_before_stop() {
 }
 
 _call_trace() {
-	grep -q "Call Trace:"
+	grep -aq "Call Trace:"
 }
 
 _has_call_trace() {
@@ -1944,17 +1944,17 @@ _print_call_trace_info() {
 	_print_line
 	echo "Call Trace:"
 	_print_line
-	grep --text -C 80 "Call Trace:" "${OUTPUT_VIRTME}" | decode_stacktrace
+	grep -aC 80 "Call Trace:" "${OUTPUT_VIRTME}" | decode_stacktrace
 	_print_line
 	echo "Call Trace found"
 }
 
 _get_call_trace_status() {
-	echo "$(grep -c "Call Trace:" "${OUTPUT_VIRTME}") Call Trace(s)"
+	echo "$(grep -ac "Call Trace:" "${OUTPUT_VIRTME}") Call Trace(s)"
 }
 
 _has_unexpected_stop() {
-	grep -q "${VIRTME_SCRIPT_UNEXPECTED_STOP}" "${OUTPUT_VIRTME}"
+	grep -aq "${VIRTME_SCRIPT_UNEXPECTED_STOP}" "${OUTPUT_VIRTME}"
 }
 
 _print_unexpected_stop() {
@@ -1964,7 +1964,7 @@ _print_unexpected_stop() {
 }
 
 _has_timed_out() {
-	! grep -q "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"
+	! grep -aq "${VIRTME_SCRIPT_END}" "${OUTPUT_VIRTME}"
 }
 
 _print_timed_out() {
@@ -1992,11 +1992,11 @@ _print_kmemleak() {
 }
 
 _has_boot_failure() {
-	grep -q "Boot VM (1)" "${OUTPUT_VIRTME}"
+	grep -aq "Boot VM (1)" "${OUTPUT_VIRTME}"
 }
 
 _print_boot_failure() {
-	echo "Had $(grep -c "Boot VM " "${OUTPUT_VIRTME}") boot attempts"
+	echo "Had $(grep -ac "Boot VM " "${OUTPUT_VIRTME}") boot attempts"
 }
 
 # $1: mode, rest: args for kconfig
@@ -2074,7 +2074,7 @@ _print_perf_tests() {
 
 # [ $1: .tap file, summary file by default]
 _has_failed_tests() {
-	grep -q "^not ok " "${1:-${TESTS_SUMMARY}}"
+	grep -aq "^not ok " "${1:-${TESTS_SUMMARY}}"
 }
 
 # $1: prefix
@@ -2082,7 +2082,7 @@ _print_tests_results_subtests() {
 	local tap ok
 	for tap in "${RESULTS_DIR}/${1}"*.tap; do
 		[[ ${tap} == *"_*.tap" ]] && continue
-		grep -q "^not ok " "${tap}" && ok="not ok" || ok="ok"
+		grep -aq "^not ok " "${tap}" && ok="not ok" || ok="ok"
 		echo "${ok} 1 test: $(basename "${tap}" ".tap")"
 	done
 }
