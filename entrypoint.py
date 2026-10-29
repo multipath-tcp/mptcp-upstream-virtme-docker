@@ -502,7 +502,7 @@ class Entrypoint:
             msgs.append("no saved dstat window (older run?): a full run is needed")
             return True
         except (OSError, ValueError) as e:
-            msgs.append(f"cannot read the saved dstat window: {e!r}")
+            msgs.append(f"cannot read the saved dstat window: {e}")
             return True
 
         dstat = config.setdefault("dstat", {})
@@ -1046,7 +1046,7 @@ class Entrypoint:
                 if self.interrupted:
                     raise
                 logger.exception(f"{global_name}: {name}: unexpected error")
-                msgs.append(f"unexpected error: {e!r}")
+                msgs.append(f"unexpected error: {e}")
                 err = True
 
             if err:
