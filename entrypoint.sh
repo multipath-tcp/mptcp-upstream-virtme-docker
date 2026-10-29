@@ -2026,7 +2026,7 @@ _print_perf_tests() {
 	echo
 	# tests stopped before the validation
 	errors="$(jq -r '.[][] | select(.result == "fail" and ((.comment // "") | startswith("error: "))) |
-		"not ok 1 test: error: \(.name): \(.comment | ltrimstr("error: ") | gsub("\n"; " / "))"' "${json}" 2>/dev/null || true)"
+		"not ok 1 test: error:\(.name): \(.comment | ltrimstr("error: ") | gsub("\n"; " / "))"' "${json}" 2>/dev/null || true)"
 	if [ -n "${errors}" ]; then
 		echo "not ok has major errors before the validation"
 		echo "${errors}"
@@ -2038,7 +2038,7 @@ _print_perf_tests() {
 	# one dir per suite and per test
 	if ls "${RESULTS_DIR}"/*/*/validations.txt &>/dev/null; then
 		echo "not ok has validations errors"
-		cat "${RESULTS_DIR}"/*/*/validations.txt | sed 's/^/not ok 1 test: validation: /g'
+		cat "${RESULTS_DIR}"/*/*/validations.txt | sed 's/^/not ok 1 test: validation:/g'
 	else
 		echo "ok no validations errors"
 	fi
@@ -2046,7 +2046,7 @@ _print_perf_tests() {
 	echo
 	if ls "${RESULTS_DIR}"/*/*/regs.txt &>/dev/null; then
 		echo "not ok has regressions"
-		cat "${RESULTS_DIR}"/*/*/regs.txt | sed 's/^/not ok 1 test: regression: /g'
+		cat "${RESULTS_DIR}"/*/*/regs.txt | sed 's/^/not ok 1 test: regression:/g'
 	else
 		echo "ok no regressions"
 	fi
@@ -2134,7 +2134,7 @@ _get_failed_tests() {
 	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" |
 		awk '{ print $5 }' |
 		sort -u |
-		sed "s/\.tap$//g"
+		sed "s/\.tap$//g; s/:$//g"
 }
 
 _get_failed_tests_status() {
