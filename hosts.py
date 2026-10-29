@@ -273,7 +273,7 @@ class VM(Host):
         try:
             serial.expect(self.prompt, timeout=60)
         except (pexpect.EOF, pexpect.TIMEOUT):
-            logger.fatal("Unable to boot the VM")
+            logger.fatal(f"{self.hostname}: Unable to boot the VM")
             self._terminate(serial)
             raise
 
@@ -284,7 +284,7 @@ class VM(Host):
             self.prompt = f"|{self.prompt}: "
             vsock.sendline(f"PS1='{self.prompt}'")
         except (pexpect.EOF, pexpect.TIMEOUT):
-            logger.fatal("Unable to get VSOCK access")
+            logger.fatal(f"{self.hostname}: Unable to get VSOCK access")
             self._terminate(serial)
             raise
 
