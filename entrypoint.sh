@@ -2132,6 +2132,7 @@ _get_failed_tests() {
 	# not ok 1 test: selftest_mptcp_join.tap # exit=1
 	# we just want the main results, not the detailed ones for the moment
 	grep --text "^not ok 1 test: " "${TESTS_SUMMARY}" |
+		sort -u |
 		awk '{ print $5 }' |
 		sed "s/\.tap$//g; s/:$//g" |
 		sort |
