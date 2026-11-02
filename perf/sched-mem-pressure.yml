@@ -11,7 +11,7 @@ global:
   stats:
     post:
       - name: "nstat"
-        run: "nstat -j"
+        run: "nstat -jz"
       - name: "mptcp"
         run: "ip -j mptcp endpoint show"
     pre:

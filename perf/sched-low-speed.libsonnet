@@ -307,7 +307,7 @@ local regression(c) =
           { name: 'nstat', run: 'nstat -n' },
         ],
         post: [
-          { name: 'nstat', run: 'nstat -j' },
+          { name: 'nstat', run: 'nstat -jz' },
           { name: 'mptcp', run: 'ip -j mptcp endpoint show' },
         ],
       },
