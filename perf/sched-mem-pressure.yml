@@ -29,6 +29,7 @@ tests:
         max_latency_ms: 985
         name: "br1"
         rate_mbit: 10
+    cpus: 2
     name: "bloated_slow_secondary receiver_tcp_mem parallel=1"
     regression:
       global:
@@ -96,6 +97,7 @@ tests:
         max_latency_ms: 985
         name: "br1"
         rate_mbit: 10
+    cpus: 2
     name: "bloated_slow_secondary receiver_tcp_mem parallel=16"
     regression:
       global:
@@ -163,6 +165,7 @@ tests:
         max_latency_ms: 985
         name: "br1"
         rate_mbit: 10
+    cpus: 2
     name: "bloated_slow_secondary receiver_tcp_mem parallel=99"
     regression:
       global:
@@ -230,6 +233,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 30
+    cpus: 2
     name: "very_bloated_primary both_tcp_mem parallel=1"
     regression:
       global:
@@ -300,6 +304,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 50
+    cpus: 2
     name: "slow_primary both_tcp_mem parallel=1"
     regression:
       global:
@@ -371,6 +376,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 29
+    cpus: 2
     name: "balanced both_tcp_mem parallel=1"
     regression:
       global:
@@ -442,6 +448,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 30
+    cpus: 2
     name: "very_bloated_primary both_tcp_mem parallel=10"
     regression:
       global:
@@ -512,6 +519,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 50
+    cpus: 2
     name: "slow_primary both_tcp_mem parallel=10"
     regression:
       global:
@@ -583,6 +591,7 @@ tests:
         max_latency_ms: 22.5
         name: "br1"
         rate_mbit: 29
+    cpus: 2
     name: "balanced both_tcp_mem parallel=10"
     regression:
       global:
