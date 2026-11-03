@@ -12,6 +12,7 @@ local server_addr = '10.0.0.3';
 local server_addr_secondary = '10.0.1.3';
 local iperf_port = 5201;
 local nc_port = 12345;
+local netperf_port = 12865;
 local mbit = 1000000;
 
 // One path, with the rate in Mbit/s, the base RTT, and the max queuing delay
@@ -89,6 +90,10 @@ local defaults = {
   cpu_hog: false,  // RT processes preempting the receiver
   cpus: null,
   ratio: null,  // part of the expected throughput required
+  // 'bulk': iperf3, or nc with limit_mode 'client'
+  // 'rr': request/response with netperf, see 'rr_size'
+  workload: 'bulk',
+  rr_size: null,  // size of the responses, in bytes
 };
 
 local fmtInt(n) = std.toString(std.floor(n));
@@ -98,6 +103,9 @@ local lines(cmds) = std.join('\n', cmds) + '\n';
 
 local sender(c) = if c.upload then 'client' else 'server';
 local receiver(c) = if c.upload then 'server' else 'client';
+
+// netperf: one for the control, one for the data
+local connections(c) = if c.workload == 'rr' then 2 else c.parallel;
 
 // Relaxed expected throughput, in bits/s: the regression checks will catch
 // smaller variations.
@@ -170,7 +178,12 @@ local cpuHogStep(c) =
   }];
 
 local serverStep(c) =
-  if c.limit_mode == 'client' then [{
+  if c.workload == 'rr' then [{
+    name: 'netperf server',
+    server: lines(['mptcpize run netserver -4 >/dev/null', waitListen(netperf_port)]),
+    timeout_s: 10,
+  }]
+  else if c.limit_mode == 'client' then [{
     name: 'nc server',
     server: lines([
       'for i in $(seq 1 ' + c.parallel + '); do',
@@ -208,9 +221,28 @@ local iperfArgs(c) =
     if c.limit_mode == 'server' && burst then '-l 8000 --pacing-timer ' + c.burst_ms * 1000,
   ]));
 
+// Values from netperf, also used for the regressions, latencies in us
+local netperfKeys = 'TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY';
+
 local clientStep(c) =
   local timeout = c.duration_s + 60;
-  if c.limit_mode == 'client' then [{
+  local artifact(f) = '"${RESULTS_DIR}/artifacts/' + f + '"';
+  if c.workload == 'rr' then [{
+    name: 'netperf client',
+    client: lines([
+      // one transaction at a time, without Nagle: a request of 1 byte, and
+      // the response
+      'mptcpize run netperf -H ' + server_addr + ' -t TCP_RR -l ' + c.duration_s +
+      ' -j -P 0 -- -D -r 1,' + c.rr_size + ' -k ' + netperfKeys + ' > ' + artifact('netperf.txt'),
+      'rc=$?',
+      'jq -Rn \'[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add\' ' +
+      artifact('netperf.txt') + ' > ' + artifact('netperf.json'),
+      '[ "${rc}" = 0 ]',
+    ]),
+    timeout_s: timeout,
+    dstat_only: 'step',
+  }]
+  else if c.limit_mode == 'client' then [{
     name: 'nc client',
     client: lines([
       '(for i in $(seq 1 ' + c.parallel + '); do',
@@ -234,18 +266,21 @@ local jqMean(host, iface) =
 
 local validation(c) =
   local rx = receiver(c);
-  local iperf = c.limit_mode != 'client';
+  local rr = c.workload == 'rr';
+  local iperf = c.workload == 'bulk' && c.limit_mode != 'client';
   [{
     name: 'transfer',
     run: lines(std.prune([
       'set -x',
       if iperf then '[ -s artifacts/iperf_cli.json ]',
+      if rr then 'jq -e \'.TRANSACTION_RATE > 0\' artifacts/netperf.json',
       'cd stats',
       '[ "$(jq -r \'.host.time.diff\' dstat.json || echo 0)" -ge ' + fmtInt(c.duration_s * 0.6) + ' ]',
       '[ "$(jq -r \'.host.time.diff\' dstat.json || echo 0)" -le ' + (c.duration_s + 5) + ' ]',
-      '[ ' + jqMean(rx, 'total') + ' -ge ' + fmtInt(ratio(c) * bound(c)) + ' ]',
-      if checkSecondary(c) then '[ ' + jqMean(rx, 'eth1') + ' -ge 100000 ]',
-    ])),
+    ]) + (if rr then [] else std.prune([
+            '[ ' + jqMean(rx, 'total') + ' -ge ' + fmtInt(ratio(c) * bound(c)) + ' ]',
+            if checkSecondary(c) then '[ ' + jqMean(rx, 'eth1') + ' -ge 100000 ]',
+          ]))),
   }] + (if c.backup then [{
           name: 'backup',
           run: lines([
@@ -263,7 +298,7 @@ local validation(c) =
     run: lines([
       'set -x',
       '[ "$(jq -r \'.kernel.MPTcpExtMPJoinSynAckRx\' stats/client/post/nstat || echo 0)" -ge ' +
-      c.parallel + ' ]',
+      connections(c) + ' ]',
     ]),
   }];
 
@@ -280,12 +315,30 @@ local counter(name, host, key, min_diff) = {
   holm_bonferroni: false,
 };
 
+// One direction of the data: from 'tx' to 'rx'
+local counters(tx, rx) = [
+  // MPTCP-level timeouts: the data was stuck on a subflow
+  counter('MPTCP retransmissions', tx, 'MPTcpExtMPTCPRetrans', 20),
+  // e.g. retransmissions, or reinjections, arriving too late
+  counter('Duplicated data', rx, 'MPTcpExtDuplicateData', 100),
+  // data sent beyond the window: the sender should not do that
+  counter('Data beyond the window', rx, 'MPTcpExtNoDSSInWindow', 10),
+  // same at the TCP level, e.g. a subflow used while the window is full
+  counter('Zero window drops', rx, 'TcpExtTCPZeroWindowDrop', 5),
+];
+
 local regression(c) =
   local rx = receiver(c);
   local reg(name, iface) = {
     name: name,
     file: 'stats/dstat.json',
     json_field: [rx, 'net/' + iface + ':recv', 'mean'],
+  };
+  local netperf(name, key, direction) = {
+    name: name,
+    file: 'artifacts/netperf.json',
+    json_field: [key],
+    direction: direction,
   };
   {
     // default alpha: 0.05
@@ -296,27 +349,22 @@ local regression(c) =
       // smaller changes are not relevant, even if significant
       min_diff_pc: 1,
     },
-    steps: [
-      reg('Receiver primary path', 'eth0'),
-      // a backup path should stay idle: ignore a few packets, e.g. one
-      // retransmission, 100 kbit/s on average is too much
-      reg('Receiver secondary path', 'eth1') +
-      (if c.backup then { direction: 'higher', min_diff: 100000 } else {}),
-      reg('Receiver total', 'total'),
-    ] + (if c.limit_mode != 'client' then [{
-           name: 'iperf3 received',
-           file: 'artifacts/iperf_cli.json',
-           json_field: ['end', 'sum_received', 'bits_per_second'],
-         }] else []) + [
-      // MPTCP-level timeouts: the data was stuck on a subflow
-      counter('MPTCP retransmissions', sender(c), 'MPTcpExtMPTCPRetrans', 20),
-      // e.g. retransmissions, or reinjections, arriving too late
-      counter('Duplicated data', rx, 'MPTcpExtDuplicateData', 100),
-      // data sent beyond the window: the sender should not do that
-      counter('Data beyond the window', rx, 'MPTcpExtNoDSSInWindow', 10),
-      // same at the TCP level, e.g. a subflow used while the window is full
-      counter('Zero window drops', rx, 'TcpExtTCPZeroWindowDrop', 5),
-    ],
+    steps: (if c.workload == 'rr' then [
+              netperf('Transaction rate', 'TRANSACTION_RATE', 'lower'),
+              netperf('P90 latency', 'P90_LATENCY', 'higher'),
+              netperf('P99 latency', 'P99_LATENCY', 'higher'),
+            ] else [
+              reg('Receiver primary path', 'eth0'),
+              // a backup path should stay idle: ignore a few packets, e.g. one
+              // retransmission, 100 kbit/s on average is too much
+              reg('Receiver secondary path', 'eth1') +
+              (if c.backup then { direction: 'higher', min_diff: 100000 } else {}),
+              reg('Receiver total', 'total'),
+            ] + (if c.limit_mode != 'client' then [{
+                   name: 'iperf3 received',
+                   file: 'artifacts/iperf_cli.json',
+                   json_field: ['end', 'sum_received', 'bits_per_second'],
+                 }] else [])) + counters(sender(c), rx),
   };
 
 {

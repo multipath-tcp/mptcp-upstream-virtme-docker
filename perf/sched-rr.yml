@@ -1,0 +1,1110 @@
+# Generated from sched-rr.jsonnet by gen.sh: do not edit
+# yaml-language-server: $schema=./perf.schema
+# yamllint disable rule:line-length
+---
+
+global:
+  bridges_hw_accel: false
+  dstat:
+    offset_end: 1
+    offset_start: 2
+  stats:
+    post:
+      - name: "nstat"
+        run: "nstat -jz"
+      - name: "mptcp"
+        run: "ip -j mptcp endpoint show"
+    pre:
+      - name: "nstat"
+        run: "nstat -n"
+  timeout_s: 900
+name: "sched-rr"
+tests:
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced size=1K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1024 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced size=64K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,65536 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced size=1M"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1048576 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br1"
+        rate_mbit: 8
+    name: "slow_secondary size=1K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1024 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br1"
+        rate_mbit: 8
+    name: "slow_secondary size=64K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,65536 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br1"
+        rate_mbit: 8
+    name: "slow_secondary size=1M"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1048576 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 80
+      - delay_ms: 35
+        max_latency_ms: 55
+        name: "br1"
+        rate_mbit: 1
+    name: "weak_secondary size=1K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1024 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 80
+      - delay_ms: 35
+        max_latency_ms: 55
+        name: "br1"
+        rate_mbit: 1
+    name: "weak_secondary size=64K"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,65536 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 80
+      - delay_ms: 35
+        max_latency_ms: 55
+        name: "br1"
+        rate_mbit: 1
+    name: "weak_secondary size=1M"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1048576 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br1"
+        rate_mbit: 8
+    name: "slow_secondary size=1M bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1048576 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 80
+      - delay_ms: 35
+        max_latency_ms: 55
+        name: "br1"
+        rate_mbit: 1
+    name: "weak_secondary size=1M bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P90_LATENCY"
+          name: "P90 latency"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "netperf server"
+        server: |
+          mptcpize run netserver -4 >/dev/null
+          port=":$(printf "%04X" "12865") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          mptcpize run netperf -H 10.0.0.3 -t TCP_RR -l 30 -j -P 0 -- -D -r 1,1048576 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        dstat_only: "step"
+        name: "netperf client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 2 ]
