@@ -304,6 +304,10 @@
           "minimum": 0,
           "description": "Same as 'min_diff', but in percent of the mean of the history, e.g. not to report a stable throughput going down by 0.1%. The largest of the two is used. Default: 0."
         },
+        "holm_bonferroni": {
+          "type": "boolean",
+          "description": "When false, the p-value of this check is not adjusted with the Holm-Bonferroni method, and it does not change the adjusted p-values of the other checks of the test, e.g. for a secondary check with its own minimum difference, not to make the main ones less sensitive. Default: true."
+        },
         "history_max_n": {
           "type": "integer",
           "minimum": 0,

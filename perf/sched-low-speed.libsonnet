@@ -248,7 +248,28 @@ local validation(c) =
         }] else []) + (if c.cc != null then [{
                          name: 'congestion control',
                          run: "grep -qw '" + c.cc + "' artifacts/ss_" + sender(c) + '.txt',
-                       }] else []);
+                       }] else []) + [{
+    // the client creates the additional subflows, one per MPTCP connection
+    name: 'subflows',
+    run: lines([
+      'set -x',
+      '[ "$(jq -r \'.kernel.MPTcpExtMPJoinSynAckRx\' stats/client/post/nstat || echo 0)" -ge ' +
+      c.parallel + ' ]',
+    ]),
+  }];
+
+// A counter from nstat, after the transfer: more is worse. Small differences
+// are ignored, they are often at 0, or vary a lot. Secondary checks: not to
+// make the throughput ones less sensitive.
+local counter(name, host, key, min_diff) = {
+  name: name,
+  file: 'stats/' + host + '/post/nstat',
+  json_field: ['kernel', key],
+  direction: 'higher',
+  min_diff: min_diff,
+  min_diff_pc: 50,
+  holm_bonferroni: false,
+};
 
 local regression(c) =
   local rx = receiver(c);
@@ -277,7 +298,16 @@ local regression(c) =
            name: 'iperf3 received',
            file: 'artifacts/iperf_cli.json',
            json_field: ['end', 'sum_received', 'bits_per_second'],
-         }] else []),
+         }] else []) + [
+      // MPTCP-level timeouts: the data was stuck on a subflow
+      counter('MPTCP retransmissions', sender(c), 'MPTcpExtMPTCPRetrans', 20),
+      // e.g. retransmissions, or reinjections, arriving too late
+      counter('Duplicated data', rx, 'MPTcpExtDuplicateData', 100),
+      // data sent beyond the window: the sender should not do that
+      counter('Data beyond the window', rx, 'MPTcpExtNoDSSInWindow', 10),
+      // same at the TCP level, e.g. a subflow used while the window is full
+      counter('Zero window drops', rx, 'TcpExtTCPZeroWindowDrop', 5),
+    ],
   };
 
 {

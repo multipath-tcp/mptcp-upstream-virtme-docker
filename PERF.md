@@ -13,7 +13,8 @@ to override it). At least 20 prior measurements are required by default, see the
 When a test has multiple checks, their p-values are adjusted with the
 Holm-Bonferroni method before being compared with `alpha`: without that, the more
 checks, the more false positives. This can be disabled per test, with
-`holm_bonferroni: false` in its `regression` section.
+`holm_bonferroni: false` in its `regression` section, or per check, e.g. for
+secondary checks, not to make the main ones less sensitive.
 
 A significant change is not always a relevant one: with a very stable history,
 a throughput going down by 0.1% can be reported, and so can a counter going from

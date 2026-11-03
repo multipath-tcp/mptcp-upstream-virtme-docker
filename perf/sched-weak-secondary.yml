@@ -60,6 +60,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -84,6 +120,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 15000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -124,6 +164,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -148,6 +224,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 20000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 25
         max_latency_ms: 75
@@ -188,6 +268,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -212,6 +328,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 20000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -252,6 +372,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -277,6 +433,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 14500000 ]
           [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -317,6 +477,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -342,6 +538,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 27500000 ]
           [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -382,6 +582,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -407,6 +643,10 @@ tests:
           [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
           [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 30000000 ]
           [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -449,6 +689,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -479,6 +755,10 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -521,6 +801,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -551,6 +867,10 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 25
         max_latency_ms: 75
@@ -593,6 +913,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -623,6 +979,10 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -665,6 +1025,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -695,6 +1091,10 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -737,6 +1137,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -767,6 +1203,10 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
   - bridges:
       - delay_ms: 10
         max_latency_ms: 30
@@ -809,6 +1249,42 @@ tests:
             - "sum_received"
             - "bits_per_second"
           name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
     steps:
       - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
         name: "mptcp endpoints"
@@ -839,3 +1315,7 @@ tests:
           total="$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)"
           backup="$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)"
           [ $((backup * 10)) -lt "${total}" ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]

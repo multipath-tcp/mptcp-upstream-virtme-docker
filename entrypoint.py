@@ -188,8 +188,9 @@ class Entrypoint:
     def _get_reg_dir(self, name):
         return os.path.join(self.reg_dir, re.sub(r"\W", "_", name))
 
-    # None if the value cannot be read, e.g. missing JSON field after an error
-    def _get_info(self, file_path, json_field):
+    # None if the value cannot be read, e.g. missing JSON field after an error.
+    # quiet: e.g. for the history, older results might not have the new checks
+    def _get_info(self, file_path, json_field, quiet=False):
         try:
             with open(file_path) as f:
                 if json_field:
@@ -203,7 +204,8 @@ class Entrypoint:
 
             return float(info)
         except (OSError, ValueError, LookupError, TypeError) as e:
-            logger.warning(f"{file_path}: {json_field}: cannot get the value: {e!r}")
+            log = logger.debug if quiet else logger.warning
+            log(f"{file_path}: {json_field}: cannot get the value: {e!r}")
             return None
 
     # results kept, but not used as reference for the next regression checks
@@ -335,7 +337,7 @@ class Entrypoint:
                     logger.debug(f"skip: {prev_dir}")
                     continue
 
-                prev_res = self._get_info(file_path, json_field)
+                prev_res = self._get_info(file_path, json_field, quiet=True)
                 if prev_res is not None:
                     prev_results.append(prev_res)
                     prev_runs.append(prev)
@@ -390,15 +392,18 @@ class Entrypoint:
                     "p_value": p_value,
                     "min_change": min_change,
                     "small": abs(last_res - mean) < min_change,
+                    "holm": check.get("holm_bonferroni", True),
                 }
             )
 
         # multiple checks per test: the more checks, the more false positives
         use_holm = regression.get("holm_bonferroni", True)
+        family = [c for c in tested if use_holm and c["holm"]]
         for key in ("p_reg", "p_value"):
-            p_values = [c[key] for c in tested]
-            adjusted = holm(p_values) if use_holm else p_values
-            for c, adj in zip(tested, adjusted, strict=True):
+            for c in tested:
+                c[f"{key}_adj"] = c[key]
+            adjusted = holm([c[key] for c in family])
+            for c, adj in zip(family, adjusted, strict=True):
                 c[f"{key}_adj"] = adj
 
         for c in tested:
