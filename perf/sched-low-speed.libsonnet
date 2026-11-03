@@ -53,16 +53,20 @@ local profiles = {
   weak_secondary: profile(path(80, 20, 20), path(1, 70, 20), useful=false),
   bad_secondary: profile(path(80, 20, 20), path(1, 120, 2380), useful=false, hard=true),
   far_secondary: profile(path(80, 50, 50), path(80, 500, 2000), useful=false, hard=true),
+  // the slow and far path is the one with losses, see the 'loss_*' options
+  slow_far_secondary: profile(path(50, 10, 10), path(5, 120, 120)),
+  slow_far_primary: profile(path(5, 120, 120), path(50, 10, 10)),
 };
 
 // netem is applied in both directions: half of the RTT each, the queue size is
-// computed by the framework from 'max_latency_ms'.
-local bridge(name, p) = {
+// computed by the framework from 'max_latency_ms'. The losses, if any, are in
+// both directions too.
+local bridge(name, p, loss_pc) = {
   name: name,
   rate_mbit: p.rate_mbit,
   delay_ms: p.rtt_ms / 2,
   max_latency_ms: p.rtt_ms / 2 + p.queue_ms,
-};
+} + (if loss_pc != null then { loss_pc: loss_pc } else {});
 
 local defaults = {
   profile: 'slow_primary',
@@ -80,6 +84,8 @@ local defaults = {
   // sets the one from the MPTCP socket on all subflows.
   cc: null,
   backup: false,  // the secondary path is a backup one
+  loss_primary: null,  // random losses on the primary path, in percent
+  loss_secondary: null,  // same on the secondary path
   cpu_hog: false,  // RT processes preempting the receiver
   cpus: null,
   ratio: null,  // part of the expected throughput required
@@ -98,7 +104,10 @@ local receiver(c) = if c.upload then 'server' else 'client';
 local bound(c) =
   local p = profiles[c.profile];
   local secondary = p.useful && !c.backup;
-  local rates = (p.primary.rate_mbit + (if secondary then p.secondary.rate_mbit else 0)) * mbit;
+  // a path with losses can be a lot slower: not counted
+  local rate(x, loss) = if loss != null then 0 else x.rate_mbit;
+  local rates = (rate(p.primary, c.loss_primary) +
+                 (if secondary then rate(p.secondary, c.loss_secondary) else 0)) * mbit;
   local lat(x) = x.rtt_ms + x.queue_ms;
   local rtt = std.max(lat(p.primary), if secondary then lat(p.secondary) else 0);
   local app = if c.limit_bw != null then c.limit_bw * mbit else rates;
@@ -319,7 +328,10 @@ local regression(c) =
     local p = profiles[c.profile];
     {
       name: name,
-      bridges: [bridge('br0', p.primary), bridge('br1', p.secondary)],
+      bridges: [
+        bridge('br0', p.primary, c.loss_primary),
+        bridge('br1', p.secondary, c.loss_secondary),
+      ],
       steps: endpointsStep(c) + sysctlsStep(c) + cpuHogStep(c) + serverStep(c) +
              ssStep(c) + clientStep(c),
       validation: validation(c),

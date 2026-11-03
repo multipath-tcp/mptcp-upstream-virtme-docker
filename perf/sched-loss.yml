@@ -1,0 +1,1318 @@
+# Generated from sched-loss.jsonnet by gen.sh: do not edit
+# yaml-language-server: $schema=./perf.schema
+# yamllint disable rule:line-length
+---
+
+global:
+  bridges_hw_accel: false
+  dstat:
+    offset_end: 1
+    offset_start: 2
+  stats:
+    post:
+      - name: "nstat"
+        run: "nstat -jz"
+      - name: "mptcp"
+        run: "ip -j mptcp endpoint show"
+    pre:
+      - name: "nstat"
+        run: "nstat -n"
+  timeout_s: 900
+name: "sched-loss"
+tests:
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 0.1
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=0.1"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 1
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=1"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 5
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=5"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 0.1
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=0.1"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 1
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=1"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 5
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=5"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 0.1
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=0.1 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 1
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=1 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br0"
+        rate_mbit: 50
+      - delay_ms: 60
+        loss_pc: 5
+        max_latency_ms: 180
+        name: "br1"
+        rate_mbit: 5
+    name: "slow_far_secondary loss=5 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 0.1
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=0.1 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 1
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=1 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 60
+        loss_pc: 5
+        max_latency_ms: 180
+        name: "br0"
+        rate_mbit: 5
+      - delay_ms: 5
+        max_latency_ms: 15
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_far_primary loss=5 bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Receiver primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Receiver secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Receiver total"
+        - file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "iperf3 server"
+        server: |
+          iperf3 -s -D
+          port=":$(printf "%04X" "5201") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: "iperf3 -c 10.0.0.3 --mptcp -Z --json -t 30 -R > \"${RESULTS_DIR}/artifacts/iperf_cli.json\""
+        dstat_only: "step"
+        name: "iperf3 client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          [ -s artifacts/iperf_cli.json ]
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 25000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
