@@ -425,7 +425,9 @@ local regression(c) =
           { name: 'nstat', run: 'nstat -n' },
         ],
         post: [
-          { name: 'nstat', run: 'nstat -jz' },
+          // only the JSON: a warning, e.g. 'history is aged out', would be
+          // in the output too
+          { name: 'nstat', run: 'nstat -jz 2>/dev/null' },
           { name: 'mptcp', run: 'ip -j mptcp endpoint show' },
         ],
       },
