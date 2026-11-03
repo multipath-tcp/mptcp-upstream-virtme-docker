@@ -1,0 +1,991 @@
+# Generated from sched-bidir.jsonnet by gen.sh: do not edit
+# yaml-language-server: $schema=./perf.schema
+# yamllint disable rule:line-length
+---
+
+global:
+  bridges_hw_accel: false
+  dstat:
+    offset_end: 1
+    offset_start: 2
+  stats:
+    post:
+      - name: "nstat"
+        run: "nstat -jz"
+      - name: "mptcp"
+        run: "ip -j mptcp endpoint show"
+    pre:
+      - name: "nstat"
+        run: "nstat -n"
+  timeout_s: 900
+name: "sched-bidir"
+tests:
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced bidir"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary bidir"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 15
+        max_latency_ms: 485
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_secondary bidir"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 5800000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 5800000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br0"
+        rate_mbit: 29
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 29
+    name: "balanced bidir bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+        name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 7.5
+        max_latency_ms: 22.5
+        name: "br1"
+        rate_mbit: 50
+    name: "slow_primary bidir bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+        name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 29000000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]
+  - bridges:
+      - delay_ms: 10
+        max_latency_ms: 30
+        name: "br0"
+        rate_mbit: 8
+      - delay_ms: 15
+        max_latency_ms: 485
+        name: "br1"
+        rate_mbit: 50
+    name: "bloated_secondary bidir bbr"
+    regression:
+      global:
+        direction: "lower"
+        history_max_n: 50
+        min_diff_pc: 1
+      steps:
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Download primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Download secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "client"
+            - "net/total:recv"
+            - "mean"
+          name: "Download total"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth0:recv"
+            - "mean"
+          name: "Upload primary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/eth1:recv"
+            - "mean"
+          name: "Upload secondary path"
+        - file: "stats/dstat.json"
+          json_field:
+            - "server"
+            - "net/total:recv"
+            - "mean"
+          name: "Upload total"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Download: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Download: Duplicated data"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Download: Data beyond the window"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Download: Zero window drops"
+        - direction: "higher"
+          file: "stats/client/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "Upload: MPTCP retransmissions"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Upload: Duplicated data"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtNoDSSInWindow"
+          min_diff: 10
+          min_diff_pc: 50
+          name: "Upload: Data beyond the window"
+        - direction: "higher"
+          file: "stats/server/post/nstat"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "TcpExtTCPZeroWindowDrop"
+          min_diff: 5
+          min_diff_pc: 50
+          name: "Upload: Zero window drops"
+    steps:
+      - client: "ip mptcp limits set subflows 2 add_addr_accepted 2"
+        name: "mptcp endpoints"
+        server: "ip mptcp endpoint add 10.0.1.3 dev eth1 signal"
+      - client: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+        name: "sysctls"
+        server: |
+          sysctl -qw net.ipv4.tcp_congestion_control="bbr"
+      - name: "nc server"
+        server: |
+          for i in $(seq 1 1); do
+            mptcpize run nc -kl $((12345 + i)) </dev/zero >/dev/null & disown
+          done
+          port=":$(printf "%04X" "$((12345 + 1))") 0A"; while true; do awk '{print $2" "$4}' /proc/net/tcp* | grep -q "${port}" && break; done
+        timeout_s: 10
+      - all: "(sleep 15; ss -Mtni > \"${RESULTS_DIR}/artifacts/ss_${HOSTNAME}.txt\") & disown"
+        name: "ss"
+      - client: |
+          timeout 30 mptcpize run nc 10.0.0.3 $((12345 + 1)) </dev/zero >/dev/null
+          [ "$?" = 124 ]
+        dstat_only: "step"
+        name: "nc client"
+        timeout_s: 90
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          cd stats
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -ge 18 ]
+          [ "$(jq -r '.host.time.diff' dstat.json || echo 0)" -le 35 ]
+          [ "$(jq -r '.client["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 14500000 ]
+          [ "$(jq -r '.server["net/total:recv"].mean | round' dstat.json || echo 0)" -ge 14500000 ]
+          [ "$(jq -r '.client["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+          [ "$(jq -r '.server["net/eth1:recv"].mean | round' dstat.json || echo 0)" -ge 100000 ]
+      - name: "congestion control"
+        run: "grep -qw 'bbr' artifacts/ss_server.txt"
+      - name: "subflows"
+        run: |
+          set -x
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx' stats/client/post/nstat || echo 0)" -ge 1 ]

@@ -92,6 +92,7 @@ local defaults = {
   ratio: null,  // part of the expected throughput required
   // 'bulk': iperf3, or nc with limit_mode 'client'
   // 'rr': request/response with netperf, see 'rr_size'
+  // 'bidir': both ways on the same connection with nc
   workload: 'bulk',
   rr_size: null,  // size of the responses, in bytes
 };
@@ -148,7 +149,8 @@ local hostSysctls(c, host) =
     if is_sender && c.wmem != null then
       sysctl('net.ipv4.tcp_wmem', '4096 ' + std.min(16384, c.wmem * 1000) + ' ' + c.wmem * 1000),
     if tcp_mem != null then sysctl('net.ipv4.tcp_mem', tcp_mem),
-    if is_sender && c.cc != null then
+    // both send with 'bidir'
+    if (is_sender || c.workload == 'bidir') && c.cc != null then
       sysctl('net.ipv4.tcp_congestion_control', c.cc),
   ]);
 
@@ -183,7 +185,8 @@ local serverStep(c) =
     server: lines(['mptcpize run netserver -4 >/dev/null', waitListen(netperf_port)]),
     timeout_s: 10,
   }]
-  else if c.limit_mode == 'client' then [{
+  // nc sends data to the client too: also used with 'bidir'
+  else if c.limit_mode == 'client' || c.workload == 'bidir' then [{
     name: 'nc server',
     server: lines([
       'for i in $(seq 1 ' + c.parallel + '); do',
@@ -242,6 +245,17 @@ local clientStep(c) =
     timeout_s: timeout,
     dstat_only: 'step',
   }]
+  else if c.workload == 'bidir' then [{
+    name: 'nc client',
+    client: lines([
+      'timeout ' + c.duration_s + ' mptcpize run nc ' + server_addr + ' $((' + nc_port + ' + 1)) ' +
+      '</dev/zero >/dev/null',
+      // stopped by the timeout, as expected
+      '[ "$?" = 124 ]',
+    ]),
+    timeout_s: timeout,
+    dstat_only: 'step',
+  }]
   else if c.limit_mode == 'client' then [{
     name: 'nc client',
     client: lines([
@@ -268,6 +282,8 @@ local validation(c) =
   local rx = receiver(c);
   local rr = c.workload == 'rr';
   local iperf = c.workload == 'bulk' && c.limit_mode != 'client';
+  // with 'bidir', the expected throughput is the same in both directions
+  local rxs = if c.workload == 'bidir' then ['client', 'server'] else [rx];
   [{
     name: 'transfer',
     run: lines(std.prune([
@@ -277,10 +293,14 @@ local validation(c) =
       'cd stats',
       '[ "$(jq -r \'.host.time.diff\' dstat.json || echo 0)" -ge ' + fmtInt(c.duration_s * 0.6) + ' ]',
       '[ "$(jq -r \'.host.time.diff\' dstat.json || echo 0)" -le ' + (c.duration_s + 5) + ' ]',
-    ]) + (if rr then [] else std.prune([
-            '[ ' + jqMean(rx, 'total') + ' -ge ' + fmtInt(ratio(c) * bound(c)) + ' ]',
-            if checkSecondary(c) then '[ ' + jqMean(rx, 'eth1') + ' -ge 100000 ]',
-          ]))),
+    ]) + (if rr then [] else [
+            '[ ' + jqMean(h, 'total') + ' -ge ' + fmtInt(ratio(c) * bound(c)) + ' ]'
+            for h in rxs
+          ] + [
+            '[ ' + jqMean(h, 'eth1') + ' -ge 100000 ]'
+            for h in rxs
+            if checkSecondary(c)
+          ])),
   }] + (if c.backup then [{
           name: 'backup',
           run: lines([
@@ -316,24 +336,32 @@ local counter(name, host, key, min_diff) = {
 };
 
 // One direction of the data: from 'tx' to 'rx'
-local counters(tx, rx) = [
+local counters(tx, rx, prefix) = [
   // MPTCP-level timeouts: the data was stuck on a subflow
-  counter('MPTCP retransmissions', tx, 'MPTcpExtMPTCPRetrans', 20),
+  counter(prefix + 'MPTCP retransmissions', tx, 'MPTcpExtMPTCPRetrans', 20),
   // e.g. retransmissions, or reinjections, arriving too late
-  counter('Duplicated data', rx, 'MPTcpExtDuplicateData', 100),
+  counter(prefix + 'Duplicated data', rx, 'MPTcpExtDuplicateData', 100),
   // data sent beyond the window: the sender should not do that
-  counter('Data beyond the window', rx, 'MPTcpExtNoDSSInWindow', 10),
+  counter(prefix + 'Data beyond the window', rx, 'MPTcpExtNoDSSInWindow', 10),
   // same at the TCP level, e.g. a subflow used while the window is full
-  counter('Zero window drops', rx, 'TcpExtTCPZeroWindowDrop', 5),
+  counter(prefix + 'Zero window drops', rx, 'TcpExtTCPZeroWindowDrop', 5),
 ];
 
 local regression(c) =
   local rx = receiver(c);
-  local reg(name, iface) = {
+  local reg(name, host, iface) = {
     name: name,
     file: 'stats/dstat.json',
-    json_field: [rx, 'net/' + iface + ':recv', 'mean'],
+    json_field: [host, 'net/' + iface + ':recv', 'mean'],
   };
+  local paths(prefix, host) = [
+    reg(prefix + ' primary path', host, 'eth0'),
+    // a backup path should stay idle: ignore a few packets, e.g. one
+    // retransmission, 100 kbit/s on average is too much
+    reg(prefix + ' secondary path', host, 'eth1') +
+    (if c.backup then { direction: 'higher', min_diff: 100000 } else {}),
+    reg(prefix + ' total', host, 'total'),
+  ];
   local netperf(name, key, direction) = {
     name: name,
     file: 'artifacts/netperf.json',
@@ -349,22 +377,19 @@ local regression(c) =
       // smaller changes are not relevant, even if significant
       min_diff_pc: 1,
     },
-    steps: (if c.workload == 'rr' then [
-              netperf('Transaction rate', 'TRANSACTION_RATE', 'lower'),
-              netperf('P90 latency', 'P90_LATENCY', 'higher'),
-              netperf('P99 latency', 'P99_LATENCY', 'higher'),
-            ] else [
-              reg('Receiver primary path', 'eth0'),
-              // a backup path should stay idle: ignore a few packets, e.g. one
-              // retransmission, 100 kbit/s on average is too much
-              reg('Receiver secondary path', 'eth1') +
-              (if c.backup then { direction: 'higher', min_diff: 100000 } else {}),
-              reg('Receiver total', 'total'),
-            ] + (if c.limit_mode != 'client' then [{
-                   name: 'iperf3 received',
-                   file: 'artifacts/iperf_cli.json',
-                   json_field: ['end', 'sum_received', 'bits_per_second'],
-                 }] else [])) + counters(sender(c), rx),
+    steps: if c.workload == 'rr' then [
+      netperf('Transaction rate', 'TRANSACTION_RATE', 'lower'),
+      netperf('P90 latency', 'P90_LATENCY', 'higher'),
+      netperf('P99 latency', 'P99_LATENCY', 'higher'),
+    ] + counters(sender(c), rx, '')
+    else if c.workload == 'bidir' then
+      paths('Download', 'client') + paths('Upload', 'server') +
+      counters('server', 'client', 'Download: ') + counters('client', 'server', 'Upload: ')
+    else paths('Receiver', rx) + (if c.limit_mode != 'client' then [{
+                                    name: 'iperf3 received',
+                                    file: 'artifacts/iperf_cli.json',
+                                    json_field: ['end', 'sum_received', 'bits_per_second'],
+                                  }] else []) + counters(sender(c), rx, ''),
   };
 
 {
