@@ -2412,7 +2412,10 @@ go_perf() {
 	fi
 	# unset TERM to avoid this in pexpect buffers: "\x1b[?2004l\r"
 	# python env var to avoid creating __pycache__ in kernel src dir
+	# no need to build selftests and packetdrill (+ fetch)
 	TERM="" PYTHONDONTWRITEBYTECODE=1 \
+		INPUT_BUILD_SKIP_SELFTESTS=1 \
+		INPUT_BUILD_SKIP_PACKETDRILL=1 \
 		/perf.py "${perf_params[@]}" "${@}" || EXIT_STATUS=$?
 
 	# nothing to analyse
