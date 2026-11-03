@@ -263,12 +263,15 @@ local regression(c) =
       history_max_n: 50,
       // throughputs: lower values are marked as regressions
       direction: 'lower',
+      // smaller changes are not relevant, even if significant
+      min_diff_pc: 1,
     },
     steps: [
       reg('Receiver primary path', 'eth0'),
-      // a backup path should stay idle
+      // a backup path should stay idle: ignore a few packets, e.g. one
+      // retransmission, 100 kbit/s on average is too much
       reg('Receiver secondary path', 'eth1') +
-      (if c.backup then { direction: 'higher' } else {}),
+      (if c.backup then { direction: 'higher', min_diff: 100000 } else {}),
       reg('Receiver total', 'total'),
     ] + (if c.limit_mode != 'client' then [{
            name: 'iperf3 received',

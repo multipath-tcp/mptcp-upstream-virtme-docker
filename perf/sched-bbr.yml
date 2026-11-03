@@ -34,6 +34,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -103,6 +104,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -172,6 +174,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -241,6 +244,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -310,6 +314,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -379,6 +384,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -448,6 +454,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -517,6 +524,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -586,6 +594,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -655,6 +664,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -724,6 +734,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -793,6 +804,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -862,6 +874,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -930,6 +943,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:

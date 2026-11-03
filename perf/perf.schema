@@ -294,6 +294,16 @@
           "enum": ["lower", "higher", "different"],
           "description": "Which significant changes are regressions: 'lower' (e.g. for a throughput) or 'higher' (e.g. for a transfer time) values, or both with 'different'. Changes in the other direction are reported as improvements. Default: different."
         },
+        "min_diff": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum difference with the mean of the history, for a significant change to be reported as a regression or an improvement, e.g. not to report a counter going from 0 to 1. Default: 0."
+        },
+        "min_diff_pc": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Same as 'min_diff', but in percent of the mean of the history, e.g. not to report a stable throughput going down by 0.1%. The largest of the two is used. Default: 0."
+        },
         "history_max_n": {
           "type": "integer",
           "minimum": 0,

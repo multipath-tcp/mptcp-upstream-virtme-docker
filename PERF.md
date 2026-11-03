@@ -15,6 +15,12 @@ Holm-Bonferroni method before being compared with `alpha`: without that, the mor
 checks, the more false positives. This can be disabled per test, with
 `holm_bonferroni: false` in its `regression` section.
 
+A significant change is not always a relevant one: with a very stable history,
+a throughput going down by 0.1% can be reported, and so can a counter going from
+0 to 1. A minimum difference with the mean of the history can then be set per
+check, with `min_diff` (absolute) and/or `min_diff_pc` (in percent of the mean):
+smaller changes are neither reported as regressions, nor as improvements.
+
 Results of each run are kept. The ones with a `skip` file are ignored by the
 next regression checks: the file contains the reason.
 

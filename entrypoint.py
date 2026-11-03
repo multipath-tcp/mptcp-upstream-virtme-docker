@@ -314,6 +314,8 @@ class Entrypoint:
             history_max_n = int(check.get("history_max_n", 0))
             history_since = max(int(check.get("history_since", 0)), reset_since)
             direction = check.get("direction", "different")
+            min_diff = float(check.get("min_diff", 0))
+            min_diff_pc = float(check.get("min_diff_pc", 0))
 
             prev = last
             prev_results = []
@@ -376,6 +378,9 @@ class Entrypoint:
                 output = self._mark_outlier(global_name, name, check_name, msg, outs)
                 odd_outputs[f"{check_name}: run {prev_runs[i]}"] = output
 
+            # significant is not always relevant, e.g. -0.1% on a stable value
+            min_change = max(min_diff, abs(mean) * min_diff_pc / 100)
+
             tested.append(
                 {
                     "name": check_name,
@@ -383,6 +388,8 @@ class Entrypoint:
                     "msg": f"got {last_res}, had {mean}",
                     "p_reg": p_reg,
                     "p_value": p_value,
+                    "min_change": min_change,
+                    "small": abs(last_res - mean) < min_change,
                 }
             )
 
@@ -396,6 +403,14 @@ class Entrypoint:
 
         for c in tested:
             check_name, alpha = c["name"], c["alpha"]
+            if c["small"] and min(c["p_reg_adj"], c["p_value_adj"]) < alpha:
+                logger.info(
+                    f"{name}: {check_name}: significant change, but below the "
+                    f"minimum difference of {c['min_change']:.6g} ({c['msg']}, "
+                    f"p-value {c['p_value']:.6g}, adjusted {c['p_value_adj']:.6g})"
+                )
+                continue
+
             if c["p_reg_adj"] < alpha:
                 msg = (
                     f"{c['msg']}; p-value {c['p_reg']:.6g}, "

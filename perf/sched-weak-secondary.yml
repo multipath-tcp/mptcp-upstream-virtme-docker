@@ -34,6 +34,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -97,6 +98,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -160,6 +162,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -223,6 +226,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -287,6 +291,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -351,6 +356,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -415,6 +421,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -428,6 +435,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
@@ -485,6 +493,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -498,6 +507,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
@@ -555,6 +565,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -568,6 +579,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
@@ -625,6 +637,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -638,6 +651,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
@@ -695,6 +709,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -708,6 +723,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
@@ -765,6 +781,7 @@ tests:
       global:
         direction: "lower"
         history_max_n: 50
+        min_diff_pc: 1
       steps:
         - file: "stats/dstat.json"
           json_field:
@@ -778,6 +795,7 @@ tests:
             - "client"
             - "net/eth1:recv"
             - "mean"
+          min_diff: 100000
           name: "Receiver secondary path"
         - file: "stats/dstat.json"
           json_field:
