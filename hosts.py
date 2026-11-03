@@ -255,6 +255,14 @@ class VM(Host):
         super().__init__(mode, script, log, lvl, dry_run, user, hostname, env, timeout)
         global CID
 
+        if CID == 3:
+            try:
+                cid = int(os.environ.get("INPUT_VSOCK_CID", ""))
+                if cid >= 3:  # 0-2 are reserved
+                    CID = cid
+            except ValueError:
+                pass
+
         self.cid = CID
         CID += 1
 
