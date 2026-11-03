@@ -912,26 +912,12 @@ class Entrypoint:
         if bridges:
             env["INPUT_NET_BRIDGES"] = ",".join(bridges)
 
-    def _get_cpus(self, config):
-        return str(config.get("cpus", int(os.cpu_count() / 2)))
-
-    def _get_ram(self, config):
-        if "ram" in config:
-            return str(config["ram"])
-
-        try:
-            ram = "awk '/^MemAvailable:/ {print $2}' /proc/meminfo"
-            ram = int(self.cmd.output(ram)) / 1024
-        except ValueError:
-            ram = 2048 * 3
-
-        return f"{int(ram / 3)}M"
-
     def _get_envs(self, config):
-        env = {
-            "INPUT_CPUS": self._get_cpus(config),
-            "INPUT_RAM": self._get_ram(config),
-        }
+        env = {"INPUT_CPUS": str(config.get("cpus", 4))}
+
+        # if not set, entrypoint.sh will pick a value depending on the CPUs
+        if "ram" in config:
+            env["INPUT_RAM"] = str(config["ram"])
 
         self._get_bridges(config, env)
 

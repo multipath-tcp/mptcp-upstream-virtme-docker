@@ -49,14 +49,14 @@
         "cpus": {
           "type": "integer",
           "minimum": 1,
-          "description": "Number of CPUs for each VM. Default: half of the CPUs of the host."
+          "description": "Number of CPUs for each VM. Default: 4."
         },
         "ram": {
           "oneOf": [
             { "type": "integer", "minimum": 1 },
             { "type": "string", "minLength": 1 }
           ],
-          "description": "Memory for each VM, in MB if it is an integer, or with a unit, e.g. '2G'. Default: a third of the available memory of the host."
+          "description": "Memory for each VM, in MB if it is an integer, or with a unit, e.g. '2G'. Default: set by entrypoint.sh depending on the number of CPUs."
         },
         "bridges": {
           "type": "array",
