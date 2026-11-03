@@ -213,3 +213,18 @@ the latest results of each checked test, add `--reg-reset`, alone or with
 `--reg-only` to use the results from the previous run. The regression checks
 will then be done again once enough new measurements are available, see
 `--reg-min-history`.
+
+To compare with an existing history without modifying it, e.g. when another run
+is adding results to it in parallel, use `--reg-ref-dir` with the existing
+history, and a different `--reg-dir`, e.g.:
+
+```shell
+INPUT_VSOCK_CID=1000 ./.virtme.sh perf-normal \
+    --reg-dir .virtme/perf_reg-2 --reg-ref-dir .virtme/perf_reg
+```
+
+For each test, the history is linked from the reference directory, and the new
+results are only added in `--reg-dir`: they are not part of the history for the
+next runs, and the previous content of `--reg-dir` for this test is removed.
+`--reg-only` and `--validation-only` can still be used with the same options,
+but not `--reg-reset`: the history is reset from the reference directory.

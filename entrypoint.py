@@ -76,6 +76,7 @@ class Entrypoint:
         script,
         log_dir,
         reg_dir,
+        reg_ref_dir,
         reg_min_history,
         reg_alpha,
         reg_exclude,
@@ -88,6 +89,9 @@ class Entrypoint:
         self.script = script
         self.log_dir_parent = os.path.realpath(log_dir)
         self.reg_dir_parent = None if reg_dir is None else os.path.realpath(reg_dir)
+        self.reg_ref_dir_parent = (
+            None if reg_ref_dir is None else os.path.realpath(reg_ref_dir)
+        )
         self.reg_min_history = reg_min_history
         self.reg_alpha = reg_alpha
         self.reg_exclude = reg_exclude
@@ -129,6 +133,11 @@ class Entrypoint:
             os.makedirs(self.reg_dir, exist_ok=True)
         else:
             self.reg_dir = None
+
+        if self.reg_ref_dir_parent is not None:
+            self.reg_ref_dir = os.path.join(self.reg_ref_dir_parent, name)
+        else:
+            self.reg_ref_dir = None
 
     def build(self):
         logger.info(f"Building kernel ({self.mode})")
@@ -185,8 +194,37 @@ class Entrypoint:
                 self._kmemleak_scan(name, host)
             host.stop()
 
-    def _get_reg_dir(self, name):
-        return os.path.join(self.reg_dir, re.sub(r"\W", "_", name))
+    def _get_reg_dir(self, name, reg_dir=None):
+        return os.path.join(reg_dir or self.reg_dir, re.sub(r"\W", "_", name))
+
+    # Use the history from the reference dir, without modifying it: the new
+    # results are only added in --reg-dir. Previous ones there are removed,
+    # e.g. from a previous run: the reference history might have changed.
+    def _link_ref_history(self, name):
+        dir_path = self._get_reg_dir(name)
+        ref_path = self._get_reg_dir(name, self.reg_ref_dir)
+
+        # symlinks are not followed: the reference dir is not modified
+        shutil.rmtree(dir_path, ignore_errors=True)
+        os.makedirs(dir_path)
+
+        if not os.path.isdir(ref_path):
+            logger.info(f"{name}: no reference history in {ref_path}")
+            return
+
+        runs = []
+        for entry in os.listdir(ref_path):
+            src = os.path.join(ref_path, entry)
+            if entry.isdigit() and os.path.isdir(src):
+                os.symlink(src, os.path.join(dir_path, entry))
+                runs.append(int(entry))
+            elif entry == "history_since":
+                # a copy, just in case it is modified later
+                shutil.copy(src, dir_path)
+
+        # the most recent one, not 'latest': it might be modified in parallel
+        if runs:
+            os.symlink(str(max(runs)), os.path.join(dir_path, "latest"))
 
     # None if the value cannot be read, e.g. missing JSON field after an error.
     # quiet: e.g. for the history, older results might not have the new checks
@@ -552,6 +590,9 @@ class Entrypoint:
         if self.reg_dir is None or self.cmd.dry_run:
             logger.warning("Regressions are not tracked")
             return
+
+        if self.reg_ref_dir is not None:
+            self._link_ref_history(name)
 
         # create new dir and point latest to it
         dir_path = self._get_reg_dir(name)

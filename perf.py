@@ -201,6 +201,14 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-ref-dir",
+        action="store",
+        type=check_dir_arg,
+        help="Reference regression directory, only read: its history is linked"
+        " in --reg-dir, re-created for each test, e.g. for parallel runs",
+    )
+
+    parser.add_argument(
         "--reg-exclude",
         action="store_true",
         help="Keep the results, but exclude them from the next regression checks,"
@@ -317,6 +325,17 @@ def main():
             arg_parser.error("--reg-reset requires --reg-dir")
         if args.reg_exclude:
             arg_parser.error("--reg-reset cannot be used with --reg-exclude")
+        if args.reg_ref_dir:
+            arg_parser.error("--reg-reset cannot be used with --reg-ref-dir")
+
+    if args.reg_ref_dir:
+        if not args.reg_dir:
+            arg_parser.error("--reg-ref-dir requires --reg-dir")
+        # --reg-dir content is removed: it should not contain the reference
+        ref = os.path.join(args.reg_ref_dir, "")
+        reg = os.path.join(args.reg_dir, "")
+        if ref.startswith(reg) or reg.startswith(ref):
+            arg_parser.error("--reg-dir and --reg-ref-dir cannot contain each other")
 
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
@@ -336,6 +355,7 @@ def main():
         args.entrypoint,
         args.log_dir,
         args.reg_dir,
+        args.reg_ref_dir,
         args.reg_min_history,
         args.reg_alpha,
         args.reg_exclude,
