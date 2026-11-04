@@ -7,6 +7,10 @@
 // without shaping, the sender on CPU 0, the receiver on CPU 1. Between 2 VMs,
 // the results depend too much on where the host runs the threads of the VMs
 // and of vhost, e.g. +/- 50% for the same kernel. The server VM is not used.
+//
+// Even like that, the throughputs and latencies depend on the host: they are
+// marked as 'noisy', only reported with 'perf.py --reg-noisy', e.g. on a
+// dedicated host. The counters are always checked.
 
 local ip = '10.10.9.2';  // server address, on its loopback
 local mbit = 1000000;
@@ -128,12 +132,16 @@ local counter(name, ns, key, min_diff) = {
   min_diff: min_diff,
   min_diff_pc: 50,
   holm_bonferroni: false,
+  // not depending on the host
+  noisy: false,
 };
 
 local regression(c) = {
   // default alpha: 0.05
   global: {
     history_max_n: 50,
+    // see the top of this file
+    noisy: true,
     // the CPU speed varies a bit: smaller changes are not relevant
     min_diff_pc: 2,
   },
@@ -177,7 +185,7 @@ local test(name, cfg) =
     name: name,
     // the sender and the receiver on their own CPU, and room for the buffers
     cpus: 2,
-    ram: '8G',
+    ram: '4G',
     steps: [setup(c), workload(c), collect],
     validation: validation(c),
     regression: regression(c),

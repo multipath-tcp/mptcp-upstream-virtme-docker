@@ -9,11 +9,12 @@ name: "sched-dc"
 tests:
   - cpus: 2
     name: "bulk"
-    ram: "8G"
+    ram: "4G"
     regression:
       global:
         history_max_n: 50
         min_diff_pc: 2
+        noisy: true
       steps:
         - direction: "lower"
           file: "artifacts/iperf_cli.json"
@@ -31,6 +32,7 @@ tests:
           min_diff: 100
           min_diff_pc: 50
           name: "Duplicated data"
+          noisy: false
         - direction: "higher"
           file: "artifacts/nstat_c.json"
           holm_bonferroni: false
@@ -40,6 +42,7 @@ tests:
           min_diff: 20
           min_diff_pc: 50
           name: "MPTCP retransmissions"
+          noisy: false
     steps:
       - client: |
           sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
@@ -88,11 +91,12 @@ tests:
           [ "$(cat artifacts/c2_tx_bytes)" -ge 1000000 ]
   - cpus: 2
     name: "bulk single"
-    ram: "8G"
+    ram: "4G"
     regression:
       global:
         history_max_n: 50
         min_diff_pc: 2
+        noisy: true
       steps:
         - direction: "lower"
           file: "artifacts/iperf_cli.json"
@@ -110,6 +114,7 @@ tests:
           min_diff: 100
           min_diff_pc: 50
           name: "Duplicated data"
+          noisy: false
         - direction: "higher"
           file: "artifacts/nstat_c.json"
           holm_bonferroni: false
@@ -119,6 +124,7 @@ tests:
           min_diff: 20
           min_diff_pc: 50
           name: "MPTCP retransmissions"
+          noisy: false
     steps:
       - client: |
           sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
@@ -165,11 +171,12 @@ tests:
           [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 0 ]
   - cpus: 2
     name: "bulk parallel=4"
-    ram: "8G"
+    ram: "4G"
     regression:
       global:
         history_max_n: 50
         min_diff_pc: 2
+        noisy: true
       steps:
         - direction: "lower"
           file: "artifacts/iperf_cli.json"
@@ -187,6 +194,7 @@ tests:
           min_diff: 100
           min_diff_pc: 50
           name: "Duplicated data"
+          noisy: false
         - direction: "higher"
           file: "artifacts/nstat_c.json"
           holm_bonferroni: false
@@ -196,6 +204,7 @@ tests:
           min_diff: 20
           min_diff_pc: 50
           name: "MPTCP retransmissions"
+          noisy: false
     steps:
       - client: |
           sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
@@ -244,11 +253,12 @@ tests:
           [ "$(cat artifacts/c2_tx_bytes)" -ge 1000000 ]
   - cpus: 2
     name: "bulk write=4K"
-    ram: "8G"
+    ram: "4G"
     regression:
       global:
         history_max_n: 50
         min_diff_pc: 2
+        noisy: true
       steps:
         - direction: "lower"
           file: "artifacts/iperf_cli.json"
@@ -266,6 +276,7 @@ tests:
           min_diff: 100
           min_diff_pc: 50
           name: "Duplicated data"
+          noisy: false
         - direction: "higher"
           file: "artifacts/nstat_c.json"
           holm_bonferroni: false
@@ -275,6 +286,7 @@ tests:
           min_diff: 20
           min_diff_pc: 50
           name: "MPTCP retransmissions"
+          noisy: false
     steps:
       - client: |
           sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
@@ -322,11 +334,12 @@ tests:
           [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 1 ]
   - cpus: 2
     name: "rr size=1"
-    ram: "8G"
+    ram: "4G"
     regression:
       global:
         history_max_n: 50
         min_diff_pc: 2
+        noisy: true
       steps:
         - direction: "lower"
           file: "artifacts/netperf.json"
@@ -347,6 +360,7 @@ tests:
           min_diff: 100
           min_diff_pc: 50
           name: "Duplicated data"
+          noisy: false
         - direction: "higher"
           file: "artifacts/nstat_c.json"
           holm_bonferroni: false
@@ -356,6 +370,7 @@ tests:
           min_diff: 20
           min_diff_pc: 50
           name: "MPTCP retransmissions"
+          noisy: false
     steps:
       - client: |
           sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
