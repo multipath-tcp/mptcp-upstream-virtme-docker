@@ -1,0 +1,406 @@
+# Generated from sched-dc.jsonnet by gen.sh: do not edit
+# yaml-language-server: $schema=./perf.schema
+# yamllint disable rule:line-length
+---
+
+global:
+  timeout_s: 900
+name: "sched-dc"
+tests:
+  - cpus: 2
+    name: "bulk"
+    ram: "8G"
+    regression:
+      global:
+        history_max_n: 50
+        min_diff_pc: 2
+      steps:
+        - direction: "lower"
+          file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "artifacts/nstat_s.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "artifacts/nstat_c.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+    steps:
+      - client: |
+          sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
+          ip netns add c
+          ip netns add s
+          for ns in c s; do
+            ip -n "${ns}" link set lo up
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_rmem="4096 131072 134217728"
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_wmem="4096 16384 134217728"
+            ip -n "${ns}" mptcp limits set subflow 2 add_addr_accepted 0
+          done
+          ip -n s addr add 10.10.9.2/32 dev lo
+          for i in 1 2; do
+            ip link add "c${i}" netns c type veth peer name "s${i}" netns s
+            ip -n c addr add "10.10.${i}.1/24" dev "c${i}"
+            ip -n s addr add "10.10.${i}.2/24" dev "s${i}"
+            ip -n c link set "c${i}" up
+            ip -n s link set "s${i}" up
+            ip -n c route add default via "10.10.${i}.2" dev "c${i}" metric "$((100 + i))"
+          done
+          ip -n c mptcp endpoint add 10.10.2.1 dev c2 subflow
+          ip netns exec c nstat -n
+          ip netns exec s nstat -n
+        name: "netns"
+      - client: |
+          ip netns exec s iperf3 -m -s -1 -D -B 10.10.9.2 -A 1
+          ip netns exec s sh -c 'until ss -Htnl | grep -q ":5201 "; do sleep 0.1; done'
+          ip netns exec c iperf3 -m -c 10.10.9.2 -A 0 -J -t 20 > "${RESULTS_DIR}/artifacts/iperf_cli.json"
+        name: "iperf3"
+        timeout_s: 80
+      - client: |
+          ip netns exec c nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_c.json"
+          ip netns exec s nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_s.json"
+          ip netns exec c cat /sys/class/net/c2/statistics/tx_bytes > "${RESULTS_DIR}/artifacts/c2_tx_bytes"
+          for ns in c s; do ip netns pids "${ns}" | xargs -r kill; done
+          sleep 0.5
+          ip netns del c
+          ip netns del s
+        name: "counters"
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.end.sum_received.bits_per_second >= 1000000000' artifacts/iperf_cli.json
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 1 ]
+          [ "$(cat artifacts/c2_tx_bytes)" -ge 1000000 ]
+  - cpus: 2
+    name: "bulk single"
+    ram: "8G"
+    regression:
+      global:
+        history_max_n: 50
+        min_diff_pc: 2
+      steps:
+        - direction: "lower"
+          file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "artifacts/nstat_s.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "artifacts/nstat_c.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+    steps:
+      - client: |
+          sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
+          ip netns add c
+          ip netns add s
+          for ns in c s; do
+            ip -n "${ns}" link set lo up
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_rmem="4096 131072 134217728"
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_wmem="4096 16384 134217728"
+            ip -n "${ns}" mptcp limits set subflow 2 add_addr_accepted 0
+          done
+          ip -n s addr add 10.10.9.2/32 dev lo
+          for i in 1 2; do
+            ip link add "c${i}" netns c type veth peer name "s${i}" netns s
+            ip -n c addr add "10.10.${i}.1/24" dev "c${i}"
+            ip -n s addr add "10.10.${i}.2/24" dev "s${i}"
+            ip -n c link set "c${i}" up
+            ip -n s link set "s${i}" up
+            ip -n c route add default via "10.10.${i}.2" dev "c${i}" metric "$((100 + i))"
+          done
+          ip netns exec c nstat -n
+          ip netns exec s nstat -n
+        name: "netns"
+      - client: |
+          ip netns exec s iperf3 -m -s -1 -D -B 10.10.9.2 -A 1
+          ip netns exec s sh -c 'until ss -Htnl | grep -q ":5201 "; do sleep 0.1; done'
+          ip netns exec c iperf3 -m -c 10.10.9.2 -A 0 -J -t 20 > "${RESULTS_DIR}/artifacts/iperf_cli.json"
+        name: "iperf3"
+        timeout_s: 80
+      - client: |
+          ip netns exec c nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_c.json"
+          ip netns exec s nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_s.json"
+          ip netns exec c cat /sys/class/net/c2/statistics/tx_bytes > "${RESULTS_DIR}/artifacts/c2_tx_bytes"
+          for ns in c s; do ip netns pids "${ns}" | xargs -r kill; done
+          sleep 0.5
+          ip netns del c
+          ip netns del s
+        name: "counters"
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.end.sum_received.bits_per_second >= 1000000000' artifacts/iperf_cli.json
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 0 ]
+  - cpus: 2
+    name: "bulk parallel=4"
+    ram: "8G"
+    regression:
+      global:
+        history_max_n: 50
+        min_diff_pc: 2
+      steps:
+        - direction: "lower"
+          file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "artifacts/nstat_s.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "artifacts/nstat_c.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+    steps:
+      - client: |
+          sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
+          ip netns add c
+          ip netns add s
+          for ns in c s; do
+            ip -n "${ns}" link set lo up
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_rmem="4096 131072 134217728"
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_wmem="4096 16384 134217728"
+            ip -n "${ns}" mptcp limits set subflow 2 add_addr_accepted 0
+          done
+          ip -n s addr add 10.10.9.2/32 dev lo
+          for i in 1 2; do
+            ip link add "c${i}" netns c type veth peer name "s${i}" netns s
+            ip -n c addr add "10.10.${i}.1/24" dev "c${i}"
+            ip -n s addr add "10.10.${i}.2/24" dev "s${i}"
+            ip -n c link set "c${i}" up
+            ip -n s link set "s${i}" up
+            ip -n c route add default via "10.10.${i}.2" dev "c${i}" metric "$((100 + i))"
+          done
+          ip -n c mptcp endpoint add 10.10.2.1 dev c2 subflow
+          ip netns exec c nstat -n
+          ip netns exec s nstat -n
+        name: "netns"
+      - client: |
+          ip netns exec s iperf3 -m -s -1 -D -B 10.10.9.2 -A 1
+          ip netns exec s sh -c 'until ss -Htnl | grep -q ":5201 "; do sleep 0.1; done'
+          ip netns exec c iperf3 -m -c 10.10.9.2 -A 0 -J -t 20 -P 4 > "${RESULTS_DIR}/artifacts/iperf_cli.json"
+        name: "iperf3"
+        timeout_s: 80
+      - client: |
+          ip netns exec c nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_c.json"
+          ip netns exec s nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_s.json"
+          ip netns exec c cat /sys/class/net/c2/statistics/tx_bytes > "${RESULTS_DIR}/artifacts/c2_tx_bytes"
+          for ns in c s; do ip netns pids "${ns}" | xargs -r kill; done
+          sleep 0.5
+          ip netns del c
+          ip netns del s
+        name: "counters"
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.end.sum_received.bits_per_second >= 1000000000' artifacts/iperf_cli.json
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 4 ]
+          [ "$(cat artifacts/c2_tx_bytes)" -ge 1000000 ]
+  - cpus: 2
+    name: "bulk write=4K"
+    ram: "8G"
+    regression:
+      global:
+        history_max_n: 50
+        min_diff_pc: 2
+      steps:
+        - direction: "lower"
+          file: "artifacts/iperf_cli.json"
+          json_field:
+            - "end"
+            - "sum_received"
+            - "bits_per_second"
+          name: "iperf3 received"
+        - direction: "higher"
+          file: "artifacts/nstat_s.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "artifacts/nstat_c.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+    steps:
+      - client: |
+          sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
+          ip netns add c
+          ip netns add s
+          for ns in c s; do
+            ip -n "${ns}" link set lo up
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_rmem="4096 131072 134217728"
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_wmem="4096 16384 134217728"
+            ip -n "${ns}" mptcp limits set subflow 2 add_addr_accepted 0
+          done
+          ip -n s addr add 10.10.9.2/32 dev lo
+          for i in 1 2; do
+            ip link add "c${i}" netns c type veth peer name "s${i}" netns s
+            ip -n c addr add "10.10.${i}.1/24" dev "c${i}"
+            ip -n s addr add "10.10.${i}.2/24" dev "s${i}"
+            ip -n c link set "c${i}" up
+            ip -n s link set "s${i}" up
+            ip -n c route add default via "10.10.${i}.2" dev "c${i}" metric "$((100 + i))"
+          done
+          ip -n c mptcp endpoint add 10.10.2.1 dev c2 subflow
+          ip netns exec c nstat -n
+          ip netns exec s nstat -n
+        name: "netns"
+      - client: |
+          ip netns exec s iperf3 -m -s -1 -D -B 10.10.9.2 -A 1
+          ip netns exec s sh -c 'until ss -Htnl | grep -q ":5201 "; do sleep 0.1; done'
+          ip netns exec c iperf3 -m -c 10.10.9.2 -A 0 -J -t 20 -l 4096 > "${RESULTS_DIR}/artifacts/iperf_cli.json"
+        name: "iperf3"
+        timeout_s: 80
+      - client: |
+          ip netns exec c nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_c.json"
+          ip netns exec s nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_s.json"
+          ip netns exec c cat /sys/class/net/c2/statistics/tx_bytes > "${RESULTS_DIR}/artifacts/c2_tx_bytes"
+          for ns in c s; do ip netns pids "${ns}" | xargs -r kill; done
+          sleep 0.5
+          ip netns del c
+          ip netns del s
+        name: "counters"
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.end.sum_received.bits_per_second >= 1000000000' artifacts/iperf_cli.json
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 1 ]
+  - cpus: 2
+    name: "rr size=1"
+    ram: "8G"
+    regression:
+      global:
+        history_max_n: 50
+        min_diff_pc: 2
+      steps:
+        - direction: "lower"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "TRANSACTION_RATE"
+          name: "Transaction rate"
+        - direction: "higher"
+          file: "artifacts/netperf.json"
+          json_field:
+            - "P99_LATENCY"
+          name: "P99 latency"
+        - direction: "higher"
+          file: "artifacts/nstat_s.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtDuplicateData"
+          min_diff: 100
+          min_diff_pc: 50
+          name: "Duplicated data"
+        - direction: "higher"
+          file: "artifacts/nstat_c.json"
+          holm_bonferroni: false
+          json_field:
+            - "kernel"
+            - "MPTcpExtMPTCPRetrans"
+          min_diff: 20
+          min_diff_pc: 50
+          name: "MPTCP retransmissions"
+    steps:
+      - client: |
+          sysctl -qw net.ipv4.tcp_mem="1048576 1572864 2097152"
+          ip netns add c
+          ip netns add s
+          for ns in c s; do
+            ip -n "${ns}" link set lo up
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_rmem="4096 131072 134217728"
+            ip netns exec "${ns}" sysctl -qw net.ipv4.tcp_wmem="4096 16384 134217728"
+            ip -n "${ns}" mptcp limits set subflow 2 add_addr_accepted 0
+          done
+          ip -n s addr add 10.10.9.2/32 dev lo
+          for i in 1 2; do
+            ip link add "c${i}" netns c type veth peer name "s${i}" netns s
+            ip -n c addr add "10.10.${i}.1/24" dev "c${i}"
+            ip -n s addr add "10.10.${i}.2/24" dev "s${i}"
+            ip -n c link set "c${i}" up
+            ip -n s link set "s${i}" up
+            ip -n c route add default via "10.10.${i}.2" dev "c${i}" metric "$((100 + i))"
+          done
+          ip -n c mptcp endpoint add 10.10.2.1 dev c2 subflow
+          ip netns exec c nstat -n
+          ip netns exec s nstat -n
+        name: "netns"
+      - client: |
+          ip netns exec s mptcpize run netserver -4 -L 10.10.9.2 >/dev/null
+          ip netns exec s sh -c 'until ss -Htnl | grep -q ":12865 "; do sleep 0.1; done'
+          ip netns exec c mptcpize run netperf -4 -H 10.10.9.2 -t TCP_RR -l 20 -j -P 0 -T 0,1 -- -D -r 1,1 -k TRANSACTION_RATE,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY > "${RESULTS_DIR}/artifacts/netperf.txt"
+          rc=$?
+          jq -Rn '[inputs | split("=") | {(.[0]): (.[1] | tonumber)}] | add' "${RESULTS_DIR}/artifacts/netperf.txt" > "${RESULTS_DIR}/artifacts/netperf.json"
+          [ "${rc}" = 0 ]
+        name: "netperf"
+        timeout_s: 80
+      - client: |
+          ip netns exec c nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_c.json"
+          ip netns exec s nstat -jz 2>/dev/null > "${RESULTS_DIR}/artifacts/nstat_s.json"
+          ip netns exec c cat /sys/class/net/c2/statistics/tx_bytes > "${RESULTS_DIR}/artifacts/c2_tx_bytes"
+          for ns in c s; do ip netns pids "${ns}" | xargs -r kill; done
+          sleep 0.5
+          ip netns del c
+          ip netns del s
+        name: "counters"
+    validation:
+      - name: "transfer"
+        run: |
+          set -x
+          jq -e '.TRANSACTION_RATE > 0' artifacts/netperf.json
+          [ "$(jq -r '.kernel.MPTcpExtMPJoinSynAckRx // 0' artifacts/nstat_c.json)" -ge 2 ]
