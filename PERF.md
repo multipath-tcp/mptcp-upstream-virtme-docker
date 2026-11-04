@@ -22,6 +22,14 @@ a throughput going down by 0.1% can be reported, and so can a counter going from
 check, with `min_diff` (absolute) and/or `min_diff_pc` (in percent of the mean):
 smaller changes are neither reported as regressions, nor as improvements.
 
+Some values depend too much on the host to be reliable everywhere, e.g. a
+throughput limited by the CPU, on a CI where other jobs run on the same machine.
+Such checks can be marked with `noisy: true`: their significant changes are then
+only informational, in `noisy.txt`, and their p-values do not change the
+adjusted ones of the other checks. With the `--reg-noisy` option, e.g. on a
+dedicated host, they are reported as the other checks. Their values are kept in
+the history in both cases.
+
 Results of each run are kept. The ones with a `skip` file are ignored by the
 next regression checks: the file contains the reason.
 

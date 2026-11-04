@@ -209,6 +209,13 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--reg-noisy",
+        action="store_true",
+        help="Report the regressions of the checks marked as noisy, e.g. on a"
+        " dedicated host: they are only informational by default",
+    )
+
+    parser.add_argument(
         "--reg-exclude",
         action="store_true",
         help="Keep the results, but exclude them from the next regression checks,"
@@ -359,6 +366,7 @@ def main():
         args.reg_min_history,
         args.reg_alpha,
         args.reg_exclude,
+        args.reg_noisy,
         args.reg_only,
         args.reg_reset,
         args.validation_only,

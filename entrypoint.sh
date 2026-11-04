@@ -2058,6 +2058,13 @@ _print_perf_tests() {
 		cat "${RESULTS_DIR}"/*/*/improvement.txt | sed 's/^/ok 1 test: improvement: /g'
 	fi
 
+	# checks marked as noisy, without --reg-noisy: only informational
+	if ls "${RESULTS_DIR}"/*/*/noisy.txt &>/dev/null; then
+		echo
+		echo "ok has changes in noisy checks, not reported"
+		cat "${RESULTS_DIR}"/*/*/noisy.txt | sed 's/^/ok 1 test: noisy: /g'
+	fi
+
 	# still used as reference: to be reviewed, and maybe skipped
 	if ls "${RESULTS_DIR}"/*/*/outliers.txt &>/dev/null; then
 		echo

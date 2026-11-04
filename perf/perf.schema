@@ -308,6 +308,10 @@
           "type": "boolean",
           "description": "When false, the p-value of this check is not adjusted with the Holm-Bonferroni method, and it does not change the adjusted p-values of the other checks of the test, e.g. for a secondary check with its own minimum difference, not to make the main ones less sensitive. Default: true."
         },
+        "noisy": {
+          "type": "boolean",
+          "description": "When true, a significant change is only informational, not reported as a regression or an improvement, and its p-value does not change the adjusted ones of the other checks of the test: e.g. for a throughput limited by the CPU, depending too much on the host. Reported as the other checks with 'perf.py --reg-noisy', e.g. on a dedicated host. Default: false."
+        },
         "history_max_n": {
           "type": "integer",
           "minimum": 0,

@@ -80,6 +80,7 @@ class Entrypoint:
         reg_min_history,
         reg_alpha,
         reg_exclude,
+        reg_noisy,
         reg_only,
         reg_reset,
         validation_only,
@@ -95,6 +96,7 @@ class Entrypoint:
         self.reg_min_history = reg_min_history
         self.reg_alpha = reg_alpha
         self.reg_exclude = reg_exclude
+        self.reg_noisy = reg_noisy
         self.reg_only = reg_only
         self.reg_reset = reg_reset
         self.validation_only = validation_only
@@ -270,6 +272,14 @@ class Entrypoint:
         with open(os.path.join(self.log_dir, "improvement.txt"), "a") as f:
             print(f"{global_name}: {name}: {output}", file=f)
 
+    # a noisy check, without --reg-noisy: only informational
+    def _mark_noisy(self, global_name, name, check_name, kind, msg):
+        output = f"{check_name}: {kind}: {msg}"
+        logger.info(f"Noisy check, not reported: {output}")
+
+        with open(os.path.join(self.log_dir, "noisy.txt"), "a") as f:
+            print(f"{global_name}: {name}: {output}", file=f)
+
     def _mark_outlier(self, global_name, name, check_name, msg, outs):
         output = f"{check_name}: {msg}"
         outs.append(output)
@@ -431,12 +441,14 @@ class Entrypoint:
                     "min_change": min_change,
                     "small": abs(last_res - mean) < min_change,
                     "holm": check.get("holm_bonferroni", True),
+                    "noisy": check.get("noisy", False) and not self.reg_noisy,
                 }
             )
 
         # multiple checks per test: the more checks, the more false positives
         use_holm = regression.get("holm_bonferroni", True)
-        family = [c for c in tested if use_holm and c["holm"]]
+        # noisy checks are not reported: they should not change the others
+        family = [c for c in tested if use_holm and c["holm"] and not c["noisy"]]
         for key in ("p_reg", "p_value"):
             for c in tested:
                 c[f"{key}_adj"] = c[key]
@@ -459,7 +471,12 @@ class Entrypoint:
                     f"{c['msg']}; p-value {c['p_reg']:.6g}, "
                     f"adjusted {c['p_reg_adj']:.6g} is below alpha {alpha:.6g}"
                 )
-                reg = self._mark_reg(latest, global_name, name, check_name, msg, msgs)
+                if c["noisy"]:
+                    self._mark_noisy(global_name, name, check_name, "regression", msg)
+                else:
+                    reg = self._mark_reg(
+                        latest, global_name, name, check_name, msg, msgs
+                    )
                 continue
 
             # the other way, with a two-sided test not to report small changes
@@ -468,7 +485,10 @@ class Entrypoint:
                     f"{c['msg']}; p-value {c['p_value']:.6g}, "
                     f"adjusted {c['p_value_adj']:.6g} is below alpha {alpha:.6g}"
                 )
-                self._mark_improv(global_name, name, check_name, msg, improvs)
+                if c["noisy"]:
+                    self._mark_noisy(global_name, name, check_name, "improvement", msg)
+                else:
+                    self._mark_improv(global_name, name, check_name, msg, improvs)
                 continue
 
             logger.info(
@@ -525,7 +545,13 @@ class Entrypoint:
             msgs.append(f"{latest}: not the results from the previous run")
             return True
 
-        for f in ("regs.txt", "improvement.txt", "outliers.txt", "outliers_new.txt"):
+        for f in (
+            "regs.txt",
+            "improvement.txt",
+            "noisy.txt",
+            "outliers.txt",
+            "outliers_new.txt",
+        ):
             path = os.path.join(self.log_dir, f)
             if os.path.isfile(path):
                 os.remove(path)
