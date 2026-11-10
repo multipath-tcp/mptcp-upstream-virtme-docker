@@ -717,6 +717,9 @@ gen_kconfig() {
 	# Useful to reproduce issue
 	kconfig+=(-e NET_SCH_TBF -e BRIDGE)
 
+	# To kill sockets with 'ss -K'
+	kconfig+=(-e INET_DIAG_DESTROY)
+
 	# For the perf tests
 	kconfig+=(-e TCP_CONG_ADVANCED -e TCP_CONG_BBR -e NET_SCH_FQ)
 
