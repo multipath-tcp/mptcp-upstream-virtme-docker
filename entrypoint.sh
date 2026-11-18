@@ -1089,7 +1089,7 @@ set_max_threads() {
 	if [[ "${mode}" == *"debug" ]] ||
 	   { [ "\$(cat /sys/devices/virtual/dmi/id/sys_vendor)" = "QEMU" ] &&
 	     [ "\$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)" != "kvm-clock" ]; }; then
-		MAX_THREADS=$((MAX_THREADS / 2)) # avoid too many concurrent work
+		MAX_THREADS=\$((MAX_THREADS / 2)) # avoid too many concurrent work
 	fi
 }
 
