@@ -890,7 +890,8 @@ class Entrypoint:
         dirname = os.path.join(self.log_dir, "stats", hostname)
         os.makedirs(dirname, exist_ok=True)
         out = os.path.join(dirname, "dstat.csv")
-        host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null &")
+        # without disown, bash would report its end in the output of the next cmd
+        host.cmd_wait(f"dstat -tclmn -N {ifaces} -o '{out}' &>/dev/null & disown")
 
     def _stop_dstat(self, hostname):
         host = self.hosts[hostname]
