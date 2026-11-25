@@ -2565,6 +2565,8 @@ exit_trap() {
 		else
 			err=${rc}
 		fi
+		# removed if empty by another run with the same CID, e.g. a sub-build
+		mkdir -p "$(dirname "${CONCLUSION:-"conclusion.txt"}")"
 		print_conclusion ${err} | tee "${CONCLUSION:-"conclusion.txt"}"
 	fi
 	echo -e "${COLOR_RESET}"
