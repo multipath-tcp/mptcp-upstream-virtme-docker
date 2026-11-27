@@ -14,6 +14,7 @@ import re
 import shlex
 import shutil
 import statistics
+import sys
 import tempfile
 import time
 
@@ -23,6 +24,21 @@ from scipy import stats
 import hosts
 
 logger = logging.getLogger(__name__)
+
+# as in entrypoint.sh: GitHub Actions can fold these sections of the logs
+GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
+
+
+# on stderr, with the logs, to keep the order
+def log_section_start(title):
+    if GITHUB_ACTIONS:
+        print(f"\n::group::\033[1;33m{title}\033[0m", file=sys.stderr, flush=True)
+
+
+def log_section_end():
+    if GITHUB_ACTIONS:
+        print("::endgroup::\n", file=sys.stderr, flush=True)
+
 
 # Same as kmemleak_scan() in entrypoint.sh
 KMEMLEAK_SCAN = """p=/sys/kernel/debug/kmemleak; f={file}
@@ -1081,6 +1097,7 @@ class Entrypoint:
         total = len(tests)
 
         self._set_dirs(global_name)
+        log_section_start(f"Perf Tests: {global_name_n}")
         logger.info(f"Starting tests {global_name_n}")
 
         for test in tests:
@@ -1184,4 +1201,5 @@ class Entrypoint:
             id += 1
 
         logger.info(f"Ending tests: {global_name_n}")
+        log_section_end()
         return results, exit
