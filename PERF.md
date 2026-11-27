@@ -193,9 +193,10 @@ e.g. `<reg dir>/<suite>/<test>/<run>/skip`.
 **Note**: more runs in the history -- e.g. 20 by default -- give more reliable
 comparisons, fewer false positives.
 
-**Note**: with `--parallel K/N`, only the part `K` out of `N` is executed, e.g.
-on another host. Each part gets one test out of `N`, in turn, and the tests keep
-the same IDs as in a full run: the results of the parts can then be regrouped.
+**Note**: on a powerful host, `--parallel N` runs the tests in `N` parts at the
+same time, then regroups their results. Each part has its own VMs, with VSOCK
+CIDs starting from `INPUT_VSOCK_CID` + 1000 per part. With `--parallel K/N`,
+only the part `K` is executed, e.g. on another host.
 
 ## Adapting the regressions
 

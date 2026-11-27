@@ -109,6 +109,8 @@ class Entrypoint:
                 self.prev_results = json.load(f)
 
         self.hosts = {}
+        # e.g. parts of the tests running in parallel here: not the same bridges
+        self.br_suffix = os.environ.get("PERF_BRIDGE_SUFFIX", "")
         self.git_sha = self.cmd.output("git rev-parse HEAD", fatal=False)
         self.stopped = False
         self.interrupted = False
@@ -966,7 +968,7 @@ class Entrypoint:
             if not tc_args:
                 continue
 
-            vbr = f"vir{br['name']}"
+            vbr = f"vir{br['name']}{self.br_suffix}"
             if self.cmd.dry_run:
                 # bridges are created when booting the VMs
                 ifaces = [f"<{vbr}-port>"]
@@ -994,7 +996,7 @@ class Entrypoint:
 
         bridges = []
         for br in config["bridges"]:
-            vbr = f"vir{br['name']}"
+            vbr = f"vir{br['name']}{self.br_suffix}"
             bridges.append(vbr)
 
         if bridges:

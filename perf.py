@@ -6,11 +6,13 @@ Perf script interacting with entrypoint
 """
 
 import argparse
+import glob
 import json
 import logging
 import os
 import shutil
 import signal
+import subprocess
 import sys
 
 import jsonschema
@@ -88,11 +90,18 @@ def check_output_file_arg(path):
 
 def check_parallel_arg(value):
     try:
-        part, parts = (int(v) for v in value.split("/"))
-        if not 1 <= part <= parts:
+        if "/" in value:
+            part, parts = (int(v) for v in value.split("/"))
+            valid = 1 <= part <= parts
+        else:
+            part, parts = 0, int(value)
+            valid = 1 <= parts <= 26  # one letter per part for the bridges
+        if not valid:
             raise ValueError
     except ValueError:
-        raise argparse.ArgumentTypeError(f"'{value}' is not K/N, with 1 <= K <= N.")
+        raise argparse.ArgumentTypeError(
+            f"'{value}' is not K/N, with 1 <= K <= N, or N, with 1 <= N <= 26."
+        )
     return part, parts
 
 
@@ -197,11 +206,11 @@ def get_args_parser():
     parser.add_argument(
         "--parallel",
         action="store",
-        metavar="K/N",
+        metavar="[K/]N",
         type=check_parallel_arg,
-        help="Only run the part K out of N, e.g. 1/3, to run the parts in parallel,"
-        " e.g. on different hosts: each one gets one test out of N, in turn, with"
-        " the same IDs as in a full run, to regroup the results",
+        help="Run the tests in N parts at the same time here, then regroup the"
+        " results, or only the part K, e.g. 1/3 on another host: each part gets"
+        " one test out of N, in turn, with the same IDs as in a full run",
     )
 
     parser.add_argument(
@@ -327,6 +336,71 @@ def parallel_ids(configs, part, parts):
     return ids
 
 
+# all the parts at the same time, each one with its own VMs, bridges and logs
+def run_parts(args, ep):
+    parts = args.parallel[1]
+    # already built, and the status of the parts is needed: no JSON file
+    argv, it = [], iter(sys.argv[1:])
+    for arg in it:
+        if arg == "--json":
+            next(it, None)
+        elif arg not in ("--build", "-b") and not arg.startswith("--json="):
+            argv.append(arg)
+    cid = int(os.environ.get("INPUT_VSOCK_CID", "3"))
+    procs = []
+    for k in range(1, parts + 1):
+        log_dir = os.path.join(args.log_dir, f"part-{k}")
+        shutil.rmtree(log_dir, ignore_errors=True)
+        os.makedirs(log_dir)
+        env = os.environ | {
+            "INPUT_VSOCK_CID": str(cid + (k - 1) * 1000),  # 2 per test
+            "PERF_BRIDGE_SUFFIX": chr(ord("a") + k - 1),
+        }
+        cmd = [sys.executable, __file__, *argv, "--parallel", f"{k}/{parts}"]
+        procs.append(subprocess.Popen([*cmd, "--log-dir", log_dir], env=env))
+    # e.g. Ctrl+C: stopped by the parts, then their results are regrouped
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    results = {}
+    suite_dirs = set()
+    exit = 0
+    for k, proc in enumerate(procs, start=1):
+        rc = proc.wait()
+        log_dir = os.path.join(args.log_dir, f"part-{k}")
+        try:
+            with open(os.path.join(log_dir, "perf.json")) as f:
+                for suite, tests in json.load(f).items():
+                    results.setdefault(suite, {}).update(tests)
+        except (OSError, ValueError):
+            logger.error(f"Part {k}/{parts}: no results ({rc})")
+            rc = 1
+        if rc > 0 and (exit == 0 or rc < exit):
+            exit = rc
+
+        # same dirs as without the parts: one per suite, replacing older ones
+        for suite in os.listdir(log_dir):
+            src, dst = os.path.join(log_dir, suite), os.path.join(args.log_dir, suite)
+            if os.path.isdir(src):
+                if suite not in suite_dirs:
+                    shutil.rmtree(dst, ignore_errors=True)
+                    suite_dirs.add(suite)
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+        shutil.rmtree(log_dir)
+
+    # in order, as without the parts, with the outliers, e.g. for --json
+    results = {
+        suite: dict(sorted(tests.items(), key=lambda t: int(t[0])))
+        for suite, tests in sorted(results.items())
+    }
+    for suite in results:
+        suite_dir = os.path.join(args.log_dir, suite.split("-", 1)[1])
+        for path in sorted(glob.glob(os.path.join(suite_dir, "*", "outliers.txt"))):
+            with open(path) as f:
+                ep.outliers += f.read().splitlines()
+
+    return results, exit
+
+
 def add_infos(results, infos):
     for info in infos:
         info = info.split(":", 1)
@@ -384,9 +458,12 @@ def main():
             arg_parser.error("--reg-dir and --reg-ref-dir cannot contain each other")
 
     level = logging.DEBUG if args.verbose else logging.INFO
+    part = ""
+    if args.parallel and args.parallel[0]:
+        part = f"[{args.parallel[0]}/{args.parallel[1]}] "
     logging.basicConfig(
         level=level,
-        format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s",
+        format=f"%(asctime)s.%(msecs)03d %(levelname)s {part}%(module)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     logger_color(logging.DEBUG, "30")
@@ -447,13 +524,18 @@ def main():
         arg_parser.error("--test-only requires exactly one config file")
 
     only_ids = [None] * len(configs)
-    if args.parallel:
+    if args.parallel and args.parallel[0]:
         only_ids = parallel_ids(configs, *args.parallel)
 
     results = {}
     exit = 0
     id = 1
-    for conf_file, config, ids in zip(args.config, configs, only_ids, strict=True):
+    suites = zip(args.config, configs, only_ids, strict=True)
+    # all the parts at the same time, except to check the results again: no VMs
+    if args.parallel and not args.parallel[0] and not ep.reuse:
+        results, exit = run_parts(args, ep)
+        suites = []
+    for conf_file, config, ids in suites:
         # with a timeout, the next tests are still reported
         if ep.interrupted and not ep.graceful:
             logger.warning(f"Interrupted: skipping {conf_file}")
