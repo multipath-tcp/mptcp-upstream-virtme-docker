@@ -461,9 +461,11 @@ def main():
     part = ""
     if args.parallel and args.parallel[0]:
         part = f"[{args.parallel[0]}/{args.parallel[1]}] "
+    # GitHub Actions already records the time of each line
+    stamp = "" if entrypoint.GITHUB_ACTIONS else "%(asctime)s.%(msecs)03d "
     logging.basicConfig(
         level=level,
-        format=f"%(asctime)s.%(msecs)03d %(levelname)s {part}%(module)s: %(message)s",
+        format=f"{stamp}%(levelname)s {part}%(module)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     logger_color(logging.DEBUG, "30")
