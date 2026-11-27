@@ -86,6 +86,16 @@ def check_output_file_arg(path):
     return os.path.realpath(path)
 
 
+def check_parallel_arg(value):
+    try:
+        part, parts = (int(v) for v in value.split("/"))
+        if not 1 <= part <= parts:
+            raise ValueError
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not K/N, with 1 <= K <= N.")
+    return part, parts
+
+
 def get_args_parser():
     parser = argparse.ArgumentParser(
         description="MPTCP Perf checker",
@@ -185,6 +195,16 @@ def get_args_parser():
     )
 
     parser.add_argument(
+        "--parallel",
+        action="store",
+        metavar="K/N",
+        type=check_parallel_arg,
+        help="Only run the part K out of N, e.g. 1/3, to run the parts in parallel,"
+        " e.g. on different hosts: each one gets one test out of N, in turn, with"
+        " the same IDs as in a full run, to regroup the results",
+    )
+
+    parser.add_argument(
         "--reg-alpha",
         action="store",
         type=check_alpha_arg,
@@ -281,7 +301,7 @@ def get_args_parser():
     return parser
 
 
-def validate_config(conf_file):
+def load_config(conf_file):
     with open(conf_file) as c:
         config = yaml.safe_load(c)
 
@@ -289,6 +309,22 @@ def validate_config(conf_file):
     with open(schema_file) as s:
         schema = json.load(s)
     jsonschema.validate(config, schema)
+
+    return config
+
+
+# IDs of the tests of each config: in turn, the parts then have similar
+# durations, even if a suite has longer tests
+def parallel_ids(configs, part, parts):
+    ids = []
+    first = 0  # index of the first test of the suite, among all of them
+    for config in configs:
+        n = len(config["tests"])
+        ids.append({i + 1 for i in range(n) if (first + i) % parts == part - 1})
+        first += n
+
+    logger.info(f"Part {part}/{parts}: {sum(map(len, ids))} tests out of {first}")
+    return ids
 
 
 def add_infos(results, infos):
@@ -326,6 +362,9 @@ def main():
 
     if args.reg_only and args.validation_only:
         arg_parser.error("--validation-only also checks the regressions")
+
+    if args.parallel and args.test_only:
+        arg_parser.error("--parallel cannot be used with --test-only")
 
     if args.reg_reset:
         if not args.reg_dir:
@@ -402,23 +441,24 @@ def main():
     elif not args.config:
         args.config = [os.path.join(os.path.dirname(__file__), "perf", "perf.yml")]
 
-    for conf_file in args.config:
-        validate_config(conf_file)
+    configs = [load_config(conf_file) for conf_file in args.config]
 
     if args.test_only and len(args.config) != 1:
         arg_parser.error("--test-only requires exactly one config file")
 
+    only_ids = [None] * len(configs)
+    if args.parallel:
+        only_ids = parallel_ids(configs, *args.parallel)
+
     results = {}
     exit = 0
     id = 1
-    for conf_file in args.config:
+    for conf_file, config, ids in zip(args.config, configs, only_ids, strict=True):
         # with a timeout, the next tests are still reported
         if ep.interrupted and not ep.graceful:
             logger.warning(f"Interrupted: skipping {conf_file}")
             continue
-        with open(conf_file) as c:
-            config = yaml.safe_load(c)
-        result, rc = ep.run_tests(id, config, args.test_only)
+        result, rc = ep.run_tests(id, config, args.test_only, ids)
         results.update(result)
         # keep the lowest error code, e.g. errors (1) before fails (42)
         if rc > 0 and (exit == 0 or rc < exit):

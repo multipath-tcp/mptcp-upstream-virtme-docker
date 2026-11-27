@@ -1060,7 +1060,12 @@ class Entrypoint:
             print(last, file=f)
         logger.info(f"{name}: regression history reset, starting from {last}")
 
-    def run_tests(self, tests_id, config, only_this_name=None):
+    # only_ids: IDs of the tests to run, e.g. from one part of a parallel run
+    def run_tests(self, tests_id, config, only_this_name=None, only_ids=None):
+        # nothing to run: no empty dirs
+        if only_ids is not None and not only_ids:
+            return {}, 0
+
         global_name = config["name"]
         if self.reuse:
             global_name_n = self._prev_suite_id(global_name, tests_id)
@@ -1085,7 +1090,9 @@ class Entrypoint:
             test_config = copy.deepcopy(global_config | test)
             name = test_config["name"]
 
-            if only_this_name is not None and name != only_this_name:
+            if (only_this_name is not None and name != only_this_name) or (
+                only_ids is not None and id not in only_ids
+            ):
                 id += 1
                 continue
 
