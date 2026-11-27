@@ -438,8 +438,11 @@ setup_env() {
 		"${CCACHE_DIR}"
 	chmod 777 "${VIRTME_CACHE_DIR}" # to let users writting files there, e.g. clangd
 
-	rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
-	ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
+	# not for each VM: in parallel, e.g. perf tests, 'ln' could fail
+	if [ "$(readlink "${VIRTME_CURRENT_BUILD_DIR}")" != "${VIRTME_BUILD_DIR}" ]; then
+		rm -rf "${VIRTME_CURRENT_BUILD_DIR}"
+		ln -s "${VIRTME_BUILD_DIR}" "${VIRTME_CURRENT_BUILD_DIR}"
+	fi
 
 	local ram_mul=1
 	if is_ci; then
